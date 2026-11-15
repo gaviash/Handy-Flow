@@ -42,6 +42,8 @@ pub enum NoticeCode {
     TranscriptionFailed,
     PasteFailed,
     PasteBlockedElevated,
+    /// Handy Adaptive (F33): the destination is an excluded app or site.
+    PasteSkippedExcluded,
     NoMicrophone,
     MicrophoneSilent,
     MicPermissionDenied,
@@ -66,7 +68,9 @@ impl NoticeCode {
             | Self::ModelLoadFailed
             | Self::NoModelSelected
             | Self::FileTranscriptionFailed => NoticeLevel::Error,
-            Self::PostProcessFailed | Self::FilePostProcessFailed => NoticeLevel::Warning,
+            Self::PostProcessFailed | Self::FilePostProcessFailed | Self::PasteSkippedExcluded => {
+                NoticeLevel::Warning
+            }
         }
     }
 
@@ -76,6 +80,7 @@ impl NoticeCode {
             Self::TranscriptionFailed => &strings.transcription_failed_title,
             Self::PasteFailed => &strings.paste_failed_title,
             Self::PasteBlockedElevated => &strings.paste_blocked_elevated_title,
+            Self::PasteSkippedExcluded => &strings.paste_skipped_excluded_title,
             Self::NoMicrophone => &strings.no_input_device_title,
             Self::MicrophoneSilent => &strings.microphone_silent_title,
             Self::MicPermissionDenied => &strings.mic_permission_denied_title,

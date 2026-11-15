@@ -1,0 +1,36 @@
+{
+  "categories": [
+    {
+      "content": "ai",
+      "processes": ["chatgpt", "claude", "ollama", "lm studio"],
+      "hosts": ["chatgpt.com", "chat.openai.com", "claude.ai", "gemini.google.com", "perplexity.ai", "perplexity.com", "copilot.microsoft.com", "aistudio.google.com", "chat.deepseek.com", "chat.mistral.ai"]
+    },
+    {
+      "content": "email",
+      "processes": ["outlook", "olk", "thunderbird", "hxoutlook", "mailbird", "em client", "spark"],
+      "hosts": ["mail.google.com", "outlook.live.com", "outlook.office.com", "outlook.office365.com", "m365.cloud.microsoft", "mail.proton.me", "mail.yahoo.com", "app.fastmail.com"]
+    },
+    {
+      "content": "work_chat",
+      "processes": ["slack", "teams", "ms-teams", "msteams", "zoom", "webex", "mattermost"],
+      "hosts": ["app.slack.com", "teams.microsoft.com", "teams.live.com", "chat.google.com", "linkedin.com"]
+    },
+    {
+      "content": "personal_chat",
+      "processes": ["whatsapp", "whatsapp.root", "telegram", "signal", "discord", "messenger"],
+      "hosts": ["web.whatsapp.com", "web.telegram.org", "discord.com", "messenger.com", "x.com", "reddit.com", "facebook.com", "instagram.com"]
+    },
+    {
+      "content": "code",
+      "processes": ["code", "code - insiders", "cursor", "windsurf", "zed", "devenv", "idea64", "pycharm64", "rider64", "sublime_text"],
+      "hosts": ["github.com", "gitlab.com"]
+    },
+    {
+      "content": "document",
+      "processes": ["winword", "powerpnt", "excel", "onenote", "notion", "obsidian", "notepad", "wordpad"],
+      "hosts": ["docs.google.com", "notion.so", "coda.io", "linear.app"]
+    }
+  ],
+  "terminals": ["windowsterminal", "cmd", "powershell", "pwsh", "wezterm", "wezterm-gui", "alacritty", "conhost", "mintty", "warp"],
+  "browsers": ["chrome", "msedge", "brave", "vivaldi", "opera", "firefox", "arc", "chromium"]
+}

@@ -692,6 +692,34 @@
       "timeout": {
         "title": "Fallback Delay",
         "description": "How long to wait for the rewrite before pasting the cleaned transcript instead."
+      },
+      "context": {
+        "title": "Context and Privacy",
+        "read": {
+          "label": "Read the Destination",
+          "description": "Reads the app, the site and the text around the cursor to adapt the rewrite. Password fields are never read."
+        },
+        "send": {
+          "label": "Send Context to the LLM",
+          "description": "Sends the category, a short masked excerpt around the cursor and the names of the people on the page. Emails and recognizable secrets are never sent."
+        },
+        "excludedApps": {
+          "label": "Excluded Apps",
+          "description": "Process names, one per line. These apps get no context and no automatic paste."
+        },
+        "excludedDomains": {
+          "label": "Excluded Sites",
+          "description": "Domains, one per line, subdomains included. These sites get no context and no automatic paste."
+        },
+        "last": {
+          "label": "Last Dictation",
+          "description": "What the last dictation read and sent to the LLM. Kept in memory only.",
+          "refresh": "Refresh",
+          "none": "No dictation yet.",
+          "sensitive": "Password field: nothing was read, sent or kept.",
+          "excluded": "Excluded app or site: no context was read or sent.",
+          "nothingSent": "Nothing was sent to the LLM."
+        }
       }
     },
     "history": {
@@ -956,6 +984,8 @@
     "pasteFailed": "활성 애플리케이션에 텍스트를 붙여넣을 수 없습니다.",
     "pasteBlockedElevatedTitle": "관리자 앱에는 붙여넣을 수 없음",
     "pasteBlockedElevated": "활성 애플리케이션이 관리자 권한으로 실행 중이어서 Handy가 붙여넣을 수 없습니다. 히스토리에서 받아쓰기 결과를 복사할 수 있습니다.",
+    "pasteSkippedExcludedTitle": "Not Pasted in Excluded App",
+    "pasteSkippedExcluded": "This app or site is excluded, so Handy didn't paste into it. You can copy the transcript from History.",
     "postProcessFailedTitle": "후처리 없이 붙여넣음",
     "postProcessFailed": "후처리가 완료되지 않아 받아쓰기 결과를 그대로 붙여넣었습니다.",
     "filePostProcessFailedTitle": "후처리 없이 받아씀",

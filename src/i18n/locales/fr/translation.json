@@ -692,6 +692,34 @@
       "timeout": {
         "title": "Délai avant secours",
         "description": "Temps d'attente maximal de la reformulation avant de coller la transcription nettoyée."
+      },
+      "context": {
+        "title": "Contexte et confidentialité",
+        "read": {
+          "label": "Lire la destination",
+          "description": "Lit l'application, le site et le texte autour du curseur pour adapter la reformulation. Les champs mot de passe ne sont jamais lus."
+        },
+        "send": {
+          "label": "Envoyer le contexte au LLM",
+          "description": "Envoie la catégorie, un court extrait masqué autour du curseur et les noms des personnes de la page. Les adresses email et les secrets reconnaissables ne sont jamais envoyés."
+        },
+        "excludedApps": {
+          "label": "Applications exclues",
+          "description": "Noms de processus, un par ligne. Ces applications ne reçoivent ni contexte ni collage automatique."
+        },
+        "excludedDomains": {
+          "label": "Sites exclus",
+          "description": "Domaines, un par ligne, sous-domaines compris. Ces sites ne reçoivent ni contexte ni collage automatique."
+        },
+        "last": {
+          "label": "Dernière dictée",
+          "description": "Ce que la dernière dictée a lu et envoyé au LLM. Conservé en mémoire seulement.",
+          "refresh": "Actualiser",
+          "none": "Aucune dictée pour l'instant.",
+          "sensitive": "Champ mot de passe : rien n'a été lu, envoyé ni conservé.",
+          "excluded": "Application ou site exclu : aucun contexte lu ni envoyé.",
+          "nothingSent": "Rien n'a été envoyé au LLM."
+        }
       }
     },
     "history": {
@@ -956,6 +984,8 @@
     "pasteFailed": "Le texte n'a pas pu être collé dans l'application active.",
     "pasteBlockedElevatedTitle": "Collage bloqué par une app admin",
     "pasteBlockedElevated": "L'application active s'exécute en tant qu'administrateur, Handy ne peut donc pas y coller de texte. Vous pouvez copier la transcription depuis Historique.",
+    "pasteSkippedExcludedTitle": "Non collé : app exclue",
+    "pasteSkippedExcluded": "Cette application ou ce site est exclu, Handy n'y a donc rien collé. Vous pouvez copier la transcription depuis Historique.",
     "postProcessFailedTitle": "Collé sans post-traitement",
     "postProcessFailed": "Le post-traitement n'a pas abouti, la transcription a donc été collée telle quelle.",
     "filePostProcessFailedTitle": "Transcrit sans post-traitement",

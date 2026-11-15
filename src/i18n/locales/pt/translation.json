@@ -692,6 +692,34 @@
       "timeout": {
         "title": "Fallback Delay",
         "description": "How long to wait for the rewrite before pasting the cleaned transcript instead."
+      },
+      "context": {
+        "title": "Context and Privacy",
+        "read": {
+          "label": "Read the Destination",
+          "description": "Reads the app, the site and the text around the cursor to adapt the rewrite. Password fields are never read."
+        },
+        "send": {
+          "label": "Send Context to the LLM",
+          "description": "Sends the category, a short masked excerpt around the cursor and the names of the people on the page. Emails and recognizable secrets are never sent."
+        },
+        "excludedApps": {
+          "label": "Excluded Apps",
+          "description": "Process names, one per line. These apps get no context and no automatic paste."
+        },
+        "excludedDomains": {
+          "label": "Excluded Sites",
+          "description": "Domains, one per line, subdomains included. These sites get no context and no automatic paste."
+        },
+        "last": {
+          "label": "Last Dictation",
+          "description": "What the last dictation read and sent to the LLM. Kept in memory only.",
+          "refresh": "Refresh",
+          "none": "No dictation yet.",
+          "sensitive": "Password field: nothing was read, sent or kept.",
+          "excluded": "Excluded app or site: no context was read or sent.",
+          "nothingSent": "Nothing was sent to the LLM."
+        }
       }
     },
     "history": {
@@ -956,6 +984,8 @@
     "pasteFailed": "Não foi possível colar o texto no aplicativo ativo.",
     "pasteBlockedElevatedTitle": "Colagem bloqueada por app admin",
     "pasteBlockedElevated": "O aplicativo ativo está sendo executado como administrador, então o Handy não consegue colar nele. Você pode copiar a transcrição do Histórico.",
+    "pasteSkippedExcludedTitle": "Not Pasted in Excluded App",
+    "pasteSkippedExcluded": "This app or site is excluded, so Handy didn't paste into it. You can copy the transcript from History.",
     "postProcessFailedTitle": "Colado sem pós-processamento",
     "postProcessFailed": "O pós-processamento não terminou, então a transcrição foi colada como está.",
     "filePostProcessFailedTitle": "Transcrito sem pós-processamento",

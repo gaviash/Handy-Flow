@@ -215,6 +215,14 @@ const settingUpdaters: {
     commands.changeExtraRecordingBufferSetting(value as number),
   post_process_timeout_secs: (value) =>
     commands.changePostProcessTimeoutSetting(value as number),
+  context_enabled: (value) =>
+    commands.changeContextEnabledSetting(value as boolean),
+  context_send_enabled: (value) =>
+    commands.changeContextSendEnabledSetting(value as boolean),
+  context_excluded_apps: (value) =>
+    commands.changeContextExcludedAppsSetting(value as string[]),
+  context_excluded_domains: (value) =>
+    commands.changeContextExcludedDomainsSetting(value as string[]),
   language_detection: (value) =>
     commands.changeLanguageDetectionSetting(value as LanguageDetectionMode),
   language_detection_window_secs: (value) =>

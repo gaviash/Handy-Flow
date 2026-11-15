@@ -410,6 +410,19 @@ pub struct AppSettings {
     /// Deadline for the rewrite before falling back to the cleaned transcript (F57).
     #[serde(default = "default_post_process_timeout_secs")]
     pub post_process_timeout_secs: u64,
+    /// F97: read the destination (site, field, page names). A password field
+    /// is detected even when this is off.
+    #[serde(default = "default_true")]
+    pub context_enabled: bool,
+    /// F97: send the minimal context (F31) with the rewrite request.
+    #[serde(default = "default_true")]
+    pub context_send_enabled: bool,
+    /// F33: apps (process names) and domains that get no context and no
+    /// automatic paste.
+    #[serde(default = "default_context_excluded_apps")]
+    pub context_excluded_apps: Vec<String>,
+    #[serde(default = "default_context_excluded_domains")]
+    pub context_excluded_domains: Vec<String>,
     /// Defaults to empty on partial stores; the load path merges in the
     /// default bindings for any missing keys before the settings are used.
     #[serde(default)]
@@ -599,6 +612,54 @@ fn default_adaptive_settings_version() -> u32 {
 
 fn default_post_process_timeout_secs() -> u64 {
     8
+}
+
+fn default_true() -> bool {
+    true
+}
+
+fn default_context_excluded_apps() -> Vec<String> {
+    [
+        "1password",
+        "bitwarden",
+        "keepass",
+        "keepassxc",
+        "lastpass",
+        "dashlane",
+        "enpass",
+        "nordpass",
+        "proton pass",
+    ]
+    .map(String::from)
+    .to_vec()
+}
+
+fn default_context_excluded_domains() -> Vec<String> {
+    [
+        "1password.com",
+        "bitwarden.com",
+        "lastpass.com",
+        "dashlane.com",
+        "boursorama.com",
+        "credit-agricole.fr",
+        "societegenerale.fr",
+        "mabanque.bnpparibas",
+        "lcl.fr",
+        "labanquepostale.fr",
+        "caisse-epargne.fr",
+        "banquepopulaire.fr",
+        "creditmutuel.fr",
+        "cic.fr",
+        "hellobank.fr",
+        "fortuneo.fr",
+        "revolut.com",
+        "n26.com",
+        "paypal.com",
+        "impots.gouv.fr",
+        "ameli.fr",
+    ]
+    .map(String::from)
+    .to_vec()
 }
 
 fn house_prompt() -> LLMPrompt {
@@ -1056,6 +1117,10 @@ pub fn get_default_settings() -> AppSettings {
         settings_schema_version: default_settings_schema_version(),
         adaptive_settings_version: default_adaptive_settings_version(),
         post_process_timeout_secs: default_post_process_timeout_secs(),
+        context_enabled: true,
+        context_send_enabled: true,
+        context_excluded_apps: default_context_excluded_apps(),
+        context_excluded_domains: default_context_excluded_domains(),
         bindings,
         shortcut_activation: ShortcutActivation::default(),
         hold_threshold_ms: default_hold_threshold_ms(),

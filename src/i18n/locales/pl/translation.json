@@ -692,6 +692,34 @@
       "timeout": {
         "title": "Fallback Delay",
         "description": "How long to wait for the rewrite before pasting the cleaned transcript instead."
+      },
+      "context": {
+        "title": "Context and Privacy",
+        "read": {
+          "label": "Read the Destination",
+          "description": "Reads the app, the site and the text around the cursor to adapt the rewrite. Password fields are never read."
+        },
+        "send": {
+          "label": "Send Context to the LLM",
+          "description": "Sends the category, a short masked excerpt around the cursor and the names of the people on the page. Emails and recognizable secrets are never sent."
+        },
+        "excludedApps": {
+          "label": "Excluded Apps",
+          "description": "Process names, one per line. These apps get no context and no automatic paste."
+        },
+        "excludedDomains": {
+          "label": "Excluded Sites",
+          "description": "Domains, one per line, subdomains included. These sites get no context and no automatic paste."
+        },
+        "last": {
+          "label": "Last Dictation",
+          "description": "What the last dictation read and sent to the LLM. Kept in memory only.",
+          "refresh": "Refresh",
+          "none": "No dictation yet.",
+          "sensitive": "Password field: nothing was read, sent or kept.",
+          "excluded": "Excluded app or site: no context was read or sent.",
+          "nothingSent": "Nothing was sent to the LLM."
+        }
       }
     },
     "history": {
@@ -956,6 +984,8 @@
     "pasteFailed": "Nie można było wkleić tekstu do aktywnej aplikacji.",
     "pasteBlockedElevatedTitle": "Nie można wkleić do aplikacji admina",
     "pasteBlockedElevated": "Aktywna aplikacja działa jako administrator, więc Handy nie może do niej wklejać. Transkrypcję możesz skopiować z Historii.",
+    "pasteSkippedExcludedTitle": "Not Pasted in Excluded App",
+    "pasteSkippedExcluded": "This app or site is excluded, so Handy didn't paste into it. You can copy the transcript from History.",
     "postProcessFailedTitle": "Wklejono bez postprocesu",
     "postProcessFailed": "Postproces nie został ukończony, więc transkrypcja została wklejona bez zmian.",
     "filePostProcessFailedTitle": "Przetranskrybowano bez postprocesu",

@@ -981,6 +981,56 @@ pub fn change_post_process_timeout_setting(app: AppHandle, secs: u64) -> Result<
 
 #[tauri::command]
 #[specta::specta]
+pub fn change_context_enabled_setting(app: AppHandle, enabled: bool) -> Result<(), String> {
+    let mut settings = settings::get_settings(&app);
+    settings.context_enabled = enabled;
+    settings::write_settings(&app, settings);
+    Ok(())
+}
+
+#[tauri::command]
+#[specta::specta]
+pub fn change_context_send_enabled_setting(app: AppHandle, enabled: bool) -> Result<(), String> {
+    let mut settings = settings::get_settings(&app);
+    settings.context_send_enabled = enabled;
+    settings::write_settings(&app, settings);
+    Ok(())
+}
+
+fn clean_list(items: Vec<String>) -> Vec<String> {
+    items
+        .into_iter()
+        .map(|s| s.trim().to_lowercase())
+        .filter(|s| !s.is_empty())
+        .collect()
+}
+
+#[tauri::command]
+#[specta::specta]
+pub fn change_context_excluded_apps_setting(
+    app: AppHandle,
+    apps: Vec<String>,
+) -> Result<(), String> {
+    let mut settings = settings::get_settings(&app);
+    settings.context_excluded_apps = clean_list(apps);
+    settings::write_settings(&app, settings);
+    Ok(())
+}
+
+#[tauri::command]
+#[specta::specta]
+pub fn change_context_excluded_domains_setting(
+    app: AppHandle,
+    domains: Vec<String>,
+) -> Result<(), String> {
+    let mut settings = settings::get_settings(&app);
+    settings.context_excluded_domains = clean_list(domains);
+    settings::write_settings(&app, settings);
+    Ok(())
+}
+
+#[tauri::command]
+#[specta::specta]
 pub fn change_paste_delay_ms_setting(app: AppHandle, ms: u64) -> Result<(), String> {
     let mut settings = settings::get_settings(&app);
     settings.paste_delay_ms = ms;
