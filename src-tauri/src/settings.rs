@@ -1355,15 +1355,18 @@ fn apply_settings_migrations(
         .get("adaptive_settings_version")
         .and_then(|v| v.as_u64())
         .unwrap_or(0);
-    if adaptive_version < 1 {
+    // Windows only: macOS and Linux users keep their own choices (NF-41).
+    let windows = cfg!(target_os = "windows");
+    if windows && adaptive_version < 1 {
         // The reliable paste becomes the default (F72) and the main shortcut
-        // uses the house prompt (F50–F53). The user's own prompts stay in the
-        // list and can be selected again.
-        settings.reliable_paste = cfg!(any(target_os = "macos", target_os = "windows"));
+        // rewrites with the house prompt (F50–F53). The user's own prompts
+        // stay in the list and can be selected again.
+        settings.reliable_paste = true;
+        settings.post_process_enabled = true;
         settings.post_process_selected_prompt_id =
             Some(crate::adaptive::HOUSE_PROMPT_ID.to_string());
     }
-    if adaptive_version < 2 {
+    if windows && adaptive_version < 2 {
         // Q7: gpt-oss-120b won the golden bench at a similar latency.
         if let Some(model) = settings.post_process_models.get_mut("groq") {
             if model == "openai/gpt-oss-20b" {
