@@ -947,6 +947,7 @@ impl ShortcutAction for TranscribeAction {
                             // F79: a password field gets the raw transcript, nothing sent or kept.
                             let sensitive = capture.sensitive;
                             let excluded = capture.excluded;
+                            let (field, terminal) = (capture.field.clone(), capture.terminal);
                             let post_process = post_process && !sensitive;
                             let llm_context = get_settings(&ah)
                                 .context_send_enabled
@@ -1005,7 +1006,18 @@ impl ShortcutAction for TranscribeAction {
                             // The user's hook only changes what gets pasted;
                             // history above keeps the text as produced.
                             let Some(final_text) = complete_unless_cancelled(
-                                crate::transcription_hook::apply(&ah, processed.final_text),
+                                crate::transcription_hook::apply(
+                                    &ah,
+                                    // F70: fit the text to the cursor it goes to.
+                                    match &field {
+                                        Some(f) => crate::adaptive::join_at_cursor(
+                                            f,
+                                            &processed.final_text,
+                                            terminal,
+                                        ),
+                                        None => processed.final_text,
+                                    },
+                                ),
                                 || rm.was_cancelled_since(cancel_generation),
                             )
                             .await
