@@ -184,11 +184,13 @@ pub fn capture(read_context: bool, apps: &[String], domains: &[String]) -> Captu
     // SAFETY: plain Win32 queries on the foreground window.
     let hwnd = unsafe { GetForegroundWindow() };
     let mut cap = Capture::default();
+    let mut owner = 0u32;
     if !hwnd.is_invalid() {
-        let pid = window_pid(hwnd);
-        cap.process = process_name(pid);
+        owner = window_pid(hwnd);
+        cap.process = process_name(owner);
         if cap.process == "applicationframehost" {
-            if let Some(child) = packaged_child_pid(hwnd, pid) {
+            if let Some(child) = packaged_child_pid(hwnd, owner) {
+                owner = child;
                 cap.process = process_name(child);
             }
         }
@@ -206,7 +208,7 @@ pub fn capture(read_context: bool, apps: &[String], domains: &[String]) -> Captu
     let hwnd_raw = hwnd.0 as isize;
     let (apps, domains) = (apps.to_vec(), domains.to_vec());
     let cap = run(DEADLINE, move |a| {
-        read(a, hwnd_raw, cap, read_context, &apps, &domains)
+        read(a, hwnd_raw, owner, cap, read_context, &apps, &domains)
     })
     .unwrap_or(base);
     log::debug!(
@@ -226,6 +228,7 @@ pub fn capture(read_context: bool, apps: &[String], domains: &[String]) -> Captu
 fn read(
     a: &IUIAutomation,
     hwnd: isize,
+    owner: u32,
     mut cap: Capture,
     read_context: bool,
     apps: &[String],
@@ -238,7 +241,8 @@ fn read(
             .as_ref()
             .and_then(|f| f.CurrentIsPassword().ok())
             .is_some_and(|b| b.as_bool());
-        if read_context && is_browser(&cap.process) {
+        // The site is read even with context off: domain exclusions need it.
+        if is_browser(&cap.process) {
             cap.host = read_host(a, HWND(hwnd as *mut _));
             let (content, terminal) = classify(&cap.process, cap.host.as_deref());
             cap.content = Some(content);
@@ -248,7 +252,11 @@ fn read(
         if cap.sensitive || cap.excluded || !read_context {
             return cap;
         }
-        let Some(focused) = focused else {
+        // The focus must still be in the window identified above, or its
+        // text would be sent under another window's identity.
+        let Some(focused) =
+            focused.filter(|f| f.CurrentProcessId().is_ok_and(|p| p as u32 == owner))
+        else {
             return cap;
         };
         cap.field = read_field(&focused);
