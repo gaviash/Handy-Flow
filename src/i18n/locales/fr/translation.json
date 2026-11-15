@@ -720,6 +720,23 @@
           "excluded": "Application ou site exclu : aucun contexte lu ni envoyé.",
           "nothingSent": "Rien n'a été envoyé au LLM."
         }
+      },
+      "learning": {
+        "title": "Apprentissage",
+        "toggle": {
+          "label": "Apprendre de mes corrections",
+          "description": "Après une dictée, Handy observe le texte collé pendant une minute et retient les noms et termes que vous corrigez. Seuls les mots corrigés sont conservés, chiffrés avec votre compte Windows."
+        },
+        "words": {
+          "label": "Mots appris",
+          "description": "Orthographes que Handy utilise dans vos prochaines dictées.",
+          "empty": "Rien d'appris pour l'instant.",
+          "heard": "entendu « {{heard}} »",
+          "delete": "Supprimer",
+          "clear": "Tout effacer",
+          "export": "Exporter",
+          "confirmClear": "Effacer tous les mots appris ?"
+        }
       }
     },
     "history": {

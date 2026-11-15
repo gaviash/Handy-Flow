@@ -498,6 +498,52 @@ unsafe fn page_texts(a: &IUIAutomation, focused: &IUIAutomationElement) -> Vec<S
     texts
 }
 
+thread_local! {
+    /// The field under observation, kept on the UIA worker that read it.
+    static WATCHED: std::cell::RefCell<Option<IUIAutomationElement>> = const { std::cell::RefCell::new(None) };
+}
+
+/// Longest field text read during an observation (PAR §7.1: 15 000).
+const WATCH_CHARS: i32 = 15_000;
+
+pub fn watch_focused() -> bool {
+    run(DEADLINE, |a| {
+        // SAFETY: live COM interfaces on the worker thread.
+        let el = unsafe { a.GetFocusedElement().ok() }
+            .filter(|f| unsafe { !f.CurrentIsPassword().is_ok_and(|b| b.as_bool()) });
+        let ok = el.is_some();
+        WATCHED.with(|w| *w.borrow_mut() = el);
+        ok
+    })
+    .unwrap_or(false)
+}
+
+pub fn read_watched() -> Option<String> {
+    run(DEADLINE, |_| {
+        WATCHED.with(|w| {
+            let el = w.borrow().clone()?;
+            // SAFETY: live COM interfaces on the worker thread.
+            unsafe {
+                if let Ok(v) =
+                    el.GetCurrentPatternAs::<IUIAutomationValuePattern>(UIA_ValuePatternId)
+                {
+                    if let Ok(b) = v.CurrentValue() {
+                        let s = b.to_string();
+                        return (s.chars().count() <= WATCH_CHARS as usize)
+                            .then(|| normalize_newlines(&s));
+                    }
+                }
+                let tp = el
+                    .GetCurrentPatternAs::<IUIAutomationTextPattern>(UIA_TextPatternId)
+                    .ok()?;
+                let text = tp.DocumentRange().ok()?.GetText(WATCH_CHARS).ok()?;
+                Some(normalize_newlines(&text.to_string()))
+            }
+        })
+    })
+    .flatten()
+}
+
 #[cfg(test)]
 mod tests {
     /// F34/S21: a reader stuck past its deadline is dropped and the next read

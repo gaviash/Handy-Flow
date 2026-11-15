@@ -16,6 +16,7 @@ mod helpers;
 mod input;
 mod language_detection;
 mod languages;
+mod learning;
 mod llm_client;
 mod managers;
 mod memory;
@@ -716,6 +717,11 @@ pub fn run(cli_args: CliArgs) {
             shortcut::change_context_excluded_apps_setting,
             shortcut::change_context_excluded_domains_setting,
             context::get_last_context_report,
+            shortcut::change_learning_enabled_setting,
+            learning::get_learned_words,
+            learning::delete_learned_word,
+            learning::clear_learned_words,
+            learning::export_learned_words,
             shortcut::change_language_detection_setting,
             shortcut::change_language_detection_window_setting,
             shortcut::change_paste_delay_ms_setting,

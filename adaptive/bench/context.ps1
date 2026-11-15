@@ -179,4 +179,19 @@ if (Want 'GE05') {
   Record 'GE05' ($s -match 'terms: .*Zorblax' -and $s -match 'Quintavex' -and $s -match 'Merindor') @{ sent = $s }
   Stop-Process -Id $pad.Id -Force
 }
+if (Want 'LEARN') {
+  # S02: a name corrected by accessibility (never by keystrokes) is learned when
+  # the next dictation starts, and that dictation already gets it as a term.
+  $pad = Start-Pad 'testpad'; $f = Pad-Field $pad
+  Dictate 'CT07'; $ok = Wait-Until { Value $f }; Start-Sleep -Milliseconds 1500
+  $v = Value $f; $words = $v -split ' '; $i = [array]::IndexOf(($words | ForEach-Object { $_.ToLower() }), 'installons') + 1
+  $o = $null; $f.TryGetCurrentPattern([System.Windows.Automation.ValuePattern]::Pattern, [ref]$o) | Out-Null
+  $heard = $words[$i]; $words[$i] = 'Quorvantis'; $o.SetValue($words -join ' '); Start-Sleep -Milliseconds 2500
+  Stop-Process -Id $pad.Id -Force
+  $pad = Start-Pad 'testpad'; $f = Pad-Field $pad; $m = Mock-Count
+  Dictate 'CT04'; Wait-Until { Value $f } | Out-Null; Start-Sleep -Milliseconds 500
+  $s = (Mock-Since $m) -join "`n"
+  Record 'LEARN' ($ok -and $s -match 'terms: .*Quorvantis \(heard as') @{ pasted = $v; heard = $heard; sent = $s }
+  Stop-Process -Id $pad.Id -Force
+}
 $results | Format-Table id, pass -AutoSize | Out-String | Write-Host

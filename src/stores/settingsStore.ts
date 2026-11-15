@@ -221,6 +221,8 @@ const settingUpdaters: {
     commands.changeContextSendEnabledSetting(value as boolean),
   context_excluded_apps: (value) =>
     commands.changeContextExcludedAppsSetting(value as string[]),
+  learning_enabled: (value) =>
+    commands.changeLearningEnabledSetting(value as boolean),
   context_excluded_domains: (value) =>
     commands.changeContextExcludedDomainsSetting(value as string[]),
   language_detection: (value) =>

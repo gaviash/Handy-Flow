@@ -22,6 +22,7 @@ import { usePostProcessProviderState } from "../PostProcessingSettingsApi/usePos
 import { ShortcutInput } from "../ShortcutInput";
 import { PostProcessTimeout } from "./PostProcessTimeout";
 import { ContextSettings } from "./ContextSettings";
+import { LearningSettings } from "./LearningSettings";
 import { useSettings } from "../../../hooks/useSettings";
 
 const PostProcessingSettingsApiComponent: React.FC = () => {
@@ -490,6 +491,10 @@ export const PostProcessingSettings: React.FC = () => {
 
       <SettingsGroup title={t("settings.postProcessing.context.title")}>
         <ContextSettings />
+      </SettingsGroup>
+
+      <SettingsGroup title={t("settings.postProcessing.learning.title")}>
+        <LearningSettings />
       </SettingsGroup>
 
       <SettingsGroup title={t("settings.postProcessing.prompts.title")}>
