@@ -490,6 +490,19 @@ unsafe fn page_texts(a: &IUIAutomation, focused: &IUIAutomationElement) -> Vec<S
 
 #[cfg(test)]
 mod tests {
+    /// F34/S21: a reader stuck past its deadline is dropped and the next read
+    /// gets a fresh one.
+    #[test]
+    fn a_stuck_reader_is_replaced() {
+        use std::time::Duration;
+        let stuck = super::run(Duration::from_millis(100), |_| {
+            std::thread::sleep(Duration::from_millis(1_500));
+            1
+        });
+        assert_eq!(stuck, None);
+        assert_eq!(super::run(Duration::from_millis(1_000), |_| 2), Some(2));
+    }
+
     /// Manual check: `cargo test --release --lib context::windows -- --ignored --nocapture`,
     /// then focus a field within 3 s.
     #[test]
