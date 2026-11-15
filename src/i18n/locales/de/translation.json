@@ -688,6 +688,10 @@
         "cancel": "Abbrechen",
         "selectToEdit": "Wähle oben einen Prompt aus, um dessen Details anzuzeigen und zu bearbeiten.",
         "createFirst": "Klicke oben auf 'Neuen Prompt erstellen', um deinen ersten Nachbearbeitungs-Prompt zu erstellen."
+      },
+      "timeout": {
+        "title": "Fallback Delay",
+        "description": "How long to wait for the rewrite before pasting the cleaned transcript instead."
       }
     },
     "history": {

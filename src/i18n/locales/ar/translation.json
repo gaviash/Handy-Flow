@@ -688,6 +688,10 @@
         "cancel": "إلغاء",
         "selectToEdit": ".اختر مطالبة أعلاه لعرض وتعديل تفاصيلها",
         "createFirst": ".انقر على 'إنشاء مطالبة جديدة' أعلاه لإنشاء أول مطالبة معالجة لاحقة لك"
+      },
+      "timeout": {
+        "title": "Fallback Delay",
+        "description": "How long to wait for the rewrite before pasting the cleaned transcript instead."
       }
     },
     "history": {

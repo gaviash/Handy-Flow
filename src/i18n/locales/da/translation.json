@@ -688,6 +688,10 @@
         "cancel": "Annuller",
         "selectToEdit": "Vælg en prompt ovenfor for at se og redigere dens detaljer.",
         "createFirst": "Klik på 'Opret ny prompt' ovenfor for at oprette din første efterbehandlingsprompt."
+      },
+      "timeout": {
+        "title": "Fallback Delay",
+        "description": "How long to wait for the rewrite before pasting the cleaned transcript instead."
       }
     },
     "history": {

@@ -688,6 +688,10 @@
         "cancel": "ביטול",
         "selectToEdit": "בחר פרומפט למעלה כדי לצפות בפרטים שלו ולערוך אותם.",
         "createFirst": "לחץ על 'צור פרומפט חדש' למעלה כדי ליצור את פרומפט העיבוד הראשון שלך."
+      },
+      "timeout": {
+        "title": "Fallback Delay",
+        "description": "How long to wait for the rewrite before pasting the cleaned transcript instead."
       }
     },
     "history": {

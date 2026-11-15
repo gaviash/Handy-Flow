@@ -149,6 +149,14 @@ async changeExtraRecordingBufferSetting(ms: number) : Promise<Result<null, strin
     else return { status: "error", error: e  as any };
 }
 },
+async changePostProcessTimeoutSetting(secs: number) : Promise<Result<null, string>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("change_post_process_timeout_setting", { secs }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
 async changeLanguageDetectionSetting(mode: LanguageDetectionMode) : Promise<Result<null, string>> {
     try {
     return { status: "ok", data: await TAURI_INVOKE("change_language_detection_setting", { mode }) };
@@ -1110,6 +1118,14 @@ export type AppSettings = {
  * treated as version 0 and migrated forward.
  */
 settings_schema_version?: number; 
+/**
+ * Handy Adaptive migration marker.
+ */
+adaptive_settings_version?: number; 
+/**
+ * Deadline for the rewrite before falling back to the cleaned transcript (F57).
+ */
+post_process_timeout_secs?: number; 
 /**
  * Defaults to empty on partial stores; the load path merges in the
  * default bindings for any missing keys before the settings are used.

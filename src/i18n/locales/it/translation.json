@@ -688,6 +688,10 @@
         "cancel": "Annulla",
         "selectToEdit": "Scegli un prompt qui sopra per visualizzare o modificare i dettagli.",
         "createFirst": "Clicca 'Crea un nuovo prompt' qui sopra per creare il tuo primo prompt di post-elaborazione."
+      },
+      "timeout": {
+        "title": "Fallback Delay",
+        "description": "How long to wait for the rewrite before pasting the cleaned transcript instead."
       }
     },
     "history": {

@@ -688,6 +688,10 @@
         "cancel": "Annuler",
         "selectToEdit": "Sélectionnez un prompt ci-dessus pour voir et modifier ses détails.",
         "createFirst": "Cliquez sur 'Créer un nouveau prompt' ci-dessus pour créer votre premier prompt de post-traitement."
+      },
+      "timeout": {
+        "title": "Délai avant secours",
+        "description": "Temps d'attente maximal de la reformulation avant de coller la transcription nettoyée."
       }
     },
     "history": {

@@ -363,13 +363,9 @@ unsafe fn publish(hwnd: HWND) -> Result<u32, String> {
     Ok(GetClipboardSequenceNumber())
 }
 
-/// Everything `publish` does while the clipboard is open, split out so
-/// `publish` closes the clipboard on every path — bailing out while holding it
-/// open (and possibly already emptied) would strand the clipboard and leave
-/// the legacy fallback snapshotting nothing.
-unsafe fn publish_formats() -> Result<(), String> {
-    EmptyClipboard().map_err(|e| format!("EmptyClipboard failed: {e}"))?;
-
+/// Marks the open clipboard's content as private: kept out of the Win+V
+/// history and the cloud clipboard. The clipboard must be open.
+unsafe fn set_private_formats() {
     for (name, value) in [
         ("ExcludeClipboardContentFromMonitorProcessing", 1u32),
         ("CanIncludeInClipboardHistory", 0u32),
@@ -393,6 +389,27 @@ unsafe fn publish_formats() -> Result<(), String> {
             }
         }
     }
+}
+
+/// Handy Adaptive (F72/S32): marks the text the legacy paste path just put on
+/// the clipboard as private too, so no paste path feeds the Win+V history.
+pub(crate) fn mark_clipboard_private() {
+    unsafe {
+        if OpenClipboard(None).is_ok() {
+            set_private_formats();
+            let _ = CloseClipboard();
+        }
+    }
+}
+
+/// Everything `publish` does while the clipboard is open, split out so
+/// `publish` closes the clipboard on every path — bailing out while holding it
+/// open (and possibly already emptied) would strand the clipboard and leave
+/// the legacy fallback snapshotting nothing.
+unsafe fn publish_formats() -> Result<(), String> {
+    EmptyClipboard().map_err(|e| format!("EmptyClipboard failed: {e}"))?;
+
+    set_private_formats();
 
     // NULL handle = delayed rendering: we are only asked for the data (via
     // WM_RENDERFORMAT) when a consumer actually reads it. SetClipboardData
@@ -452,6 +469,18 @@ fn on_timer(_hwnd: HWND, shared: &WinTxShared) {
         info!("[reliable-paste] settling: chord injection failed, restoring quickly");
     } else {
         info!("[reliable-paste] settling: no read within timeout, restoring anyway");
+    }
+    // Handy Adaptive (F72/O5): the target never read the transcript, so the
+    // paste most likely failed; say so instead of failing silently. The text
+    // stays in history. Without overlay: a newer session may own it by now.
+    if !receipt && !ownership_lost {
+        crate::notices::raise_without_overlay(
+            &shared.app_handle,
+            crate::notices::Notice::new(
+                crate::notices::NoticeCode::PasteFailed,
+                crate::notices::NoticeSource::Dictation,
+            ),
+        );
     }
 
     // Auto-submit only once the target demonstrably read the transcript;

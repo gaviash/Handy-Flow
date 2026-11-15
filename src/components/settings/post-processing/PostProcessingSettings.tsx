@@ -20,6 +20,7 @@ import { ApiKeyField } from "../PostProcessingSettingsApi/ApiKeyField";
 import { ModelSelect } from "../PostProcessingSettingsApi/ModelSelect";
 import { usePostProcessProviderState } from "../PostProcessingSettingsApi/usePostProcessProviderState";
 import { ShortcutInput } from "../ShortcutInput";
+import { PostProcessTimeout } from "./PostProcessTimeout";
 import { useSettings } from "../../../hooks/useSettings";
 
 const PostProcessingSettingsApiComponent: React.FC = () => {
@@ -280,6 +281,8 @@ const PostProcessingSettingsPromptsComponent: React.FC = () => {
   };
 
   const hasPrompts = prompts.length > 0;
+  // Handy Adaptive: the house prompt is code-owned and re-synced on launch.
+  const isHouse = selectedPromptId === "adaptive_house";
   const isDirty =
     !!selectedPrompt &&
     (draftName.trim() !== selectedPrompt.name ||
@@ -335,6 +338,7 @@ const PostProcessingSettingsPromptsComponent: React.FC = () => {
                 type="text"
                 value={draftName}
                 onChange={(e) => setDraftName(e.target.value)}
+                readOnly={isHouse}
                 placeholder={t(
                   "settings.postProcessing.prompts.promptLabelPlaceholder",
                 )}
@@ -349,6 +353,7 @@ const PostProcessingSettingsPromptsComponent: React.FC = () => {
               <Textarea
                 value={draftText}
                 onChange={(e) => setDraftText(e.target.value)}
+                readOnly={isHouse}
                 placeholder={t(
                   "settings.postProcessing.prompts.promptInstructionsPlaceholder",
                 )}
@@ -366,7 +371,9 @@ const PostProcessingSettingsPromptsComponent: React.FC = () => {
                 onClick={handleUpdatePrompt}
                 variant="primary"
                 size="md"
-                disabled={!draftName.trim() || !draftText.trim() || !isDirty}
+                disabled={
+                  isHouse || !draftName.trim() || !draftText.trim() || !isDirty
+                }
               >
                 {t("settings.postProcessing.prompts.updatePrompt")}
               </Button>
@@ -374,7 +381,7 @@ const PostProcessingSettingsPromptsComponent: React.FC = () => {
                 onClick={() => handleDeletePrompt(selectedPromptId)}
                 variant="secondary"
                 size="md"
-                disabled={!selectedPromptId || prompts.length <= 1}
+                disabled={isHouse || !selectedPromptId || prompts.length <= 1}
               >
                 {t("settings.postProcessing.prompts.deletePrompt")}
               </Button>
@@ -477,6 +484,7 @@ export const PostProcessingSettings: React.FC = () => {
 
       <SettingsGroup title={t("settings.postProcessing.api.title")}>
         <PostProcessingSettingsApi />
+        <PostProcessTimeout />
       </SettingsGroup>
 
       <SettingsGroup title={t("settings.postProcessing.prompts.title")}>

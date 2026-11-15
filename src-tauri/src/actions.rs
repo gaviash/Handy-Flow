@@ -114,6 +114,14 @@ static RECORDING_SESSION: AtomicU64 = AtomicU64::new(0);
 struct FinishGuard(AppHandle, Arc<TranscriptionManager>);
 impl Drop for FinishGuard {
     fn drop(&mut self) {
+        // Processing is over: disarm Escape, unless a newer recording armed it.
+        let recording = self
+            .0
+            .try_state::<Arc<AudioRecordingManager>>()
+            .is_some_and(|rm| rm.is_recording());
+        if !recording {
+            shortcut::unregister_cancel_shortcut(&self.0);
+        }
         self.1.maybe_unload_immediately("transcription session");
         if let Some(c) = self.0.try_state::<TranscriptionCoordinator>() {
             c.notify_processing_finished();
@@ -216,6 +224,9 @@ enum PostProcessOutcome {
     /// The user asked for it, but it couldn't run or produced nothing, so the
     /// transcript goes out as it is.
     Failed,
+    /// The rewrite came back anomalous (§6 guard 3): the cleaned transcript
+    /// goes out, without a notice for an isolated case.
+    Rejected,
 }
 
 async fn post_process_transcription(
@@ -292,6 +303,33 @@ async fn post_process_transcription(
     // benefits from it and it adds seconds of latency. llm_client picks the
     // field the endpoint understands and retries without it if rejected.
     let disable_reasoning = matches!(provider.id.as_str(), "custom" | "openrouter");
+
+    // Handy Adaptive house prompt: instructions in the system message, the
+    // dictation framed as data in the user message, plain-text reply.
+    if selected_prompt_id == crate::adaptive::HOUSE_PROMPT_ID
+        && provider.id != APPLE_INTELLIGENCE_PROVIDER_ID
+    {
+        return match crate::llm_client::send_chat_completion_with_schema(
+            &provider,
+            api_key,
+            &model,
+            crate::adaptive::house_user_message(transcription),
+            Some(crate::adaptive::HOUSE_PROMPT.to_string()),
+            None,
+            disable_reasoning,
+        )
+        .await
+        {
+            Ok(Some(content)) => PostProcessOutcome::Done(crate::adaptive::finish_rewrite(
+                &strip_invisible_chars(strip_think_block(&content)),
+            )),
+            Ok(None) => PostProcessOutcome::Failed,
+            Err(e) => {
+                warn!("Rewrite failed for provider '{}': {}", provider.id, e);
+                PostProcessOutcome::Failed
+            }
+        };
+    }
 
     if provider.supports_structured_output {
         debug!("Using structured outputs for provider '{}'", provider.id);
@@ -468,25 +506,43 @@ pub(crate) async fn process_transcription_output(
 
     if post_process {
         // A reply that's blank once cleaned is no better than none.
-        let outcome = match tokio::time::timeout(
-            POST_PROCESS_TIMEOUT,
-            post_process_transcription(&settings, &final_text),
-        )
-        .await
-        {
-            Ok(PostProcessOutcome::Done(text)) => non_blank_post_processed_text(text)
-                .map_or(PostProcessOutcome::Failed, PostProcessOutcome::Done),
-            Ok(outcome) => outcome,
-            Err(_) => {
-                warn!(
-                    "Post-processing timed out after {:?}; pasting the original transcription",
-                    POST_PROCESS_TIMEOUT
-                );
-                PostProcessOutcome::Failed
-            }
-        };
+        let timeout = Duration::from_secs(settings.post_process_timeout_secs.max(1))
+            .min(POST_PROCESS_TIMEOUT);
+        let outcome =
+            match tokio::time::timeout(timeout, post_process_transcription(&settings, &final_text))
+                .await
+            {
+                Ok(PostProcessOutcome::Done(text)) => {
+                    non_blank_post_processed_text(text).map_or(PostProcessOutcome::Failed, |text| {
+                        // §6 guard 3: a verifiably anomalous rewrite falls back.
+                        // House rewrite only: a user prompt may translate or summarize.
+                        let house = settings.post_process_selected_prompt_id.as_deref()
+                            == Some(crate::adaptive::HOUSE_PROMPT_ID);
+                        match house
+                            .then(|| crate::adaptive::output_anomaly(&final_text, &text))
+                            .flatten()
+                        {
+                            Some(anomaly) => {
+                                warn!(
+                                    "Rewrite rejected ({anomaly:?}); using the cleaned transcript"
+                                );
+                                PostProcessOutcome::Rejected
+                            }
+                            None => PostProcessOutcome::Done(text),
+                        }
+                    })
+                }
+                Ok(outcome) => outcome,
+                Err(_) => {
+                    warn!(
+                        "Post-processing timed out after {:?}; pasting the original transcription",
+                        timeout
+                    );
+                    PostProcessOutcome::Failed
+                }
+            };
         match outcome {
-            PostProcessOutcome::Skipped => {}
+            PostProcessOutcome::Skipped | PostProcessOutcome::Rejected => {}
             PostProcessOutcome::Failed => post_process_failed = true,
             PostProcessOutcome::Done(processed_text) => {
                 post_processed_text = Some(processed_text.clone());
@@ -703,8 +759,8 @@ impl ShortcutAction for TranscribeAction {
         app.state::<Arc<AudioRecordingManager>>()
             .invalidate_recording_readiness();
 
-        // Unregister the cancel shortcut when transcription stops
-        shortcut::unregister_cancel_shortcut(app);
+        // Handy Adaptive (F03/S48): Escape stays armed while the dictation is
+        // processed; FinishGuard disarms it once the pipeline is done.
 
         let stop_time = Instant::now();
         debug!("TranscribeAction::stop called for binding: {}", binding_id);
