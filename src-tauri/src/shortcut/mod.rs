@@ -1006,6 +1006,15 @@ pub fn change_learning_enabled_setting(app: AppHandle, enabled: bool) -> Result<
     Ok(())
 }
 
+#[tauri::command]
+#[specta::specta]
+pub fn change_styles_setting(app: AppHandle, styles: crate::context::Styles) -> Result<(), String> {
+    let mut settings = settings::get_settings(&app);
+    settings.styles = styles;
+    settings::write_settings(&app, settings);
+    Ok(())
+}
+
 fn clean_list(items: Vec<String>) -> Vec<String> {
     items
         .into_iter()

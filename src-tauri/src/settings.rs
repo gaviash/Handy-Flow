@@ -423,6 +423,9 @@ pub struct AppSettings {
     pub context_excluded_apps: Vec<String>,
     #[serde(default = "default_context_excluded_domains")]
     pub context_excluded_domains: Vec<String>,
+    /// F58: tone per style category, effective from the first dictation.
+    #[serde(default)]
+    pub styles: crate::context::Styles,
     /// F97: learn corrected names and terms from the user's edits.
     #[serde(default = "default_true")]
     pub learning_enabled: bool,
@@ -1125,6 +1128,7 @@ pub fn get_default_settings() -> AppSettings {
         context_excluded_apps: default_context_excluded_apps(),
         context_excluded_domains: default_context_excluded_domains(),
         learning_enabled: true,
+        styles: crate::context::Styles::default(),
         bindings,
         shortcut_activation: ShortcutActivation::default(),
         hold_threshold_ms: default_hold_threshold_ms(),

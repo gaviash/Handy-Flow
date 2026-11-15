@@ -737,6 +737,23 @@
           "export": "Export",
           "confirmClear": "Clear all learned words?"
         }
+      },
+      "styles": {
+        "title": "Styles",
+        "description": "How the rewrite sounds in each kind of app. Casual drops the final period, very casual writes everything in lowercase, excited ends with an exclamation mark.",
+        "categories": {
+          "email": "Email",
+          "work": "Work Messaging",
+          "personal": "Personal Messaging",
+          "other": "Other Apps"
+        },
+        "tones": {
+          "formal": "Formal",
+          "casual": "Casual",
+          "very_casual": "Very Casual",
+          "excited": "Excited",
+          "default": "Default"
+        }
       }
     },
     "history": {
