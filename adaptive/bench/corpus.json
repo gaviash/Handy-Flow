@@ -198,5 +198,10 @@
     "id": "CT08",
     "lang": "fr",
     "text": "Mon adresse."
+  },
+  {
+    "id": "CT09",
+    "lang": "fr",
+    "text": "Rends ce texte plus formel."
   }
 ]
