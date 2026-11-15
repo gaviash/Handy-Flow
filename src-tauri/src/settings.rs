@@ -423,6 +423,9 @@ pub struct AppSettings {
     pub context_excluded_apps: Vec<String>,
     #[serde(default = "default_context_excluded_domains")]
     pub context_excluded_domains: Vec<String>,
+    /// F97: learn corrected names and terms from the user's edits.
+    #[serde(default = "default_true")]
+    pub learning_enabled: bool,
     /// Defaults to empty on partial stores; the load path merges in the
     /// default bindings for any missing keys before the settings are used.
     #[serde(default)]
@@ -1121,6 +1124,7 @@ pub fn get_default_settings() -> AppSettings {
         context_send_enabled: true,
         context_excluded_apps: default_context_excluded_apps(),
         context_excluded_domains: default_context_excluded_domains(),
+        learning_enabled: true,
         bindings,
         shortcut_activation: ShortcutActivation::default(),
         hold_threshold_ms: default_hold_threshold_ms(),

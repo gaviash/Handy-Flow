@@ -569,7 +569,7 @@ pub fn extract_terms(texts: &[String], title: &str, code: bool, names: &[String]
             let word = tok.trim_matches(|c: char| ",;:!?()[]{}«»\"'“”".contains(c));
             let word = word
                 .strip_suffix('.')
-                .filter(|w| !is_identifier(tok.trim_end_matches([',', ';', ':'])))
+                .filter(|_| !is_identifier(tok.trim_end_matches([',', ';', ':'])))
                 .unwrap_or(word);
             let clean = !word.contains('@') && !word.contains("://") && word.chars().count() >= 2;
             let next_capital = raw
@@ -653,6 +653,34 @@ pub fn get_last_context_report() -> ContextReport {
 #[cfg(windows)]
 pub fn capture(read_context: bool, apps: &[String], domains: &[String]) -> Capture {
     windows::capture(read_context, apps, domains)
+}
+
+/// Last `n` characters of `s`.
+pub fn tail_chars(s: &str, n: usize) -> String {
+    let count = s.chars().count();
+    s.chars().skip(count.saturating_sub(n)).collect()
+}
+
+/// F80: keeps the focused field to read it again during the observation.
+#[cfg(windows)]
+pub fn watch_focused() -> bool {
+    windows::watch_focused()
+}
+
+/// The watched field's whole text, or `None` once it can't be read.
+#[cfg(windows)]
+pub fn read_watched() -> Option<String> {
+    windows::read_watched()
+}
+
+#[cfg(not(windows))]
+pub fn watch_focused() -> bool {
+    false
+}
+
+#[cfg(not(windows))]
+pub fn read_watched() -> Option<String> {
+    None
 }
 
 #[cfg(not(windows))]

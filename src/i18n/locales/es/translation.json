@@ -720,6 +720,23 @@
           "excluded": "Excluded app or site: no context was read or sent.",
           "nothingSent": "Nothing was sent to the LLM."
         }
+      },
+      "learning": {
+        "title": "Learning",
+        "toggle": {
+          "label": "Learn from My Corrections",
+          "description": "After a dictation, Handy watches the pasted text for a minute and remembers the names and terms you correct. Only the corrected words are kept, encrypted with your Windows account."
+        },
+        "words": {
+          "label": "Learned Words",
+          "description": "Spellings Handy uses in your next dictations.",
+          "empty": "Nothing learned yet.",
+          "heard": "heard as {{heard}}",
+          "delete": "Delete",
+          "clear": "Clear All",
+          "export": "Export",
+          "confirmClear": "Clear all learned words?"
+        }
       }
     },
     "history": {

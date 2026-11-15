@@ -189,6 +189,31 @@ async changeContextExcludedDomainsSetting(domains: string[]) : Promise<Result<nu
     else return { status: "error", error: e  as any };
 }
 },
+async changeLearningEnabledSetting(enabled: boolean) : Promise<Result<null, string>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("change_learning_enabled_setting", { enabled }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+async getLearnedWords() : Promise<Learned[]> {
+    return await TAURI_INVOKE("get_learned_words");
+},
+async deleteLearnedWord(term: string) : Promise<void> {
+    await TAURI_INVOKE("delete_learned_word", { term });
+},
+async clearLearnedWords() : Promise<void> {
+    await TAURI_INVOKE("clear_learned_words");
+},
+async exportLearnedWords(path: string) : Promise<Result<null, string>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("export_learned_words", { path }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
 async getLastContextReport() : Promise<ContextReport> {
     return await TAURI_INVOKE("get_last_context_report");
 },
@@ -1176,6 +1201,10 @@ context_send_enabled?: boolean;
  */
 context_excluded_apps?: string[]; context_excluded_domains?: string[]; 
 /**
+ * F97: learn corrected names and terms from the user's edits.
+ */
+learning_enabled?: boolean; 
+/**
  * Defaults to empty on partial stores; the load path merges in the
  * default bindings for any missing keys before the settings are used.
  */
@@ -1425,6 +1454,7 @@ export type Content = "email" | "work_chat" | "personal_chat" | "ai" | "document
 export type Style = "work" | "email" | "personal" | "other"
 export type Field = { before: string; after: string; selection: string; caret_known: boolean }
 export type Capture = { process: string; title: string; host: string | null; content: Content | null; terminal: boolean; sensitive: boolean; excluded: boolean; field: Field | null; names: string[]; page_chars: number }
+export type Learned = { term: string; heard: string; count: number; last_seen: number }
 export type ContextReport = { capture: Capture | null; sent: string | null }
 export type NoticeCode = "TranscriptionFailed" | "PasteFailed" | "PasteBlockedElevated" | "PasteSkippedExcluded" | "NoMicrophone" | "MicrophoneSilent" | "MicPermissionDenied" | "RecordingFailed" | "ModelLoadFailed" | "NoModelSelected" | "PostProcessFailed" | "FileTranscriptionFailed" | "FilePostProcessFailed"
 export type NoticeLevel = 

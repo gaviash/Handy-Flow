@@ -643,6 +643,9 @@ impl ShortcutAction for TranscribeAction {
             }
         }
 
+        // F98: a new dictation closes the previous observation, which learns
+        // before this dictation's rewrite.
+        crate::learning::end_observation();
         let binding_id = binding_id.to_string();
         RECORDING_SESSION.fetch_add(1, Ordering::SeqCst);
         let tray_started = Instant::now();
@@ -954,9 +957,17 @@ impl ShortcutAction for TranscribeAction {
                                 .context_send_enabled
                                 .then(|| crate::context::llm_context(&capture))
                                 .flatten();
-                            // The user's custom words are spellings to respect too.
+                            // The user's custom words and learned spellings are
+                            // spellings to respect too.
                             if let Some(c) = llm_context.as_mut() {
-                                for word in &ctx_settings.custom_words {
+                                for word in ctx_settings
+                                    .custom_words
+                                    .iter()
+                                    .cloned()
+                                    .chain(crate::learning::terms(&ah))
+                                    .collect::<Vec<_>>()
+                                    .iter()
+                                {
                                     if !c.terms.contains(word) {
                                         c.terms.push(word.clone());
                                     }
@@ -1044,6 +1055,11 @@ impl ShortcutAction for TranscribeAction {
                                 let paste_time = Instant::now();
                                 let post_process_failed = processed.post_process_failed;
                                 let rm_for_paste = Arc::clone(&rm);
+                                // F80: the pasted text is watched for the user's corrections.
+                                let observed = field
+                                    .clone()
+                                    .filter(|_| !sensitive && !excluded && !terminal)
+                                    .map(|f| (f, final_text.clone()));
                                 // Taken before the paste thread exists, and so
                                 // before the next session can start.
                                 let session = RECORDING_SESSION.load(Ordering::SeqCst);
@@ -1090,6 +1106,9 @@ impl ShortcutAction for TranscribeAction {
                                                     "Text pasted successfully in {:?}",
                                                     paste_time.elapsed()
                                                 );
+                                                if let Some((f, text)) = &observed {
+                                                    crate::learning::observe(&ah_clone, f, text);
+                                                }
                                                 // Leave a newer session's notice alone.
                                                 if owns_ui() {
                                                     notices::clear(
