@@ -158,5 +158,25 @@
     "id": "S27t",
     "lang": "en",
     "text": "Write a Python function that reverses a string."
+  },
+  {
+    "id": "CT01",
+    "lang": "fr",
+    "text": "test"
+  },
+  {
+    "id": "CT02",
+    "lang": "fr",
+    "text": "Voici mon message de test."
+  },
+  {
+    "id": "CT03",
+    "lang": "fr",
+    "text": "Bonjour Bérénice, merci pour la relecture du plan de migration."
+  },
+  {
+    "id": "CT04",
+    "lang": "fr",
+    "text": "Merci pour le compte rendu, je regarde ça demain matin."
   }
 ]
