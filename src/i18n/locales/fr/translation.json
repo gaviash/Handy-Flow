@@ -348,6 +348,26 @@
           "transcribe_with_post_process": {
             "name": "Raccourci de post-traitement",
             "description": "Facultatif : Un raccourci dédié qui applique toujours le post-traitement IA à votre transcription."
+          },
+          "polish": {
+            "name": "Polish",
+            "description": "Sélectionnez un texte puis appuyez sur ce raccourci : le texte est amélioré sur place. Annulez avec Ctrl+Z."
+          },
+          "instruct": {
+            "name": "Instruction vocale",
+            "description": "Sélectionnez un texte, maintenez ce raccourci et dites quoi faire (« rends-le plus formel ») : le texte est remplacé."
+          },
+          "transform_1": {
+            "name": "Transformation 1",
+            "description": "Applique la première transformation enregistrée au texte sélectionné."
+          },
+          "transform_2": {
+            "name": "Transformation 2",
+            "description": "Applique la deuxième transformation enregistrée au texte sélectionné."
+          },
+          "transform_3": {
+            "name": "Transformation 3",
+            "description": "Applique la troisième transformation enregistrée au texte sélectionné."
           }
         },
         "errors": {
@@ -767,6 +787,13 @@
         "trigger": "Déclencheur",
         "text": "Texte à insérer",
         "add": "Ajouter un snippet"
+      },
+      "transforms": {
+        "title": "Transformer le texte sélectionné",
+        "saved": "Transformations enregistrées",
+        "savedDescription": "Chacune a son raccourci ci-dessus. Donnez-lui un nom et dites ce qu'elle fait.",
+        "name": "Nom",
+        "instruction": "Consigne"
       }
     },
     "history": {
@@ -795,7 +822,11 @@
       "showMore": "Afficher plus",
       "showLess": "Afficher moins",
       "dropTitle": "Déposez pour transcrire",
-      "dropDescription": "Il apparaîtra dans l'historique."
+      "dropDescription": "Il apparaîtra dans l'historique.",
+      "stats": {
+        "title": "30 derniers jours : {{dictations}} dictées, {{words}} mots, {{learned}} mots appris",
+        "apps": "Les plus utilisées : {{apps}}"
+      }
     },
     "debug": {
       "title": "Débogage",
@@ -1039,7 +1070,9 @@
     "filePostProcessFailedTitle": "Transcrit sans post-traitement",
     "filePostProcessFailed": "Le post-traitement n'a pas abouti, la transcription a donc été enregistrée telle quelle.",
     "fileTranscriptionFailedTitle": "Échec de la transcription du fichier",
-    "transcriptionFailedTitle": "Échec de la transcription"
+    "transcriptionFailedTitle": "Échec de la transcription",
+    "selectionUnavailableTitle": "Sélectionnez d'abord un texte",
+    "selectionUnavailable": "Polish et les instructions vocales modifient le texte sélectionné (8 000 caractères au plus). Rien n'a été modifié."
   },
   "notices": {
     "errorOne": "{{n}} erreur",

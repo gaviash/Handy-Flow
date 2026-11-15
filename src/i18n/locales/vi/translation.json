@@ -348,6 +348,26 @@
           "transcribe_with_post_process": {
             "name": "Phím tắt xử lý sau",
             "description": "Tùy chọn: Phím tắt chuyên dụng luôn áp dụng xử lý sau bằng AI cho bản chuyển đổi của bạn."
+          },
+          "polish": {
+            "name": "Polish",
+            "description": "Select text, then press this shortcut: the text is improved in place. Undo with Ctrl+Z."
+          },
+          "instruct": {
+            "name": "Voice Instruction",
+            "description": "Select text, hold this shortcut and say what to do (\"make it more formal\"): the text is replaced."
+          },
+          "transform_1": {
+            "name": "Transformation 1",
+            "description": "Applies the first saved transformation to the selected text."
+          },
+          "transform_2": {
+            "name": "Transformation 2",
+            "description": "Applies the second saved transformation to the selected text."
+          },
+          "transform_3": {
+            "name": "Transformation 3",
+            "description": "Applies the third saved transformation to the selected text."
           }
         },
         "errors": {
@@ -767,6 +787,13 @@
         "trigger": "Trigger",
         "text": "Text to insert",
         "add": "Add Snippet"
+      },
+      "transforms": {
+        "title": "Transform Selected Text",
+        "saved": "Saved Transformations",
+        "savedDescription": "Each one has its own shortcut above. Give it a name and say what it does.",
+        "name": "Name",
+        "instruction": "Instruction"
       }
     },
     "history": {
@@ -795,7 +822,11 @@
       "showMore": "Xem thêm",
       "showLess": "Thu gọn",
       "dropTitle": "Thả để chép lời",
-      "dropDescription": "Nó sẽ xuất hiện trong Lịch sử."
+      "dropDescription": "Nó sẽ xuất hiện trong Lịch sử.",
+      "stats": {
+        "title": "Last 30 days: {{dictations}} dictations, {{words}} words, {{learned}} learned words",
+        "apps": "Most used: {{apps}}"
+      }
     },
     "debug": {
       "title": "Gỡ lỗi",
@@ -1039,7 +1070,9 @@
     "filePostProcessFailedTitle": "Đã chép lời không qua xử lý sau",
     "filePostProcessFailed": "Xử lý sau chưa hoàn tất nên bản chép lời được lưu nguyên trạng.",
     "fileTranscriptionFailedTitle": "Phiên âm tệp thất bại",
-    "transcriptionFailedTitle": "Phiên âm thất bại"
+    "transcriptionFailedTitle": "Phiên âm thất bại",
+    "selectionUnavailableTitle": "Select Some Text First",
+    "selectionUnavailable": "Polish and voice instructions change the selected text (up to 8,000 characters). Nothing was changed."
   },
   "notices": {
     "errorOne": "{{n}} lỗi",

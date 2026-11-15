@@ -348,6 +348,26 @@
           "transcribe_with_post_process": {
             "name": "पोस्ट-प्रोसेसिङ हटकी",
             "description": "वैकल्पिक: तपाईंको ट्रान्सक्रिप्सनमा सधैँ AI पोस्ट-प्रोसेसिङ लागू गर्ने छुट्टै हटकी।"
+          },
+          "polish": {
+            "name": "Polish",
+            "description": "Select text, then press this shortcut: the text is improved in place. Undo with Ctrl+Z."
+          },
+          "instruct": {
+            "name": "Voice Instruction",
+            "description": "Select text, hold this shortcut and say what to do (\"make it more formal\"): the text is replaced."
+          },
+          "transform_1": {
+            "name": "Transformation 1",
+            "description": "Applies the first saved transformation to the selected text."
+          },
+          "transform_2": {
+            "name": "Transformation 2",
+            "description": "Applies the second saved transformation to the selected text."
+          },
+          "transform_3": {
+            "name": "Transformation 3",
+            "description": "Applies the third saved transformation to the selected text."
           }
         },
         "errors": {
@@ -767,6 +787,13 @@
         "trigger": "Trigger",
         "text": "Text to insert",
         "add": "Add Snippet"
+      },
+      "transforms": {
+        "title": "Transform Selected Text",
+        "saved": "Saved Transformations",
+        "savedDescription": "Each one has its own shortcut above. Give it a name and say what it does.",
+        "name": "Name",
+        "instruction": "Instruction"
       }
     },
     "history": {
@@ -795,7 +822,11 @@
       "showMore": "थप देखाउनुहोस्",
       "showLess": "कम देखाउनुहोस्",
       "dropTitle": "ट्रान्सक्राइब गर्न छोड्नुहोस्",
-      "dropDescription": "यो इतिहासमा देखिनेछ।"
+      "dropDescription": "यो इतिहासमा देखिनेछ।",
+      "stats": {
+        "title": "Last 30 days: {{dictations}} dictations, {{words}} words, {{learned}} learned words",
+        "apps": "Most used: {{apps}}"
+      }
     },
     "debug": {
       "title": "डिबग",
@@ -1039,7 +1070,9 @@
     "filePostProcessFailedTitle": "पोस्ट प्रोसेस बिना ट्रान्सक्राइब गरियो",
     "filePostProcessFailed": "पोस्ट प्रोसेस पूरा भएन, त्यसैले ट्रान्सक्रिप्ट जस्तो थियो त्यस्तै सुरक्षित गरियो।",
     "fileTranscriptionFailedTitle": "फाइल ट्रान्सक्रिप्सन गर्न सकिएन",
-    "transcriptionFailedTitle": "ट्रान्सक्रिप्सन गर्न सकिएन"
+    "transcriptionFailedTitle": "ट्रान्सक्रिप्सन गर्न सकिएन",
+    "selectionUnavailableTitle": "Select Some Text First",
+    "selectionUnavailable": "Polish and voice instructions change the selected text (up to 8,000 characters). Nothing was changed."
   },
   "notices": {
     "errorOne": "{{n}} त्रुटि",

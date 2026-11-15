@@ -21,6 +21,10 @@ const NOTICE_DISPLAY: Record<NoticeCode, NoticeDisplay> = {
     title: "errors.pasteBlockedElevatedTitle",
     explanation: (t) => t("errors.pasteBlockedElevated"),
   },
+  SelectionUnavailable: {
+    title: "errors.selectionUnavailableTitle",
+    explanation: (t) => t("errors.selectionUnavailable"),
+  },
   PasteSkippedExcluded: {
     title: "errors.pasteSkippedExcludedTitle",
     explanation: (t) => t("errors.pasteSkippedExcluded"),

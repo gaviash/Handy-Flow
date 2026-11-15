@@ -437,6 +437,33 @@ impl HistoryManager {
         Ok(entry)
     }
 
+    /// Handy Adaptive (F110): dictations, words and top apps in the kept history.
+    pub fn stats(&self) -> Result<(u32, u32, Vec<(String, u32)>)> {
+        let conn = self.get_connection()?;
+        let mut stmt = conn.prepare(
+            "SELECT COALESCE(post_processed_text, transcription_text), app FROM transcription_history WHERE source_name IS NULL AND transcription_text != ''",
+        )?;
+        let rows: Vec<(String, Option<String>)> = stmt
+            .query_map([], |r| Ok((r.get(0)?, r.get(1)?)))?
+            .filter_map(|r| r.ok())
+            .collect();
+        let words = rows
+            .iter()
+            .map(|(t, _)| t.split_whitespace().count() as u32)
+            .sum();
+        let mut apps: Vec<(String, u32)> = Vec::new();
+        for app in rows.iter().filter_map(|(_, a)| a.as_deref()) {
+            let name = app.split(" · ").last().unwrap_or(app).to_string();
+            match apps.iter_mut().find(|(a, _)| *a == name) {
+                Some((_, n)) => *n += 1,
+                None => apps.push((name, 1)),
+            }
+        }
+        apps.sort_by(|a, b| b.1.cmp(&a.1));
+        apps.truncate(5);
+        Ok((rows.len() as u32, words, apps))
+    }
+
     /// Handy Adaptive (F109): records where a dictation went.
     pub fn set_entry_app(&self, mut entry: HistoryEntry, app: String) -> Result<()> {
         self.get_connection()?.execute(

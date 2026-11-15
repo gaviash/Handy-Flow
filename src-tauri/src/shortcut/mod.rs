@@ -1039,6 +1039,18 @@ pub fn change_user_name_setting(app: AppHandle, name: String) -> Result<(), Stri
     Ok(())
 }
 
+#[tauri::command]
+#[specta::specta]
+pub fn change_transforms_setting(
+    app: AppHandle,
+    transforms: Vec<crate::adaptive::Transform>,
+) -> Result<(), String> {
+    let mut settings = settings::get_settings(&app);
+    settings.transforms = transforms;
+    settings::write_settings(&app, settings);
+    Ok(())
+}
+
 fn clean_list(items: Vec<String>) -> Vec<String> {
     items
         .into_iter()

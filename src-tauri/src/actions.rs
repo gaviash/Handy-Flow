@@ -142,6 +142,109 @@ pub trait ShortcutAction: Send + Sync {
 // Transcribe Action
 struct TranscribeAction {
     post_process: bool,
+    /// Handy Adaptive (F123): the speech is an instruction for the selection.
+    instruct: bool,
+}
+
+/// F121–F123: applies `instruction` to `text` with the rewrite provider.
+async fn transform_text(settings: &AppSettings, instruction: &str, text: &str) -> Option<String> {
+    let provider = settings.active_post_process_provider().cloned()?;
+    let model = settings
+        .post_process_models
+        .get(&provider.id)
+        .cloned()
+        .unwrap_or_default();
+    let key = settings
+        .post_process_api_keys
+        .get(&provider.id)
+        .cloned()
+        .unwrap_or_default();
+    let disable_reasoning = matches!(provider.id.as_str(), "custom" | "openrouter");
+    let call = crate::llm_client::send_chat_completion_with_schema(
+        &provider,
+        key,
+        &model,
+        crate::adaptive::transform_user_message(instruction, text),
+        Some(crate::adaptive::TRANSFORM_PROMPT.to_string()),
+        None,
+        disable_reasoning,
+    );
+    match tokio::time::timeout(Duration::from_secs(20), call).await {
+        Ok(Ok(Some(out))) => {
+            non_blank_post_processed_text(strip_invisible_chars(strip_think_block(&out)))
+        }
+        Ok(Err(e)) => {
+            warn!("Transformation failed: {e}");
+            None
+        }
+        _ => None,
+    }
+}
+
+/// The selection a transformation may replace, or the reason it can't (F121).
+fn transformable_selection(capture: &crate::context::Capture) -> Option<String> {
+    let selection = capture.field.as_ref()?.selection.clone();
+    let ok = !capture.sensitive
+        && !capture.excluded
+        && !selection.trim().is_empty()
+        && selection.chars().count() <= crate::context::SELECTION_MAX;
+    ok.then_some(selection)
+}
+
+/// F121/F122: Polish or a saved transformation of the selected text, on a key press.
+struct TransformAction {
+    /// `None`: Polish; `Some(i)`: saved transformation `i` (0-based).
+    slot: Option<usize>,
+}
+
+impl ShortcutAction for TransformAction {
+    fn start(&self, app: &AppHandle, _binding_id: &str, _shortcut_str: &str) {
+        let (app, slot) = (app.clone(), self.slot);
+        std::thread::spawn(move || {
+            let settings = get_settings(&app);
+            let instruction = match slot {
+                None => crate::adaptive::POLISH_INSTRUCTION.to_string(),
+                Some(i) => match settings.transforms.get(i) {
+                    Some(t) if !t.instruction.trim().is_empty() => t.instruction.clone(),
+                    _ => return,
+                },
+            };
+            let capture = crate::context::capture(
+                true,
+                &settings.context_excluded_apps,
+                &settings.context_excluded_domains,
+            );
+            let Some(selection) = transformable_selection(&capture) else {
+                notices::raise(
+                    &app,
+                    Notice::new(NoticeCode::SelectionUnavailable, NoticeSource::Dictation),
+                );
+                return;
+            };
+            show_processing_overlay(&app);
+            let result =
+                tauri::async_runtime::block_on(transform_text(&settings, &instruction, &selection));
+            match result {
+                // Pasting over the selection replaces it; the app's undo reverts it.
+                Some(text) => match utils::paste(text, app.clone()) {
+                    Ok(_) => utils::hide_recording_overlay(&app),
+                    Err(e) => {
+                        error!("Failed to paste the transformation: {e}");
+                        notices::raise(
+                            &app,
+                            Notice::new(NoticeCode::PasteFailed, NoticeSource::Dictation),
+                        );
+                    }
+                },
+                None => notices::raise(
+                    &app,
+                    Notice::new(NoticeCode::PostProcessFailed, NoticeSource::Dictation),
+                ),
+            }
+        });
+    }
+
+    fn stop(&self, _app: &AppHandle, _binding_id: &str, _shortcut_str: &str) {}
 }
 
 /// Field name for structured output JSON schema
@@ -846,6 +949,7 @@ impl ShortcutAction for TranscribeAction {
 
         let binding_id = binding_id.to_string(); // Clone binding_id for the async task
         let post_process = self.post_process;
+        let instruct = self.instruct;
         let cancel_generation = rm.cancel_generation();
 
         tauri::async_runtime::spawn(async move {
@@ -1010,10 +1114,54 @@ impl ShortcutAction for TranscribeAction {
                                     show_processing_overlay(&ah);
                                 }
                             }
+                            // F123: a spoken instruction transforms the selection; nothing
+                            // else is pasted, and the result is not joined or observed.
+                            let (field, instruct_result) = if instruct {
+                                let Some(selection) =
+                                    field.as_ref().map(|f| f.selection.clone()).filter(|s| {
+                                        !sensitive
+                                            && !excluded
+                                            && !s.trim().is_empty()
+                                            && s.chars().count() <= crate::context::SELECTION_MAX
+                                    })
+                                else {
+                                    notices::raise(
+                                        &ah,
+                                        Notice::new(
+                                            NoticeCode::SelectionUnavailable,
+                                            NoticeSource::Dictation,
+                                        ),
+                                    );
+                                    set_tray_state(&ah, TrayIconState::Idle);
+                                    return;
+                                };
+                                show_processing_overlay(&ah);
+                                (
+                                    None,
+                                    transform_text(&ctx_settings, &transcription, &selection).await,
+                                )
+                            } else {
+                                (field, None)
+                            };
+                            if instruct && instruct_result.is_none() {
+                                notices::raise(
+                                    &ah,
+                                    Notice::new(
+                                        NoticeCode::PostProcessFailed,
+                                        NoticeSource::Dictation,
+                                    ),
+                                );
+                                set_tray_state(&ah, TrayIconState::Idle);
+                                return;
+                            }
+                            let post_process = post_process && !instruct;
                             let Some(processed) = complete_unless_cancelled(
                                 process_transcription_output(
                                     &ah,
-                                    snippet.as_deref().unwrap_or(&transcription),
+                                    instruct_result
+                                        .as_deref()
+                                        .or(snippet.as_deref())
+                                        .unwrap_or(&transcription),
                                     post_process,
                                     llm_context.as_ref(),
                                 ),
@@ -1313,12 +1461,34 @@ pub static ACTION_MAP: Lazy<HashMap<String, Arc<dyn ShortcutAction>>> = Lazy::ne
         "transcribe".to_string(),
         Arc::new(TranscribeAction {
             post_process: false,
+            instruct: false,
         }) as Arc<dyn ShortcutAction>,
     );
     map.insert(
         "transcribe_with_post_process".to_string(),
-        Arc::new(TranscribeAction { post_process: true }) as Arc<dyn ShortcutAction>,
+        Arc::new(TranscribeAction {
+            post_process: true,
+            instruct: false,
+        }) as Arc<dyn ShortcutAction>,
     );
+    // Handy Adaptive (F121–F123).
+    map.insert(
+        "instruct".to_string(),
+        Arc::new(TranscribeAction {
+            post_process: true,
+            instruct: true,
+        }) as Arc<dyn ShortcutAction>,
+    );
+    map.insert(
+        "polish".to_string(),
+        Arc::new(TransformAction { slot: None }) as Arc<dyn ShortcutAction>,
+    );
+    for i in 0..3 {
+        map.insert(
+            format!("transform_{}", i + 1),
+            Arc::new(TransformAction { slot: Some(i) }) as Arc<dyn ShortcutAction>,
+        );
+    }
     map.insert(
         "cancel".to_string(),
         Arc::new(CancelAction) as Arc<dyn ShortcutAction>,

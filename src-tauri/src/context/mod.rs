@@ -409,6 +409,9 @@ pub struct LlmContext {
     pub terms: Vec<String>,
 }
 
+/// Longest selection Polish and voice instructions transform (F121).
+pub const SELECTION_MAX: usize = 8_000;
+
 const BEFORE_CHARS: usize = 300;
 const AFTER_CHARS: usize = 150;
 const SELECTION_CHARS: usize = 300;

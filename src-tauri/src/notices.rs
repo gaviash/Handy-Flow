@@ -44,6 +44,8 @@ pub enum NoticeCode {
     PasteBlockedElevated,
     /// Handy Adaptive (F33): the destination is an excluded app or site.
     PasteSkippedExcluded,
+    /// Handy Adaptive (F121–F123): no editable selection to transform.
+    SelectionUnavailable,
     NoMicrophone,
     MicrophoneSilent,
     MicPermissionDenied,
@@ -68,9 +70,10 @@ impl NoticeCode {
             | Self::ModelLoadFailed
             | Self::NoModelSelected
             | Self::FileTranscriptionFailed => NoticeLevel::Error,
-            Self::PostProcessFailed | Self::FilePostProcessFailed | Self::PasteSkippedExcluded => {
-                NoticeLevel::Warning
-            }
+            Self::PostProcessFailed
+            | Self::FilePostProcessFailed
+            | Self::PasteSkippedExcluded
+            | Self::SelectionUnavailable => NoticeLevel::Warning,
         }
     }
 
@@ -81,6 +84,7 @@ impl NoticeCode {
             Self::PasteFailed => &strings.paste_failed_title,
             Self::PasteBlockedElevated => &strings.paste_blocked_elevated_title,
             Self::PasteSkippedExcluded => &strings.paste_skipped_excluded_title,
+            Self::SelectionUnavailable => &strings.selection_unavailable_title,
             Self::NoMicrophone => &strings.no_input_device_title,
             Self::MicrophoneSilent => &strings.microphone_silent_title,
             Self::MicPermissionDenied => &strings.mic_permission_denied_title,

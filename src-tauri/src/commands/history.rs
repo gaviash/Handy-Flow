@@ -143,3 +143,28 @@ pub async fn update_recording_retention_period(
 
     Ok(())
 }
+
+/// Handy Adaptive (F110): simple statistics over the kept history.
+#[derive(serde::Serialize, specta::Type)]
+pub struct DictationStats {
+    pub dictations: u32,
+    pub words: u32,
+    /// Most used apps, with their dictation count.
+    pub top_apps: Vec<(String, u32)>,
+    pub learned_words: u32,
+}
+
+#[tauri::command]
+#[specta::specta]
+pub fn get_dictation_stats(
+    app: AppHandle,
+    history_manager: State<'_, Arc<HistoryManager>>,
+) -> Result<DictationStats, String> {
+    let (dictations, words, top_apps) = history_manager.stats().map_err(|e| e.to_string())?;
+    Ok(DictationStats {
+        dictations,
+        words,
+        top_apps,
+        learned_words: crate::learning::count(&app) as u32,
+    })
+}

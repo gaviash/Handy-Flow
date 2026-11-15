@@ -238,6 +238,22 @@ async changeUserNameSetting(name: string) : Promise<Result<null, string>> {
     else return { status: "error", error: e  as any };
 }
 },
+async changeTransformsSetting(transforms: Transform[]) : Promise<Result<null, string>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("change_transforms_setting", { transforms }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+async getDictationStats() : Promise<Result<DictationStats, string>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("get_dictation_stats") };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
 async getLastContextReport() : Promise<ContextReport> {
     return await TAURI_INVOKE("get_last_context_report");
 },
@@ -1239,7 +1255,11 @@ snippets?: Snippet[];
 /**
  * F63: the user's own name, always a spelling to respect.
  */
-user_name?: string; 
+user_name?: string;
+/**
+ * F122: saved transformations, one shortcut each.
+ */
+transforms?: Transform[]; 
 /**
  * Defaults to empty on partial stores; the load path merges in the
  * default bindings for any missing keys before the settings are used.
@@ -1490,12 +1510,14 @@ export type Content = "email" | "work_chat" | "personal_chat" | "ai" | "document
 export type Style = "work" | "email" | "personal" | "other"
 export type Field = { before: string; after: string; selection: string; caret_known: boolean }
 export type Capture = { process: string; title: string; host: string | null; content: Content | null; terminal: boolean; sensitive: boolean; excluded: boolean; field: Field | null; names: string[]; page_chars: number }
+export type Transform = { name: string; instruction: string }
+export type DictationStats = { dictations: number; words: number; top_apps: [string, number][]; learned_words: number }
 export type Snippet = { trigger: string; text: string }
 export type Tone = "formal" | "casual" | "very_casual" | "excited" | "default"
 export type Styles = { work: Tone; email: Tone; personal: Tone; other: Tone }
 export type Learned = { term: string; heard: string; count: number; last_seen: number }
 export type ContextReport = { capture: Capture | null; sent: string | null }
-export type NoticeCode = "TranscriptionFailed" | "PasteFailed" | "PasteBlockedElevated" | "PasteSkippedExcluded" | "NoMicrophone" | "MicrophoneSilent" | "MicPermissionDenied" | "RecordingFailed" | "ModelLoadFailed" | "NoModelSelected" | "PostProcessFailed" | "FileTranscriptionFailed" | "FilePostProcessFailed"
+export type NoticeCode = "TranscriptionFailed" | "PasteFailed" | "PasteBlockedElevated" | "PasteSkippedExcluded" | "SelectionUnavailable" | "NoMicrophone" | "MicrophoneSilent" | "MicPermissionDenied" | "RecordingFailed" | "ModelLoadFailed" | "NoModelSelected" | "PostProcessFailed" | "FileTranscriptionFailed" | "FilePostProcessFailed"
 export type NoticeLevel = 
 /**
  * Nothing came out, or Handy can't do its job.

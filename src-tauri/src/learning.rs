@@ -326,6 +326,10 @@ fn learn(app: &AppHandle, inserted: &str, fin: &str) {
     }
 }
 
+pub fn count(app: &AppHandle) -> usize {
+    with_memory(app, |m| m.len())
+}
+
 #[tauri::command]
 #[specta::specta]
 pub fn get_learned_words(app: AppHandle) -> Vec<Learned> {
