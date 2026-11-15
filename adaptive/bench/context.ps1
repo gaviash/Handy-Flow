@@ -55,11 +55,12 @@ function Open-Page([string]$id) {
   return $w
 }
 function Close-Fg { [HB]::Down(0x11); [HB]::Down(0x57); [HB]::Up(0x57); [HB]::Up(0x11); Start-Sleep -Milliseconds 500 }  # Ctrl+W
-function Start-Pad([string]$name, [string]$text = '') {
+function Start-Pad([string]$name, [string]$text = '', [int]$caret = -1) {
+  if ($caret -lt 0) { $caret = $text.Length }
   Get-Process | Where-Object { $_.Path -like "$PadDir\*" } | Stop-Process -Force -ErrorAction SilentlyContinue; Start-Sleep -Milliseconds 300
   $bin = Join-Path $PadDir "$name.exe"; if (-not (Test-Path $bin)) { Copy-Item $PadSrc $bin }
   $tf = Join-Path $PadDir 'pad.txt'; [IO.File]::WriteAllText($tf, $text, [Text.UTF8Encoding]::new($false))
-  $p = Start-Process $bin -ArgumentList @("Pad-$name", "`"$tf`"", $text.Length, 0) -PassThru
+  $p = Start-Process $bin -ArgumentList @("Pad-$name", "`"$tf`"", $caret, 0) -PassThru
   for ($i = 0; $i -lt 40 -and $p.MainWindowHandle -eq 0; $i++) { Start-Sleep -Milliseconds 100; $p.Refresh() }
   Start-Sleep -Milliseconds 300; if ([HB]::FgPid() -ne $p.Id) { [HB]::Bring($p.MainWindowHandle) | Out-Null; Start-Sleep -Milliseconds 200 }
   return $p
@@ -160,6 +161,22 @@ if (Want 'S21') {
   $pad = Start-Pad 'testpad'; $f = Pad-Field $pad
   Dictate 'CT02'; $next = Wait-Until { Value $f }
   Record 'S21' ($saved -and $next) @{ history_after_release_ms = $done; next_field = (Value $f) }
+  Stop-Process -Id $pad.Id -Force
+}
+if (Want 'S05') {
+  # J02 for real: inserted mid-sentence in an AI app.
+  $pad = Start-Pad 'chatgpt' 'Peux-tu résumer  en trois points courts ?' 16; $f = Pad-Field $pad; $v0 = Value $f
+  Dictate 'CT05'; $ok = Wait-Until { (Value $f) -ne $v0 }; Start-Sleep -Milliseconds 500
+  $v = Value $f
+  Record 'S05' ($v -ceq 'Peux-tu résumer le compte rendu de la réunion budgétaire en trois points courts ?') @{ field = $v }
+  Stop-Process -Id $pad.Id -Force
+}
+if (Want 'GE05') {
+  # Terms read from the field go to the rewrite as spellings.
+  $pad = Start-Pad 'notepad' "Zorblax, Quintavex, Merindor`n"; $f = Pad-Field $pad; $m = Mock-Count
+  Dictate 'CT06'; $ok = Wait-Until { (Value $f).Length -gt 30 }; Start-Sleep -Milliseconds 500
+  $s = (Mock-Since $m) -join "`n"
+  Record 'GE05' ($s -match 'terms: .*Zorblax' -and $s -match 'Quintavex' -and $s -match 'Merindor') @{ sent = $s }
   Stop-Process -Id $pad.Id -Force
 }
 $results | Format-Table id, pass -AutoSize | Out-String | Write-Host
