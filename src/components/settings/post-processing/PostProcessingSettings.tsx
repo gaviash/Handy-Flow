@@ -92,7 +92,7 @@ const PostProcessingSettingsApiComponent: React.FC = () => {
             </SettingContainer>
           )}
 
-          {state.selectedProvider?.id === "custom" && (
+          {state.selectedProvider?.allow_base_url_edit && (
             <SettingContainer
               title={t("settings.postProcessing.api.baseUrl.title")}
               description={t("settings.postProcessing.api.baseUrl.description")}
@@ -183,7 +183,38 @@ const PostProcessingSettingsApiComponent: React.FC = () => {
           </div>
         </SettingContainer>
       )}
+      <FallbackProvider />
     </>
+  );
+};
+
+/** Groq ↔ Cloudflare: who answers when the main provider fails. */
+const FallbackProvider: React.FC = () => {
+  const { t } = useTranslation();
+  const { getSetting, updateSetting } = useSettings();
+  const main = getSetting("post_process_provider_id");
+  const options = [
+    { value: "", label: t("settings.postProcessing.api.fallback.none") },
+    ...(getSetting("post_process_providers") ?? [])
+      .filter((p) => p.id !== main && p.id !== "apple_intelligence")
+      .map((p) => ({ value: p.id, label: p.label })),
+  ];
+  return (
+    <SettingContainer
+      title={t("settings.postProcessing.api.fallback.title")}
+      description={t("settings.postProcessing.api.fallback.description")}
+      descriptionMode="tooltip"
+      layout="horizontal"
+      grouped={true}
+    >
+      <Dropdown
+        options={options}
+        selectedValue={getSetting("post_process_fallback_provider_id") ?? ""}
+        onSelect={(value) =>
+          updateSetting("post_process_fallback_provider_id", value)
+        }
+      />
+    </SettingContainer>
   );
 };
 

@@ -1032,6 +1032,18 @@ pub fn change_snippets_setting(
 
 #[tauri::command]
 #[specta::specta]
+pub fn change_post_process_fallback_provider_setting(
+    app: AppHandle,
+    provider_id: String,
+) -> Result<(), String> {
+    let mut settings = settings::get_settings(&app);
+    settings.post_process_fallback_provider_id = provider_id;
+    settings::write_settings(&app, settings);
+    Ok(())
+}
+
+#[tauri::command]
+#[specta::specta]
 pub fn change_user_name_setting(app: AppHandle, name: String) -> Result<(), String> {
     let mut settings = settings::get_settings(&app);
     settings.user_name = name.trim().to_string();
@@ -1274,7 +1286,7 @@ pub fn change_post_process_base_url_setting(
         .post_process_provider_mut(&provider_id)
         .expect("Provider looked up above must exist");
 
-    if provider.id != "custom" {
+    if provider.id != "custom" && !provider.allow_base_url_edit {
         return Err(format!(
             "Provider '{}' does not allow editing the base URL",
             label

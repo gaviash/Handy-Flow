@@ -159,26 +159,87 @@ async fn transform_text(settings: &AppSettings, instruction: &str, text: &str) -
         .get(&provider.id)
         .cloned()
         .unwrap_or_default();
-    let disable_reasoning = matches!(provider.id.as_str(), "custom" | "openrouter");
+    let message = crate::adaptive::transform_user_message(instruction, text);
     let call = crate::llm_client::send_chat_completion_with_schema(
         &provider,
         key,
         &model,
-        crate::adaptive::transform_user_message(instruction, text),
+        message.clone(),
         Some(crate::adaptive::TRANSFORM_PROMPT.to_string()),
         None,
-        disable_reasoning,
+        skips_reasoning(&provider.id),
     );
-    match tokio::time::timeout(Duration::from_secs(20), call).await {
-        Ok(Ok(Some(out))) => {
-            non_blank_post_processed_text(strip_invisible_chars(strip_think_block(&out)))
+    let mut reply = tokio::time::timeout(Duration::from_secs(12), call)
+        .await
+        .unwrap_or_else(|_| Err("timed out".into()));
+    if !matches!(&reply, Ok(Some(out)) if !crate::adaptive::is_refusal(text, out)) {
+        warn!(
+            "Transformation failed or refused: {:?}",
+            reply.as_ref().err()
+        );
+        reply = Err("refused".into());
+        let spare = ask_fallback(
+            settings,
+            &provider.id,
+            message,
+            crate::adaptive::TRANSFORM_PROMPT,
+        );
+        if let Ok(Some(r)) = tokio::time::timeout(Duration::from_secs(8), spare).await {
+            reply = r;
         }
-        Ok(Err(e)) => {
-            warn!("Transformation failed: {e}");
-            None
+    }
+    match reply {
+        Ok(Some(out)) if !crate::adaptive::is_refusal(text, &out) => {
+            non_blank_post_processed_text(strip_invisible_chars(strip_think_block(&out)))
         }
         _ => None,
     }
+}
+
+/// Providers asked to skip reasoning: it adds seconds and rarely helps a rewrite.
+fn skips_reasoning(provider_id: &str) -> bool {
+    matches!(provider_id, "custom" | "openrouter" | "cloudflare")
+}
+
+/// Groq ↔ Cloudflare: when the main provider fails, the fallback provider set
+/// in the app answers the same request. None when there's no usable fallback.
+async fn ask_fallback(
+    settings: &AppSettings,
+    failed_id: &str,
+    user: String,
+    system: &str,
+) -> Option<Result<Option<String>, String>> {
+    let id = settings.post_process_fallback_provider_id.as_str();
+    if id.is_empty() || id == failed_id {
+        return None;
+    }
+    let provider = settings.post_process_provider(id)?.clone();
+    let model = settings
+        .post_process_models
+        .get(id)
+        .filter(|m| !m.trim().is_empty())?;
+    let key = settings
+        .post_process_api_keys
+        .get(id)
+        .cloned()
+        .unwrap_or_default();
+    // A local custom server (Ollama) needs no key; a cloud provider does.
+    if key.is_empty() && id != "custom" {
+        return None;
+    }
+    warn!("Main provider '{failed_id}' failed; asking fallback '{id}'");
+    Some(
+        crate::llm_client::send_chat_completion_with_schema(
+            &provider,
+            key,
+            model,
+            user,
+            Some(system.to_string()),
+            None,
+            skips_reasoning(id),
+        )
+        .await,
+    )
 }
 
 /// The selection a transformation may replace, or the reason it can't (F121).
@@ -406,7 +467,7 @@ async fn post_process_transcription(
     // Ask these providers to skip reasoning/thinking — post-processing rarely
     // benefits from it and it adds seconds of latency. llm_client picks the
     // field the endpoint understands and retries without it if rejected.
-    let disable_reasoning = matches!(provider.id.as_str(), "custom" | "openrouter");
+    let disable_reasoning = skips_reasoning(&provider.id);
 
     // Handy Adaptive house prompt: instructions in the system message, the
     // dictation framed as data in the user message, plain-text reply.
@@ -415,35 +476,61 @@ async fn post_process_transcription(
     {
         let message = crate::adaptive::house_user_message(transcription, context);
         crate::context::record_sent(&message);
-        let mut reply = crate::llm_client::send_chat_completion_with_schema(
-            &provider,
-            api_key.clone(),
-            &model,
-            message.clone(),
-            Some(crate::adaptive::HOUSE_PROMPT.to_string()),
-            None,
-            disable_reasoning,
-        )
-        .await;
-        // Groq's free tier caps each model's tokens per day: once 120b is out
-        // of quota, 20b (its own quota) still rewrites better than no rewrite.
-        if model == crate::adaptive::GROQ_MAIN_MODEL
-            && reply.as_ref().is_err_and(|e| e.contains("status 429"))
-        {
-            warn!(
-                "Rewrite model is rate-limited; retrying with {}",
-                crate::adaptive::GROQ_SPARE_MODEL
-            );
-            reply = crate::llm_client::send_chat_completion_with_schema(
+        let primary = async {
+            let mut reply = crate::llm_client::send_chat_completion_with_schema(
                 &provider,
-                api_key,
-                crate::adaptive::GROQ_SPARE_MODEL,
-                message,
+                api_key.clone(),
+                &model,
+                message.clone(),
                 Some(crate::adaptive::HOUSE_PROMPT.to_string()),
                 None,
                 disable_reasoning,
             )
             .await;
+            // Groq's free tier caps each model's tokens per day: once 120b is out
+            // of quota, 20b (its own quota) still rewrites better than no rewrite.
+            if model == crate::adaptive::GROQ_MAIN_MODEL
+                && reply.as_ref().is_err_and(|e| e.contains("status 429"))
+            {
+                warn!(
+                    "Rewrite model is rate-limited; retrying with {}",
+                    crate::adaptive::GROQ_SPARE_MODEL
+                );
+                reply = crate::llm_client::send_chat_completion_with_schema(
+                    &provider,
+                    api_key,
+                    crate::adaptive::GROQ_SPARE_MODEL,
+                    message.clone(),
+                    Some(crate::adaptive::HOUSE_PROMPT.to_string()),
+                    None,
+                    disable_reasoning,
+                )
+                .await;
+            }
+            reply
+        };
+        // Leave the fallback ~3 s of the overall post-processing timeout.
+        let budget =
+            Duration::from_secs(settings.post_process_timeout_secs.saturating_sub(3).max(2));
+        let mut reply = tokio::time::timeout(budget, primary)
+            .await
+            .unwrap_or_else(|_| Err("timed out".into()));
+        if !matches!(reply, Ok(Some(_))) {
+            warn!(
+                "Rewrite failed for provider '{}': {:?}",
+                provider.id,
+                reply.as_ref().err()
+            );
+            if let Some(spare) = ask_fallback(
+                settings,
+                &provider.id,
+                message,
+                crate::adaptive::HOUSE_PROMPT,
+            )
+            .await
+            {
+                reply = spare;
+            }
         }
         return match reply {
             Ok(Some(content)) => {
@@ -1505,7 +1592,7 @@ mod tests {
     use super::{
         complete_unless_cancelled, is_blank_transcription, non_blank_post_processed_text,
         post_process_transcription, should_use_streaming_overlay, strip_invisible_chars,
-        strip_think_block, PostProcessOutcome,
+        strip_think_block, transform_text, PostProcessOutcome,
     };
     use crate::settings::{get_default_settings, AppSettings, OverlayStyle};
     use std::future;
@@ -1537,6 +1624,10 @@ mod tests {
 
     /// Answers one chat completion request with `body`, and returns its URL.
     fn serve_once(body: &'static str) -> String {
+        serve_status("200 OK", body)
+    }
+
+    fn serve_status(status: &'static str, body: &'static str) -> String {
         let listener = TcpListener::bind("127.0.0.1:0").unwrap();
         let address = listener.local_addr().unwrap();
         thread::spawn(move || {
@@ -1544,7 +1635,7 @@ mod tests {
             let mut request = [0; 8192];
             let _ = stream.read(&mut request);
             let response = format!(
-                "HTTP/1.1 200 OK\r\ncontent-type: application/json\r\ncontent-length: {}\r\nconnection: close\r\n\r\n{}",
+                "HTTP/1.1 {status}\r\ncontent-type: application/json\r\ncontent-length: {}\r\nconnection: close\r\n\r\n{}",
                 body.len(),
                 body
             );
@@ -1570,6 +1661,61 @@ mod tests {
         assert_eq!(
             run_post_process(&settings, "hello"),
             PostProcessOutcome::Failed
+        );
+    }
+
+    /// Main provider rate-limited (429); Cloudflare set up as the fallback.
+    fn with_fallback(fallback_body: &'static str) -> AppSettings {
+        let mut settings = post_process_settings(&serve_status(
+            "429 Too Many Requests",
+            r#"{"error":{"message":"rate limit"}}"#,
+        ));
+        let url = serve_once(fallback_body);
+        settings
+            .post_process_provider_mut("cloudflare")
+            .expect("cloudflare is a default provider")
+            .base_url = url;
+        settings
+            .post_process_api_keys
+            .insert("cloudflare".into(), "key".into());
+        settings
+    }
+
+    #[test]
+    fn the_fallback_provider_answers_when_the_main_one_fails() {
+        let settings = with_fallback(r#"{"choices":[{"message":{"content":"Relais OK."}}]}"#);
+        assert_eq!(
+            run_post_process(&settings, "relais ok"),
+            PostProcessOutcome::Done("Relais OK.".to_string())
+        );
+    }
+
+    #[test]
+    fn a_fallback_without_a_key_is_skipped() {
+        let mut settings = with_fallback(r#"{"choices":[{"message":{"content":"x"}}]}"#);
+        settings
+            .post_process_api_keys
+            .insert("cloudflare".into(), String::new());
+        assert_eq!(
+            run_post_process(&settings, "relais ok"),
+            PostProcessOutcome::Failed
+        );
+    }
+
+    #[test]
+    fn a_transformation_falls_back_and_a_refusal_keeps_the_text() {
+        let settings = with_fallback(r#"{"choices":[{"message":{"content":"Texte poli."}}]}"#);
+        assert_eq!(
+            tauri::async_runtime::block_on(transform_text(&settings, "Polis", "texte poli")),
+            Some("Texte poli.".to_string())
+        );
+        let refusal =
+            r#"{"choices":[{"message":{"content":"I'm sorry, but I can't help with that."}}]}"#;
+        let mut settings = post_process_settings(&serve_once(refusal));
+        settings.post_process_fallback_provider_id.clear();
+        assert_eq!(
+            tauri::async_runtime::block_on(transform_text(&settings, "Polis", "texte poli")),
+            None
         );
     }
 

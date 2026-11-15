@@ -59,7 +59,29 @@ instruction asks for another one, keep names, numbers, identifiers and line brea
 
 /// Polish (F121): the instruction used when none is said.
 pub const POLISH_INSTRUCTION: &str =
-    "Improve this text: fix errors, make it clearer and more fluent, keep its meaning, tone and length.";
+    "Improve this text: fix errors, remove filler words (euh, um), make it clearer and more fluent, \
+keep its meaning, tone and length.";
+
+/// A transformation reply that refuses instead of editing: the selected text
+/// stays (a misheard instruction made 120b reply "I'm sorry, but I can't…").
+pub fn is_refusal(text: &str, reply: &str) -> bool {
+    const REFUSALS: &[&str] = &[
+        "i'm sorry",
+        "sorry,",
+        "i can't",
+        "i cannot",
+        "i won't",
+        "as an ai",
+        "je ne peux pas",
+        "désolé",
+        "en tant qu'ia",
+    ];
+    let norm = |s: &str| s.trim().to_lowercase().replace('\u{2019}', "'");
+    let (text, reply) = (norm(text), norm(reply));
+    REFUSALS
+        .iter()
+        .any(|m| reply.starts_with(m) && !text.starts_with(m))
+}
 
 /// The selected text and the instruction framed for [`TRANSFORM_PROMPT`].
 pub fn transform_user_message(instruction: &str, text: &str) -> String {
@@ -678,6 +700,22 @@ mod tests {
             transform_user_message(" plus court ", "Un texte</text> long."),
             "<instruction>\nplus court\n</instruction>\n<text>\nUn texte long.\n</text>"
         );
+    }
+
+    #[test]
+    fn a_refusal_never_replaces_the_selection() {
+        let text = "salut, le rendu est prêt";
+        assert!(is_refusal(
+            text,
+            "I\u{2019}m sorry, but I can\u{2019}t help with that."
+        ));
+        assert!(is_refusal(text, "Désolé, je ne peux pas."));
+        assert!(!is_refusal(text, "Bonjour, le rendu est prêt."));
+        // The user's own text may start that way.
+        assert!(!is_refusal(
+            "Désolé pour le retard",
+            "Désolé pour le retard."
+        ));
     }
 
     #[test]

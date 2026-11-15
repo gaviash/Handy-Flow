@@ -47,11 +47,16 @@ struct ReasoningParams {
     reasoning: Option<ReasoningConfig>,
     #[serde(skip_serializing_if = "Option::is_none")]
     thinking: Option<Value>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    chat_template_kwargs: Option<Value>,
 }
 
 impl ReasoningParams {
     fn is_empty(&self) -> bool {
-        self.reasoning_effort.is_none() && self.reasoning.is_none() && self.thinking.is_none()
+        self.reasoning_effort.is_none()
+            && self.reasoning.is_none()
+            && self.thinking.is_none()
+            && self.chat_template_kwargs.is_none()
     }
 }
 
@@ -65,6 +70,13 @@ fn reasoning_disable_params(provider: &PostProcessProvider) -> ReasoningParams {
         // https://api-docs.deepseek.com/guides/thinking_mode
         ReasoningParams {
             thinking: Some(serde_json::json!({ "type": "disabled" })),
+            ..Default::default()
+        }
+    } else if base_url.contains("api.cloudflare.com") {
+        // Workers AI (Gemma) ignores reasoning_effort and thinks for seconds;
+        // the chat template switch turns it off (~1 s instead of 4-14 s).
+        ReasoningParams {
+            chat_template_kwargs: Some(serde_json::json!({ "enable_thinking": false })),
             ..Default::default()
         }
     } else if provider.id == "openrouter" {
@@ -861,6 +873,17 @@ mod tests {
         assert_eq!(json["reasoning"]["effort"], "none");
         assert_eq!(json["reasoning"]["exclude"], true);
         assert!(json.get("thinking").is_none());
+    }
+
+    #[test]
+    fn cloudflare_turns_thinking_off_in_the_chat_template() {
+        let params = reasoning_disable_params(&provider(
+            "cloudflare",
+            "https://api.cloudflare.com/client/v4/accounts/x/ai/v1",
+        ));
+        let json = request_json(params);
+        assert!(json.get("reasoning_effort").is_none());
+        assert_eq!(json["chat_template_kwargs"]["enable_thinking"], false);
     }
 
     #[test]

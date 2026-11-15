@@ -227,6 +227,8 @@ const settingUpdaters: {
   styles: (value) => commands.changeStylesSetting(value as Styles),
   snippets: (value) => commands.changeSnippetsSetting(value as Snippet[]),
   user_name: (value) => commands.changeUserNameSetting(value as string),
+  post_process_fallback_provider_id: (value) =>
+    commands.changePostProcessFallbackProviderSetting(value as string),
   transforms: (value) => commands.changeTransformsSetting(value as Transform[]),
   learning_enabled: (value) =>
     commands.changeLearningEnabledSetting(value as boolean),

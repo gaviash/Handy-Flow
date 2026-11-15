@@ -686,6 +686,11 @@
           "placeholderWithOptions": "모델 검색 또는 선택",
           "placeholderNoOptions": "모델 이름 입력",
           "refreshModels": "모델 새로고침"
+        },
+        "fallback": {
+          "title": "Fallback Provider",
+          "description": "Answers when the main provider fails (quota reached, error, too slow). To set it up, pick it as the provider above, enter its URL, key and model, then switch back.",
+          "none": "None"
         }
       },
       "prompts": {
