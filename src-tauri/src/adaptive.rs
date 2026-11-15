@@ -214,6 +214,98 @@ pub fn letter_form(text: &str) -> String {
     format!("{},\n\n{rest}", &text[..comma])
 }
 
+/// Lowercase in French: a single-word insertion like "Mercredi." can be
+/// lowered; any other single capitalized word may be a name and is kept.
+const FR_COMMON_NAMES: &[&str] = &[
+    "lundi",
+    "mardi",
+    "mercredi",
+    "jeudi",
+    "vendredi",
+    "samedi",
+    "dimanche",
+    "janvier",
+    "février",
+    "mars",
+    "avril",
+    "mai",
+    "juin",
+    "juillet",
+    "août",
+    "septembre",
+    "octobre",
+    "novembre",
+    "décembre",
+];
+
+/// F70: fits the text to the cursor it is inserted at — spaces, a lowercase
+/// start when it continues a sentence, no final period when the sentence goes
+/// on after it. Only the clear cases; in doubt the text is kept as produced.
+/// Unknown caret: only a leading space (R4). Terminal: spaces only.
+pub fn join_at_cursor(field: &crate::context::Field, text: &str, terminal: bool) -> String {
+    let mut out = text.trim().to_string();
+    if out.is_empty() {
+        return out;
+    }
+    let before = field.before.as_str();
+    let space_before = before
+        .chars()
+        .last()
+        .is_some_and(|c| !c.is_whitespace() && !"([{«\"'/-".contains(c))
+        && !out.starts_with(|c: char| ",.;:!?)]}»".contains(c));
+    if !field.caret_known {
+        return if space_before { format!(" {out}") } else { out };
+    }
+    let after = field.after.as_str();
+    let last = before.trim_end().chars().last();
+    let mid_sentence = last.is_some_and(|c| !".!?…:\n".contains(c));
+    let next = after.trim_start().chars().next();
+    let sentence_goes_on = next.is_some_and(|c| c.is_lowercase() || ",.;:!?)".contains(c));
+
+    if !terminal {
+        if sentence_goes_on && (out.ends_with('.') || out.ends_with('…')) && !out.ends_with("..")
+        {
+            out.pop();
+        }
+        if mid_sentence {
+            out = lower_first_word(&out);
+        }
+    }
+    let space_after = match after.chars().next() {
+        None => out.ends_with(['.', '!', '?', '…']),
+        Some(c) => !c.is_whitespace() && !",.;:!?)]}»(".contains(c),
+    };
+    format!(
+        "{}{out}{}",
+        if space_before { " " } else { "" },
+        if space_after { " " } else { "" }
+    )
+}
+
+/// "Le compte rendu" → "le compte rendu". Kept: acronyms, mixed case, "I",
+/// two capitalized words (a name), and a lone word that may be a name.
+fn lower_first_word(text: &str) -> String {
+    let mut words = text.split(' ');
+    let first = words.next().unwrap_or("");
+    let core: String = first.chars().filter(|c| c.is_alphabetic()).collect();
+    let second_capital = words
+        .next()
+        .and_then(|w| w.chars().next())
+        .is_some_and(char::is_uppercase);
+    let lone = !text.contains(' ');
+    let keep = core.chars().count() < 2 && core != "A" && core != "À"
+        || core.chars().skip(1).any(char::is_uppercase)
+        || second_capital
+        || (lone && !FR_COMMON_NAMES.contains(&core.to_lowercase().as_str()));
+    if keep || !core.starts_with(char::is_uppercase) {
+        return text.to_string();
+    }
+    let mut chars = text.chars();
+    chars
+        .next()
+        .map_or(String::new(), |c| c.to_lowercase().chain(chars).collect())
+}
+
 /// Leading phrases that mark a chat answer instead of a rewrite. Only an
 /// anomaly when the dictation itself does not contain them.
 const ANSWER_MARKERS: &[&str] = &[
@@ -404,6 +496,101 @@ mod tests {
             finish_rewrite("Three things to do: buy bread and call Paul. Really?"),
             "Three things to do: buy bread and call Paul. Really?"
         );
+    }
+
+    #[test]
+    fn joins_at_the_cursor_j01_to_j17() {
+        let at = |before: &str, after: &str, text: &str| {
+            let field = crate::context::Field {
+                before: before.into(),
+                after: after.into(),
+                selection: String::new(),
+                caret_known: true,
+            };
+            join_at_cursor(&field, text, false)
+        };
+        assert_eq!(
+            at("Le rendez-vous est fixé à ", " demain matin.", "10 heures."),
+            "10 heures"
+        );
+        assert_eq!(
+            at(
+                "Peux-tu résumer ",
+                " en trois points courts ?",
+                "Le compte rendu de la réunion budgétaire."
+            ),
+            "le compte rendu de la réunion budgétaire"
+        );
+        assert_eq!(
+            at("On se voit mardi soir.\nDeu", "xième ligne", "10:00"),
+            " 10:00 "
+        );
+        assert_eq!(at("On se voit ", " soir.", "Mercredi."), "mercredi"); // J04, selection replaced
+        assert_eq!(
+            at("Voici le compte rendu.", "", "Nouvelle phrase de test."),
+            " Nouvelle phrase de test. "
+        );
+        assert_eq!(
+            at("Il est arrivé au projet. ", "", "Nouvelle phrase de test."),
+            "Nouvelle phrase de test. "
+        );
+        assert_eq!(
+            at("test ", "", "Deuxième phrase de contrôle."),
+            "deuxième phrase de contrôle. "
+        );
+        // J08: plus an end space, as after any finished sentence at the end of the field.
+        assert_eq!(
+            at(
+                "Il faut absolument",
+                "",
+                "Vérifiez les chiffres avant lundi."
+            ),
+            " vérifiez les chiffres avant lundi. "
+        );
+        assert_eq!(
+            at("", "", "Voici mon message de test."),
+            "Voici mon message de test. "
+        );
+        assert_eq!(
+            at(
+                "",
+                "Explique-moi la différence entre Kubernetes et Terraform.",
+                "Donne aussi un exemple concret."
+            ),
+            "Donne aussi un exemple concret. "
+        );
+        assert_eq!(at("Réunion avec ", " demain", "Paris."), "Paris");
+        assert_eq!(at("Le projet ", " avance", "NASA."), "NASA");
+        assert_eq!(
+            at("Voir ", " pour les détails.", "https://example.com/doc"),
+            "https://example.com/doc"
+        );
+        assert_eq!(
+            at("Appelle ", "()", "computeInvoiceTotal"),
+            "computeInvoiceTotal"
+        );
+        assert_eq!(at("Hier ", " suis parti", "I think"), "I think");
+        assert_eq!(at("Avec ", " demain", "Jean Dupont."), "Jean Dupont");
+
+        let terminal = crate::context::Field {
+            before: "Lance ".into(),
+            caret_known: true,
+            ..Default::default()
+        };
+        assert_eq!(
+            join_at_cursor(&terminal, "npm run build", true),
+            "npm run build"
+        ); // J14
+        let unknown = crate::context::Field {
+            before: "Contenu".into(),
+            ..Default::default()
+        };
+        assert_eq!(join_at_cursor(&unknown, "Bonjour.", false), " Bonjour."); // J17
+        let unknown = crate::context::Field {
+            before: "Contenu ".into(),
+            ..Default::default()
+        };
+        assert_eq!(join_at_cursor(&unknown, "Bonjour.", false), "Bonjour.");
     }
 
     #[test]
