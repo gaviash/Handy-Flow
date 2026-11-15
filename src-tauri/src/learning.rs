@@ -182,11 +182,19 @@ pub fn candidates(inserted: &str, fin: &str) -> Vec<(String, String)> {
             .collect::<Vec<_>>()
             .join(" ");
         let (hk, tk) = (heard.to_lowercase(), term.to_lowercase());
-        let looks_like_term = term
-            .chars()
-            .any(|c| c.is_uppercase() || c.is_ascii_digit() || c == '_');
-        let truncated = hk.len() > tk.len() && (hk.starts_with(&tk) || hk.ends_with(&tk));
-        if !term.is_empty() && looks_like_term && !truncated && distance(&hk, &tk) <= 0.6 {
+        // A capital only marks a name when it doesn't just open a sentence.
+        let first = run[0].2;
+        let opens = first.is_none_or(|j| j == 0 || b[j - 1].ends_with(['.', '!', '?']));
+        let capital = term.split(' ').enumerate().any(|(n, w)| {
+            w.chars()
+                .enumerate()
+                .any(|(i, c)| c.is_uppercase() && (i > 0 || n > 0 || !opens))
+        });
+        let looks_like_term = capital || term.chars().any(|c| c.is_ascii_digit() || c == '_');
+        // Truncation, plural, conjugation: one form extends the other.
+        let affix =
+            hk.starts_with(&tk) || tk.starts_with(&hk) || hk.ends_with(&tk) || tk.ends_with(&hk);
+        if !term.is_empty() && looks_like_term && !affix && distance(&hk, &tk) <= 0.6 {
             out.push((term, heard));
         }
     }
@@ -396,21 +404,20 @@ pub fn observe(app: &AppHandle, field: &crate::context::Field, inserted: &str) {
             }
             let started = Instant::now();
             let mut last: Option<String> = None;
-            loop {
-                let current = OBSERVATION.load(Ordering::SeqCst) == id;
+            // A newer dictation ended this one: learn from the last reading,
+            // never read its field again.
+            while OBSERVATION.load(Ordering::SeqCst) == id && started.elapsed() < WINDOW {
                 match crate::context::read_watched() {
                     // An empty field was sent or cleared: keep the last reading.
                     Some(text) if !text.trim().is_empty() => match region(&text, &before, &after) {
-                        Some(r) => last = Some(r.trim().to_string()),
-                        // Pasted text never showed up, or the anchors are gone.
-                        None if last.is_none() && started.elapsed() < Duration::from_secs(3) => {}
-                        None => break,
+                        // Tracked only once the pasted text has shown up there.
+                        Some(r) if last.is_some() || r.trim() == inserted => {
+                            last = Some(r.trim().to_string())
+                        }
+                        _ if last.is_none() && started.elapsed() < Duration::from_secs(3) => {}
+                        _ => break,
                     },
-                    Some(_) => break,
-                    None => break,
-                }
-                if !current || started.elapsed() > WINDOW {
-                    break;
+                    _ => break,
                 }
                 std::thread::sleep(Duration::from_secs(1));
             }
@@ -471,6 +478,8 @@ mod tests {
         )
         .is_empty()); // L07
         assert!(candidates("Salut Maximilien, ça va ?", "Salut Max, ça va ?").is_empty()); // S42
+        assert!(candidates("Projet avance bien.", "Projets avance bien.").is_empty());
+        assert!(candidates("Merci Jean. Projet validé.", "Merci Jean. Projets validé.").is_empty());
         assert_eq!(
             candidates(
                 "on migre la base postgéré demain",
