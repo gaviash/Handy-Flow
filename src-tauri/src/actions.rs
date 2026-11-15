@@ -344,9 +344,12 @@ async fn post_process_transcription(
         }
         return match reply {
             Ok(Some(content)) => {
-                let text = crate::adaptive::finish_rewrite(&strip_invisible_chars(
-                    strip_think_block(&content),
-                ));
+                let mut text = strip_invisible_chars(strip_think_block(&content));
+                // F59: the tone's sure effects; a terminal keeps its text.
+                if let Some(c) = context.filter(|c| !c.terminal) {
+                    text = crate::adaptive::apply_tone(&text, c.tone);
+                }
+                let text = crate::adaptive::finish_rewrite(&text);
                 let email = context.is_some_and(|c| c.content == crate::context::Content::Email);
                 PostProcessOutcome::Done(if email {
                     crate::adaptive::letter_form(&text)
@@ -960,6 +963,7 @@ impl ShortcutAction for TranscribeAction {
                             // The user's custom words and learned spellings are
                             // spellings to respect too.
                             if let Some(c) = llm_context.as_mut() {
+                                c.tone = ctx_settings.styles.tone(c.style);
                                 for word in ctx_settings
                                     .custom_words
                                     .iter()

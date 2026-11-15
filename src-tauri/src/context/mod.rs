@@ -34,6 +34,49 @@ pub enum Style {
     Other,
 }
 
+/// Writing style chosen per style category (F58).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize, Type)]
+#[serde(rename_all = "snake_case")]
+pub enum Tone {
+    Formal,
+    Casual,
+    VeryCasual,
+    Excited,
+    #[default]
+    Default,
+}
+
+/// Tone per style category. Defaults (Q8): email formal, chats casual, the rest default.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Type)]
+pub struct Styles {
+    pub work: Tone,
+    pub email: Tone,
+    pub personal: Tone,
+    pub other: Tone,
+}
+
+impl Default for Styles {
+    fn default() -> Self {
+        Self {
+            work: Tone::Casual,
+            email: Tone::Formal,
+            personal: Tone::Casual,
+            other: Tone::Default,
+        }
+    }
+}
+
+impl Styles {
+    pub fn tone(&self, style: Style) -> Tone {
+        match style {
+            Style::Work => self.work,
+            Style::Email => self.email,
+            Style::Personal => self.personal,
+            Style::Other => self.other,
+        }
+    }
+}
+
 impl Content {
     pub fn style(self) -> Style {
         match self {
@@ -356,6 +399,7 @@ fn name_from_address(address: &str) -> Option<String> {
 pub struct LlmContext {
     pub content: Content,
     pub style: Style,
+    pub tone: Tone,
     pub terminal: bool,
     pub before: String,
     pub after: String,
@@ -385,6 +429,7 @@ pub fn llm_context(capture: &Capture) -> Option<LlmContext> {
     Some(LlmContext {
         content,
         style: content.style(),
+        tone: Tone::Default,
         terminal: capture.terminal,
         before,
         after,
