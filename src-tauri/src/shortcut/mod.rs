@@ -69,6 +69,12 @@ static CANCEL_REQUESTED: AtomicBool = AtomicBool::new(false);
 #[cfg(not(target_os = "linux"))]
 static CANCEL_REGISTERED: std::sync::Mutex<bool> = std::sync::Mutex::new(false);
 
+/// Whether Escape currently means "cancel the dictation": from recording start
+/// until its processing ends (Handy Adaptive, F03).
+pub fn is_cancel_requested() -> bool {
+    CANCEL_REQUESTED.load(Ordering::SeqCst)
+}
+
 /// Register the cancel shortcut (called when recording starts)
 pub fn register_cancel_shortcut(app: &AppHandle) {
     // Track recording lifecycle independently of the current implementation so
@@ -960,6 +966,15 @@ pub fn change_language_detection_window_setting(app: AppHandle, secs: u32) -> Re
 pub fn change_extra_recording_buffer_setting(app: AppHandle, ms: u64) -> Result<(), String> {
     let mut settings = settings::get_settings(&app);
     settings.extra_recording_buffer_ms = ms;
+    settings::write_settings(&app, settings);
+    Ok(())
+}
+
+#[tauri::command]
+#[specta::specta]
+pub fn change_post_process_timeout_setting(app: AppHandle, secs: u64) -> Result<(), String> {
+    let mut settings = settings::get_settings(&app);
+    settings.post_process_timeout_secs = secs.clamp(1, 60);
     settings::write_settings(&app, settings);
     Ok(())
 }

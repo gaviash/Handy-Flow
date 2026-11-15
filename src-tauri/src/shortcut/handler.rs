@@ -58,10 +58,11 @@ pub fn handle_shortcut_event(
         return;
     };
 
-    // Cancel binding: only fires when recording and key is pressed
+    // Cancel binding: fires on press while recording or while the dictation
+    // is still being processed (Handy Adaptive, F03/S48).
     if binding_id == "cancel" {
         let audio_manager = app.state::<Arc<AudioRecordingManager>>();
-        if audio_manager.is_recording() && is_pressed {
+        if is_pressed && (audio_manager.is_recording() || super::is_cancel_requested()) {
             action.start(app, binding_id, hotkey_string);
         }
         return;

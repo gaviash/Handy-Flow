@@ -213,6 +213,8 @@ const settingUpdaters: {
     commands.changeTranscribeGpuDevice(value as string | null),
   extra_recording_buffer_ms: (value) =>
     commands.changeExtraRecordingBufferSetting(value as number),
+  post_process_timeout_secs: (value) =>
+    commands.changePostProcessTimeoutSetting(value as number),
   language_detection: (value) =>
     commands.changeLanguageDetectionSetting(value as LanguageDetectionMode),
   language_detection_window_secs: (value) =>

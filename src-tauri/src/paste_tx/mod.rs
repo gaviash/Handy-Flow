@@ -41,6 +41,8 @@ use std::time::{Duration, Instant};
 mod macos;
 #[cfg(target_os = "windows")]
 mod windows;
+#[cfg(target_os = "windows")]
+pub(crate) use windows::mark_clipboard_private;
 
 #[cfg(target_os = "macos")]
 use macos as platform;

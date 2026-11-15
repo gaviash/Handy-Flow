@@ -114,6 +114,8 @@ fn paste_via_clipboard(
         }
         return Err(e);
     }
+    #[cfg(target_os = "windows")]
+    crate::paste_tx::mark_clipboard_private();
 
     std::thread::sleep(Duration::from_millis(paste_delay_ms));
 
