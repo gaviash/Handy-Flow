@@ -35,6 +35,7 @@ export const RecordingRetentionPeriodSelector: React.FC<RecordingRetentionPeriod
         }),
       },
       { value: "days3", label: t("settings.debug.recordingRetention.days3") },
+      { value: "days30", label: t("settings.debug.recordingRetention.days30") },
       { value: "weeks2", label: t("settings.debug.recordingRetention.weeks2") },
       {
         value: "months3",

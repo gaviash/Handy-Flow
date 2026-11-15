@@ -720,6 +720,7 @@ pub fn run(cli_args: CliArgs) {
             shortcut::change_learning_enabled_setting,
             shortcut::change_styles_setting,
             shortcut::change_snippets_setting,
+            shortcut::change_user_name_setting,
             learning::get_learned_words,
             learning::delete_learned_word,
             learning::clear_learned_words,

@@ -225,6 +225,7 @@ const settingUpdaters: {
     commands.changeContextExcludedAppsSetting(value as string[]),
   styles: (value) => commands.changeStylesSetting(value as Styles),
   snippets: (value) => commands.changeSnippetsSetting(value as Snippet[]),
+  user_name: (value) => commands.changeUserNameSetting(value as string),
   learning_enabled: (value) =>
     commands.changeLearningEnabledSetting(value as boolean),
   context_excluded_domains: (value) =>

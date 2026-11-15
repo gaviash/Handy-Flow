@@ -41,6 +41,10 @@ pub async fn get_audio_file_path(
     file_name: String,
 ) -> Result<String, String> {
     let path = history_manager.get_audio_file_path(&file_name);
+    // Handy Adaptive (Q4): older dictations keep their text, not their audio.
+    if !path.exists() {
+        return Err("Audio no longer kept".to_string());
+    }
     path.to_str()
         .ok_or_else(|| "Invalid file path".to_string())
         .map(|s| s.to_string())

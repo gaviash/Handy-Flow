@@ -973,6 +973,11 @@ impl ShortcutAction for TranscribeAction {
                             // spellings to respect too.
                             if let Some(c) = llm_context.as_mut() {
                                 c.tone = ctx_settings.styles.tone(c.style);
+                                // F63: the user's own name.
+                                let me = ctx_settings.user_name.trim();
+                                if !me.is_empty() && !c.names.iter().any(|n| n == me) {
+                                    c.names.push(me.to_string());
+                                }
                                 for word in ctx_settings
                                     .custom_words
                                     .iter()
@@ -986,6 +991,13 @@ impl ShortcutAction for TranscribeAction {
                                     }
                                 }
                             }
+                            // F109: where the dictation went, for History.
+                            let app_label = [Some(capture.process.clone()), capture.host.clone()]
+                                .into_iter()
+                                .flatten()
+                                .filter(|s| !s.is_empty())
+                                .collect::<Vec<_>>()
+                                .join(" · ");
                             crate::context::set_report(crate::context::ContextReport {
                                 capture: Some(capture),
                                 sent: None,
@@ -1024,7 +1036,7 @@ impl ShortcutAction for TranscribeAction {
 
                             // Save to history if WAV was saved
                             if wav_saved && !sensitive {
-                                if let Err(err) = hm.save_entry(
+                                match hm.save_entry(
                                     file_name,
                                     transcription,
                                     post_process,
@@ -1032,7 +1044,13 @@ impl ShortcutAction for TranscribeAction {
                                     processed.post_process_prompt.clone(),
                                     language,
                                 ) {
-                                    error!("Failed to save history entry: {}", err);
+                                    Ok(entry) if !app_label.is_empty() => {
+                                        if let Err(err) = hm.set_entry_app(entry, app_label) {
+                                            error!("Failed to record the dictation's app: {}", err);
+                                        }
+                                    }
+                                    Ok(_) => {}
+                                    Err(err) => error!("Failed to save history entry: {}", err),
                                 }
                             }
 
