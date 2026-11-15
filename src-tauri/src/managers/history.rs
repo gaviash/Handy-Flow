@@ -37,12 +37,12 @@ static MIGRATIONS: &[M] = &[
 
 /// Nullable columns added outside [`MIGRATIONS`]; see
 /// [`HistoryManager::apply_migrations`].
-const ADDED_COLUMNS: &[&str] = &["source_name", "language", "language_source"];
+const ADDED_COLUMNS: &[&str] = &["source_name", "language", "language_source", "app"];
 
 /// Every column a [`HistoryEntry`] is read from.
 const ENTRY_COLUMNS: &str = "id, file_name, timestamp, saved, title, transcription_text, \
     post_processed_text, post_process_prompt, post_process_requested, source_name, language, \
-    language_source";
+    language_source, app";
 
 #[derive(Clone, Debug, Serialize, Deserialize, Type)]
 pub struct PaginatedHistory {
@@ -81,6 +81,8 @@ pub struct HistoryEntry {
     pub language: Option<String>,
     /// How that language was chosen; `None` before it was recorded.
     pub language_source: Option<LanguageSource>,
+    /// Handy Adaptive (F109): the app (and site) the dictation went to.
+    pub app: Option<String>,
 }
 
 pub struct HistoryManager {
@@ -272,6 +274,7 @@ impl HistoryManager {
                 .get::<_, Option<String>>("language_source")?
                 .as_deref()
                 .and_then(LanguageSource::parse),
+            app: row.get("app")?,
         })
     }
 
@@ -304,6 +307,7 @@ impl HistoryManager {
             source_name: None,
             language,
             language_source,
+            app: None,
         })?;
 
         self.cleanup_old_entries()?;
@@ -328,6 +332,7 @@ impl HistoryManager {
             source_name: Some(source_name),
             language: None,
             language_source: None,
+            app: None,
         })
     }
 
@@ -432,6 +437,36 @@ impl HistoryManager {
         Ok(entry)
     }
 
+    /// Handy Adaptive (F109): records where a dictation went.
+    pub fn set_entry_app(&self, mut entry: HistoryEntry, app: String) -> Result<()> {
+        self.get_connection()?.execute(
+            "UPDATE transcription_history SET app = ?1 WHERE id = ?2",
+            params![&app, entry.id],
+        )?;
+        entry.app = Some(app);
+        let _ = (HistoryUpdatePayload::Updated { entry }).emit(&self.app_handle);
+        Ok(())
+    }
+
+    /// Q4: text is kept 30 days, audio only for the 20 newest dictations.
+    fn trim_audio(&self, keep: usize) -> Result<()> {
+        let conn = self.get_connection()?;
+        let mut stmt = conn.prepare(
+            "SELECT file_name FROM transcription_history WHERE saved = 0 AND source_name IS NULL ORDER BY timestamp DESC",
+        )?;
+        let files: Vec<String> = stmt
+            .query_map([], |row| row.get::<_, String>(0))?
+            .filter_map(|r| r.ok())
+            .collect();
+        for file in files.iter().skip(keep) {
+            let path = self.recordings_dir.join(file);
+            if path.exists() {
+                let _ = fs::remove_file(&path);
+            }
+        }
+        Ok(())
+    }
+
     pub fn cleanup_old_entries(&self) -> Result<()> {
         let retention_period = crate::settings::get_recording_retention_period(&self.app_handle);
 
@@ -444,6 +479,10 @@ impl HistoryManager {
                 // Use the old count-based logic with history_limit
                 let limit = crate::settings::get_history_limit(&self.app_handle);
                 self.cleanup_by_count(limit)
+            }
+            crate::settings::RecordingRetentionPeriod::Days30 => {
+                self.cleanup_by_time(retention_period)?;
+                self.trim_audio(20)
             }
             _ => {
                 // Use time-based logic
@@ -522,6 +561,7 @@ impl HistoryManager {
         let now = Utc::now().timestamp();
         let cutoff_timestamp = match retention_period {
             crate::settings::RecordingRetentionPeriod::Days3 => now - (3 * 24 * 60 * 60), // 3 days in seconds
+            crate::settings::RecordingRetentionPeriod::Days30 => now - (30 * 24 * 60 * 60),
             crate::settings::RecordingRetentionPeriod::Weeks2 => now - (2 * 7 * 24 * 60 * 60), // 2 weeks in seconds
             crate::settings::RecordingRetentionPeriod::Months3 => now - (3 * 30 * 24 * 60 * 60), // 3 months in seconds (approximate)
             _ => unreachable!("Should not reach here"),
@@ -750,7 +790,8 @@ mod tests {
                 post_process_requested BOOLEAN NOT NULL DEFAULT 0,
                 source_name TEXT,
                 language TEXT,
-                language_source TEXT
+                language_source TEXT,
+                app TEXT
             );",
         )
         .expect("create transcription_history table");

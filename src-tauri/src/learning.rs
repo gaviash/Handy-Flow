@@ -10,7 +10,7 @@ use std::path::PathBuf;
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::Mutex;
 use std::time::{Duration, Instant};
-use tauri::AppHandle;
+use tauri::{AppHandle, Emitter};
 
 /// Per-word alignment tag (PAR §8.1).
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -297,6 +297,8 @@ fn learn(app: &AppHandle, inserted: &str, fin: &str) {
         return;
     }
     let now = chrono::Utc::now().timestamp();
+    // F95: new spellings are announced once, grouped, with an undo.
+    let mut new_terms = Vec::new();
     with_memory(app, |m| {
         for (term, heard) in found {
             log::info!("Learned a spelling ({} chars)", term.chars().count());
@@ -306,16 +308,22 @@ fn learn(app: &AppHandle, inserted: &str, fin: &str) {
                     l.last_seen = now;
                     l.heard = heard;
                 }
-                None => m.push(Learned {
-                    term,
-                    heard,
-                    count: 1,
-                    last_seen: now,
-                }),
+                None => {
+                    new_terms.push(term.clone());
+                    m.push(Learned {
+                        term,
+                        heard,
+                        count: 1,
+                        last_seen: now,
+                    })
+                }
             }
         }
         save(app, m);
     });
+    if !new_terms.is_empty() {
+        let _ = app.emit("learned-words", &new_terms);
+    }
 }
 
 #[tauri::command]

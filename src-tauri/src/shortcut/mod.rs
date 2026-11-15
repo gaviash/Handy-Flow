@@ -1030,6 +1030,15 @@ pub fn change_snippets_setting(
     Ok(())
 }
 
+#[tauri::command]
+#[specta::specta]
+pub fn change_user_name_setting(app: AppHandle, name: String) -> Result<(), String> {
+    let mut settings = settings::get_settings(&app);
+    settings.user_name = name.trim().to_string();
+    settings::write_settings(&app, settings);
+    Ok(())
+}
+
 fn clean_list(items: Vec<String>) -> Vec<String> {
     items
         .into_iter()

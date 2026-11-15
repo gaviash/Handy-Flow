@@ -230,6 +230,14 @@ async changeSnippetsSetting(snippets: Snippet[]) : Promise<Result<null, string>>
     else return { status: "error", error: e  as any };
 }
 },
+async changeUserNameSetting(name: string) : Promise<Result<null, string>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("change_user_name_setting", { name }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
 async getLastContextReport() : Promise<ContextReport> {
     return await TAURI_INVOKE("get_last_context_report");
 },
@@ -1227,7 +1235,11 @@ styles?: Styles;
 /**
  * F120: user snippets, inserted when their trigger is said alone.
  */
-snippets?: Snippet[]; 
+snippets?: Snippet[];
+/**
+ * F63: the user's own name, always a spelling to respect.
+ */
+user_name?: string; 
 /**
  * Defaults to empty on partial stores; the load path merges in the
  * default bindings for any missing keys before the settings are used.
@@ -1341,7 +1353,7 @@ export type ChineseScript =
 export type ClipboardHandling = "dont_modify" | "copy_to_clipboard"
 export type CustomSounds = { start: boolean; stop: boolean }
 export type GpuDeviceOption = { id: string; name: string; total_vram_mb: number }
-export type HistoryEntry = { id: number; file_name: string; timestamp: number; saved: boolean; title: string; transcription_text: string; post_processed_text: string | null; post_process_prompt: string | null; post_process_requested: boolean; 
+export type HistoryEntry = { app?: string | null; id: number; file_name: string; timestamp: number; saved: boolean; title: string; transcription_text: string; post_processed_text: string | null; post_process_prompt: string | null; post_process_requested: boolean; 
 /**
  * The name of the file this entry was transcribed from; `None` for a
  * dictation.
@@ -1554,7 +1566,7 @@ export type RecordingPhase =
  * The session was cancelled.
  */
 "cancelled"
-export type RecordingRetentionPeriod = "never" | "preserve_limit" | "days_3" | "weeks_2" | "months_3"
+export type RecordingRetentionPeriod = "never" | "preserve_limit" | "days_3" | "days30" | "weeks_2" | "months_3"
 export type RecordingStateEvent = { phase: RecordingPhase }
 /**
  * A retired ONNX model found on disk.

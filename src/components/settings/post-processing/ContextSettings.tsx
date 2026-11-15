@@ -5,6 +5,7 @@ import { ToggleSwitch } from "../../ui/ToggleSwitch";
 import { SettingContainer } from "../../ui/SettingContainer";
 import { Textarea } from "../../ui/Textarea";
 import { Button } from "../../ui/Button";
+import { Input } from "../../ui/Input";
 import { useSettings } from "../../../hooks/useSettings";
 
 type ListKey = "context_excluded_apps" | "context_excluded_domains";
@@ -45,6 +46,30 @@ const ExclusionList: React.FC<{
   );
 };
 
+/** Handy Adaptive (F63): the user's name, always spelled right. */
+const UserName: React.FC = () => {
+  const { t } = useTranslation();
+  const { getSetting, updateSetting } = useSettings();
+  const saved = getSetting("user_name") ?? "";
+  const [name, setName] = useState(saved);
+  useEffect(() => setName(saved), [saved]);
+  return (
+    <SettingContainer
+      title={t("settings.postProcessing.context.userName.label")}
+      description={t("settings.postProcessing.context.userName.description")}
+      descriptionMode="tooltip"
+      grouped={true}
+    >
+      <Input
+        variant="compact"
+        value={name}
+        onChange={(e) => setName(e.target.value)}
+        onBlur={() => updateSetting("user_name", name)}
+      />
+    </SettingContainer>
+  );
+};
+
 /** Handy Adaptive (F97, F33, F114): what is read, what is sent, and the last send. */
 export const ContextSettings: React.FC = () => {
   const { t } = useTranslation();
@@ -72,6 +97,7 @@ export const ContextSettings: React.FC = () => {
 
   return (
     <>
+      <UserName />
       <ToggleSwitch
         checked={getSetting("context_enabled") ?? true}
         onChange={(v) => updateSetting("context_enabled", v)}

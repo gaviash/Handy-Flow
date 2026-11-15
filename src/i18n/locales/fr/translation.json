@@ -719,6 +719,10 @@
           "sensitive": "Champ mot de passe : rien n'a été lu, envoyé ni conservé.",
           "excluded": "Application ou site exclu : aucun contexte lu ni envoyé.",
           "nothingSent": "Rien n'a été envoyé au LLM."
+        },
+        "userName": {
+          "label": "Votre nom",
+          "description": "Toujours écrit correctement dans vos dictées (signature, présentation)."
         }
       },
       "learning": {
@@ -736,7 +740,9 @@
           "clear": "Tout effacer",
           "export": "Exporter",
           "confirmClear": "Effacer tous les mots appris ?"
-        }
+        },
+        "notice": "Appris : {{terms}}",
+        "undo": "Annuler"
       },
       "styles": {
         "title": "Styles",
@@ -867,7 +873,8 @@
         "days3": "Après 3 jours",
         "weeks2": "Après 2 semaines",
         "months3": "Après 3 mois",
-        "placeholder": "Sélectionner la période de conservation..."
+        "placeholder": "Sélectionner la période de conservation...",
+        "days30": "30 jours (audio des 20 dernières)"
       },
       "alwaysOnMicrophone": {
         "label": "Microphone toujours actif",

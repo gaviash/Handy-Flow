@@ -719,6 +719,10 @@
           "sensitive": "Password field: nothing was read, sent or kept.",
           "excluded": "Excluded app or site: no context was read or sent.",
           "nothingSent": "Nothing was sent to the LLM."
+        },
+        "userName": {
+          "label": "Your Name",
+          "description": "Always spelled right in your dictations (signature, introductions)."
         }
       },
       "learning": {
@@ -736,7 +740,9 @@
           "clear": "Clear All",
           "export": "Export",
           "confirmClear": "Clear all learned words?"
-        }
+        },
+        "notice": "Learned: {{terms}}",
+        "undo": "Undo"
       },
       "styles": {
         "title": "Styles",
@@ -867,7 +873,8 @@
         "days3": "Po 3 dnech",
         "weeks2": "Po 2 týdnech",
         "months3": "Po 3 měsících",
-        "placeholder": "Vyberte dobu uchování..."
+        "placeholder": "Vyberte dobu uchování...",
+        "days30": "30 Days (Audio of the Last 20)"
       },
       "alwaysOnMicrophone": {
         "label": "Vždy zapnutý mikrofon",

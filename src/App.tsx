@@ -33,6 +33,8 @@ import { WhatsNewGate } from "./components/whats-new";
 import { useSettings } from "./hooks/useSettings";
 import { useSettingsStore } from "./stores/settingsStore";
 import { commands } from "@/bindings";
+import { listen } from "@tauri-apps/api/event";
+import { notify } from "@/stores/noticeStore";
 import { deleteRetiredModel } from "@/lib/models/retired";
 import { NoticePanel } from "@/components/notices/NoticePanel";
 import { getLanguageDirection, initializeRTL } from "@/lib/utils/rtl";
@@ -103,6 +105,26 @@ function App() {
   useEffect(() => {
     checkOnboardingStatus();
   }, []);
+
+  // Handy Adaptive (F95): learned words, grouped, with an undo.
+  useEffect(() => {
+    const unlisten = listen<string[]>("learned-words", ({ payload }) =>
+      notify({
+        title: t("settings.postProcessing.learning.notice", {
+          terms: payload.join(", "),
+        }),
+        level: "warning",
+        key: "learned-words",
+        action: {
+          label: t("settings.postProcessing.learning.undo"),
+          onClick: () => payload.forEach((w) => commands.deleteLearnedWord(w)),
+        },
+      }),
+    );
+    return () => {
+      unlisten.then((f) => f());
+    };
+  }, [t]);
 
   // Initialize RTL direction when language changes
   useEffect(() => {

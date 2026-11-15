@@ -74,13 +74,13 @@ function Pad-Field($p) {
 }
 
 # Push-to-talk dictation of one corpus WAV; $during runs after speech, before release.
-function Dictate([string]$wav, [scriptblock]$during) {
+function Dictate([string]$wav, [scriptblock]$during, [int]$tailMs = 400) {
   $restore = Get-AudioDevice -Playback
   try {
     Set-AudioDevice -ID $cable.ID | Out-Null; Start-Sleep -Milliseconds 250
     [HB]::Down(0x11); [HB]::Down(0x20); Start-Sleep -Milliseconds 600
     (New-Object System.Media.SoundPlayer (Join-Path $AudioDir "$wav.wav")).PlaySync()
-    Start-Sleep -Milliseconds 400
+    Start-Sleep -Milliseconds $tailMs
     if ($during) { & $during; Start-Sleep -Milliseconds 300 }
     [HB]::Up(0x20); [HB]::Up(0x11)
   } finally { Set-AudioDevice -ID $restore.ID | Out-Null }
@@ -209,5 +209,15 @@ if (Want 'GE09') {
   $v = (Value $f).TrimEnd()
   Record 'GE09' ($v.Length -gt 20 -and -not $v.EndsWith('.')) @{ field = $v }
   Stop-Process -Id $pad.Id -Force
+}
+if (Want 'F16') {
+  # Release right when the speech ends: is the last word kept?
+  foreach ($i in 1..6) {
+    $pad = Start-Pad 'testpad'; $f = Pad-Field $pad
+    Dictate 'CT04' $null 0; Wait-Until { Value $f } | Out-Null; Start-Sleep -Milliseconds 300
+    $v = (Value $f).Trim()
+    Record "F16-$i" ($v -match 'matin\.?$') @{ field = $v }
+    Stop-Process -Id $pad.Id -Force
+  }
 }
 $results | Format-Table id, pass -AutoSize | Out-String | Write-Host

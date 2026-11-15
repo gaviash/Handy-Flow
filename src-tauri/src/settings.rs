@@ -224,6 +224,8 @@ pub enum RecordingRetentionPeriod {
     Never,
     PreserveLimit,
     Days3,
+    /// Handy Adaptive (Q4): text 30 days, audio of the 20 newest dictations.
+    Days30,
     Weeks2,
     Months3,
 }
@@ -423,6 +425,9 @@ pub struct AppSettings {
     pub context_excluded_apps: Vec<String>,
     #[serde(default = "default_context_excluded_domains")]
     pub context_excluded_domains: Vec<String>,
+    /// F63: the user's own name, always a spelling to respect.
+    #[serde(default)]
+    pub user_name: String,
     /// F120: user snippets, inserted when their trigger is said alone.
     #[serde(default)]
     pub snippets: Vec<crate::adaptive::Snippet>,
@@ -613,7 +618,7 @@ fn default_settings_schema_version() -> u32 {
     CURRENT_SETTINGS_SCHEMA_VERSION
 }
 
-const CURRENT_ADAPTIVE_SETTINGS_VERSION: u32 = 2;
+const CURRENT_ADAPTIVE_SETTINGS_VERSION: u32 = 3;
 
 fn default_adaptive_settings_version() -> u32 {
     CURRENT_ADAPTIVE_SETTINGS_VERSION
@@ -790,7 +795,11 @@ fn default_history_limit() -> usize {
 }
 
 fn default_recording_retention_period() -> RecordingRetentionPeriod {
-    RecordingRetentionPeriod::PreserveLimit
+    if cfg!(target_os = "windows") {
+        RecordingRetentionPeriod::Days30
+    } else {
+        RecordingRetentionPeriod::PreserveLimit
+    }
 }
 
 fn default_audio_feedback_volume() -> f32 {
@@ -1133,6 +1142,7 @@ pub fn get_default_settings() -> AppSettings {
         learning_enabled: true,
         styles: crate::context::Styles::default(),
         snippets: Vec::new(),
+        user_name: String::new(),
         bindings,
         shortcut_activation: ShortcutActivation::default(),
         hold_threshold_ms: default_hold_threshold_ms(),
@@ -1192,7 +1202,7 @@ pub fn get_default_settings() -> AppSettings {
         chinese_script: default_chinese_script(),
         transcribe_accelerator: TranscribeAcceleratorSetting::default(),
         transcribe_gpu_device: default_transcribe_gpu_device(),
-        extra_recording_buffer_ms: 0,
+        extra_recording_buffer_ms: if cfg!(target_os = "windows") { 120 } else { 0 },
         vad_enabled: default_vad_enabled(),
         vad_backend: VadBackend::default(),
         long_form_chunking: default_long_form_chunking(),
@@ -1449,6 +1459,16 @@ fn apply_settings_migrations(
             if model == "openai/gpt-oss-20b" {
                 *model = "openai/gpt-oss-120b".to_string();
             }
+        }
+    }
+    if windows && adaptive_version < 3 {
+        // Q4: 30 days of text instead of the last 5 entries; F16: keep the
+        // last word when the key is released early.
+        if settings.recording_retention_period == RecordingRetentionPeriod::PreserveLimit {
+            settings.recording_retention_period = RecordingRetentionPeriod::Days30;
+        }
+        if settings.extra_recording_buffer_ms == 0 {
+            settings.extra_recording_buffer_ms = 120;
         }
     }
     if adaptive_version < u64::from(CURRENT_ADAPTIVE_SETTINGS_VERSION) {
@@ -2130,9 +2150,18 @@ mod tests {
         settings
             .post_process_models
             .insert("openai".into(), "openai/gpt-oss-20b".into());
+        settings.recording_retention_period = RecordingRetentionPeriod::PreserveLimit;
+        settings.extra_recording_buffer_ms = 0;
         let raw = serde_json::json!({ "selected_model": "m", "reliable_paste": false });
 
         assert!(apply_settings_migrations(&mut settings, &raw));
+        if cfg!(target_os = "windows") {
+            assert_eq!(
+                settings.recording_retention_period,
+                RecordingRetentionPeriod::Days30
+            );
+            assert_eq!(settings.extra_recording_buffer_ms, 120);
+        }
         assert!(ensure_post_process_defaults(&mut settings));
         assert_eq!(
             settings.reliable_paste,
