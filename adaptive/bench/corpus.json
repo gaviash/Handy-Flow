@@ -178,5 +178,15 @@
     "id": "CT04",
     "lang": "fr",
     "text": "Merci pour le compte rendu, je regarde ça demain matin."
+  },
+  {
+    "id": "CT05",
+    "lang": "fr",
+    "text": "Le compte rendu de la réunion budgétaire."
+  },
+  {
+    "id": "CT06",
+    "lang": "fr",
+    "text": "On déploie zorblax et quintavex puis merindor."
   }
 ]
