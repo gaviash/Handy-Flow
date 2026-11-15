@@ -423,6 +423,9 @@ pub struct AppSettings {
     pub context_excluded_apps: Vec<String>,
     #[serde(default = "default_context_excluded_domains")]
     pub context_excluded_domains: Vec<String>,
+    /// F120: user snippets, inserted when their trigger is said alone.
+    #[serde(default)]
+    pub snippets: Vec<crate::adaptive::Snippet>,
     /// F58: tone per style category, effective from the first dictation.
     #[serde(default)]
     pub styles: crate::context::Styles,
@@ -1129,6 +1132,7 @@ pub fn get_default_settings() -> AppSettings {
         context_excluded_domains: default_context_excluded_domains(),
         learning_enabled: true,
         styles: crate::context::Styles::default(),
+        snippets: Vec::new(),
         bindings,
         shortcut_activation: ShortcutActivation::default(),
         hold_threshold_ms: default_hold_threshold_ms(),

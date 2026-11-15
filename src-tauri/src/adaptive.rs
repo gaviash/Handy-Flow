@@ -285,6 +285,38 @@ fn lower_first_word(text: &str) -> String {
         .map_or(String::new(), |c| c.to_lowercase().chain(chars).collect())
 }
 
+/// A user snippet (F120): said on its own, `trigger` inserts `text`.
+#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize, specta::Type)]
+pub struct Snippet {
+    pub trigger: String,
+    pub text: String,
+}
+
+/// Letters and digits only, lowercased, words single-spaced.
+fn spoken_key(s: &str) -> String {
+    s.chars()
+        .map(|c| {
+            if c.is_alphanumeric() {
+                c.to_lowercase().next().unwrap_or(c)
+            } else {
+                ' '
+            }
+        })
+        .collect::<String>()
+        .split_whitespace()
+        .collect::<Vec<_>>()
+        .join(" ")
+}
+
+/// The snippet whose trigger is the whole dictation, never one inside a sentence.
+pub fn snippet_for(transcription: &str, snippets: &[Snippet]) -> Option<String> {
+    let said = spoken_key(transcription);
+    snippets
+        .iter()
+        .find(|s| !said.is_empty() && spoken_key(&s.trigger) == said)
+        .map(|s| s.text.clone())
+}
+
 /// F59: the sure effects of a tone, applied by code after the rewrite —
 /// casual drops the final period, very casual also lowercases everything,
 /// excited ends on "!".
@@ -594,6 +626,28 @@ mod tests {
             ..Default::default()
         };
         assert_eq!(join_at_cursor(&unknown, "Bonjour.", false), "Bonjour.");
+    }
+
+    #[test]
+    fn snippets_only_when_said_alone() {
+        let snippets = vec![Snippet {
+            trigger: "mon adresse".into(),
+            text: "12 rue des Lilas
+75011 Paris"
+                .into(),
+        }];
+        assert_eq!(
+            snippet_for("Mon adresse.", &snippets).as_deref(),
+            Some(
+                "12 rue des Lilas
+75011 Paris"
+            )
+        );
+        assert_eq!(
+            snippet_for("J'ai changé mon adresse hier.", &snippets),
+            None
+        );
+        assert_eq!(snippet_for("", &snippets), None);
     }
 
     #[test]

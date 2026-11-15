@@ -754,6 +754,13 @@
           "excited": "Excited",
           "default": "Default"
         }
+      },
+      "snippets": {
+        "label": "Snippets",
+        "description": "Say the trigger on its own to insert its text as is, for example your address. A trigger inside a sentence stays a normal dictation.",
+        "trigger": "Trigger",
+        "text": "Text to insert",
+        "add": "Add Snippet"
       }
     },
     "history": {
