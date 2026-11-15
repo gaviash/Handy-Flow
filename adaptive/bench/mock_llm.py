@@ -14,7 +14,10 @@ class H(BaseHTTPRequestHandler):
             f.write(json.dumps(body, ensure_ascii=False) + '\n')
         user = body['messages'][-1]['content']
         m = re.search(r'<dictation>\n(.*)\n</dictation>', user, re.S)
-        reply = {'choices': [{'message': {'role': 'assistant', 'content': m.group(1) if m else user}}]}
+        t = re.search(r'<text>\n(.*)\n</text>', user, re.S)
+        # A transformation answers with a visibly changed text.
+        content = '[transformé] ' + t.group(1) if t else (m.group(1) if m else user)
+        reply = {'choices': [{'message': {'role': 'assistant', 'content': content}}]}
         data = json.dumps(reply).encode()
         self.send_response(200); self.send_header('Content-Type', 'application/json')
         self.send_header('Content-Length', str(len(data))); self.end_headers(); self.wfile.write(data)

@@ -55,12 +55,12 @@ function Open-Page([string]$id) {
   return $w
 }
 function Close-Fg { [HB]::Down(0x11); [HB]::Down(0x57); [HB]::Up(0x57); [HB]::Up(0x11); Start-Sleep -Milliseconds 500 }  # Ctrl+W
-function Start-Pad([string]$name, [string]$text = '', [int]$caret = -1) {
+function Start-Pad([string]$name, [string]$text = '', [int]$caret = -1, [int]$sel = 0) {
   if ($caret -lt 0) { $caret = $text.Length }
   Get-Process | Where-Object { $_.Path -like "$PadDir\*" } | Stop-Process -Force -ErrorAction SilentlyContinue; Start-Sleep -Milliseconds 300
   $bin = Join-Path $PadDir "$name.exe"; if (-not (Test-Path $bin)) { Copy-Item $PadSrc $bin }
   $tf = Join-Path $PadDir 'pad.txt'; [IO.File]::WriteAllText($tf, $text, [Text.UTF8Encoding]::new($false))
-  $p = Start-Process $bin -ArgumentList @("Pad-$name", "`"$tf`"", $caret, 0) -PassThru
+  $p = Start-Process $bin -ArgumentList @("Pad-$name", "`"$tf`"", $caret, $sel) -PassThru
   for ($i = 0; $i -lt 40 -and $p.MainWindowHandle -eq 0; $i++) { Start-Sleep -Milliseconds 100; $p.Refresh() }
   Start-Sleep -Milliseconds 300; if ([HB]::FgPid() -ne $p.Id) { [HB]::Bring($p.MainWindowHandle) | Out-Null; Start-Sleep -Milliseconds 200 }
   return $p
@@ -74,15 +74,15 @@ function Pad-Field($p) {
 }
 
 # Push-to-talk dictation of one corpus WAV; $during runs after speech, before release.
-function Dictate([string]$wav, [scriptblock]$during, [int]$tailMs = 400) {
+function Dictate([string]$wav, [scriptblock]$during, [int]$tailMs = 400, [byte[]]$keys = @(0x11, 0x20)) {
   $restore = Get-AudioDevice -Playback
   try {
     Set-AudioDevice -ID $cable.ID | Out-Null; Start-Sleep -Milliseconds 250
-    [HB]::Down(0x11); [HB]::Down(0x20); Start-Sleep -Milliseconds 600
+    $keys | ForEach-Object { [HB]::Down($_) }; Start-Sleep -Milliseconds 600
     (New-Object System.Media.SoundPlayer (Join-Path $AudioDir "$wav.wav")).PlaySync()
     Start-Sleep -Milliseconds $tailMs
     if ($during) { & $during; Start-Sleep -Milliseconds 300 }
-    [HB]::Up(0x20); [HB]::Up(0x11)
+    for ($k = $keys.Count - 1; $k -ge 0; $k--) { [HB]::Up($keys[$k]) }
   } finally { Set-AudioDevice -ID $restore.ID | Out-Null }
 }
 function Wait-Until([scriptblock]$cond, [int]$ms = 15000) { $sw = [Diagnostics.Stopwatch]::StartNew(); while ($sw.ElapsedMilliseconds -lt $ms) { if (& $cond) { return $true }; Start-Sleep -Milliseconds 100 }; return $false }
@@ -219,5 +219,24 @@ if (Want 'F16') {
     Record "F16-$i" ($v -match 'matin\.?$') @{ field = $v }
     Stop-Process -Id $pad.Id -Force
   }
+}
+if (Want 'S58') {
+  # Polish on a selection: replaced in place. Polish without selection: unchanged.
+  $text = 'Le texte a corriger ici.'
+  $polish = { [HB]::Down(0x11); [HB]::Down(0x12); [HB]::Down(0x50); [HB]::Up(0x50); [HB]::Up(0x12); [HB]::Up(0x11) }
+  $pad = Start-Pad 'testpad' $text 0 $text.Length; $f = Pad-Field $pad
+  & $polish; $ok = Wait-Until { (Value $f) -ne $text } 10000; Start-Sleep -Milliseconds 300
+  Record 'S58-polish' ($ok -and (Value $f) -eq "[transformé] $text") @{ field = (Value $f) }
+  Stop-Process -Id $pad.Id -Force
+  $pad = Start-Pad 'testpad' $text; $f = Pad-Field $pad
+  & $polish; Start-Sleep -Seconds 4
+  Record 'S58-noselection' ((Value $f) -eq $text) @{ field = (Value $f) }
+  Stop-Process -Id $pad.Id -Force
+  # Voice instruction on a selection (Ctrl+Alt+Space held).
+  $pad = Start-Pad 'testpad' $text 0 $text.Length; $f = Pad-Field $pad; $m = Mock-Count
+  Dictate 'CT09' $null 400 @(0x11, 0x12, 0x20); $ok = Wait-Until { (Value $f) -ne $text } 15000; Start-Sleep -Milliseconds 300
+  $s = (Mock-Since $m) -join "`n"
+  Record 'S58-instruct' ($ok -and (Value $f) -eq "[transformé] $text" -and $s -match '<instruction>\s*Rends ce texte plus formel') @{ field = (Value $f); sent = $s }
+  Stop-Process -Id $pad.Id -Force
 }
 $results | Format-Table id, pass -AutoSize | Out-String | Write-Host
