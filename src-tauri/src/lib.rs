@@ -10,6 +10,7 @@ mod chinese_script;
 pub mod cli;
 mod clipboard;
 mod commands;
+mod context;
 pub mod engine_supervisor;
 mod helpers;
 mod input;
@@ -204,6 +205,8 @@ fn initialize_core_logic(app_handle: &AppHandle) {
     // The frontend is responsible for calling the `initialize_enigo` command
     // after onboarding completes. This avoids triggering permission dialogs
     // on macOS before the user is ready.
+
+    context::load_rules(app_handle);
 
     // Initialize the managers. The audio recorder receives the streaming router
     // explicitly, so always-on microphone startup can wire live-preview frames
@@ -708,6 +711,11 @@ pub fn run(cli_args: CliArgs) {
             shortcut::change_word_correction_threshold_setting,
             shortcut::change_extra_recording_buffer_setting,
             shortcut::change_post_process_timeout_setting,
+            shortcut::change_context_enabled_setting,
+            shortcut::change_context_send_enabled_setting,
+            shortcut::change_context_excluded_apps_setting,
+            shortcut::change_context_excluded_domains_setting,
+            context::get_last_context_report,
             shortcut::change_language_detection_setting,
             shortcut::change_language_detection_window_setting,
             shortcut::change_paste_delay_ms_setting,

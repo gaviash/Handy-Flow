@@ -157,6 +157,41 @@ async changePostProcessTimeoutSetting(secs: number) : Promise<Result<null, strin
     else return { status: "error", error: e  as any };
 }
 },
+async changeContextEnabledSetting(enabled: boolean) : Promise<Result<null, string>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("change_context_enabled_setting", { enabled }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+async changeContextSendEnabledSetting(enabled: boolean) : Promise<Result<null, string>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("change_context_send_enabled_setting", { enabled }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+async changeContextExcludedAppsSetting(apps: string[]) : Promise<Result<null, string>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("change_context_excluded_apps_setting", { apps }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+async changeContextExcludedDomainsSetting(domains: string[]) : Promise<Result<null, string>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("change_context_excluded_domains_setting", { domains }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+async getLastContextReport() : Promise<ContextReport> {
+    return await TAURI_INVOKE("get_last_context_report");
+},
 async changeLanguageDetectionSetting(mode: LanguageDetectionMode) : Promise<Result<null, string>> {
     try {
     return { status: "ok", data: await TAURI_INVOKE("change_language_detection_setting", { mode }) };
@@ -1127,6 +1162,20 @@ adaptive_settings_version?: number;
  */
 post_process_timeout_secs?: number; 
 /**
+ * F97: read the destination (site, field, page names). A password field
+ * is detected even when this is off.
+ */
+context_enabled?: boolean; 
+/**
+ * F97: send the minimal context (F31) with the rewrite request.
+ */
+context_send_enabled?: boolean; 
+/**
+ * F33: apps (process names) and domains that get no context and no
+ * automatic paste.
+ */
+context_excluded_apps?: string[]; context_excluded_domains?: string[]; 
+/**
  * Defaults to empty on partial stores; the load path merges in the
  * default bindings for any missing keys before the settings are used.
  */
@@ -1372,7 +1421,12 @@ detail: string | null }
 /**
  * The frontend maps each code to its text in `src/lib/notices.ts`.
  */
-export type NoticeCode = "TranscriptionFailed" | "PasteFailed" | "PasteBlockedElevated" | "NoMicrophone" | "MicrophoneSilent" | "MicPermissionDenied" | "RecordingFailed" | "ModelLoadFailed" | "NoModelSelected" | "PostProcessFailed" | "FileTranscriptionFailed" | "FilePostProcessFailed"
+export type Content = "email" | "work_chat" | "personal_chat" | "ai" | "document" | "code" | "other"
+export type Style = "work" | "email" | "personal" | "other"
+export type Field = { before: string; after: string; selection: string; caret_known: boolean }
+export type Capture = { process: string; title: string; host: string | null; content: Content | null; terminal: boolean; sensitive: boolean; excluded: boolean; field: Field | null; names: string[]; page_chars: number }
+export type ContextReport = { capture: Capture | null; sent: string | null }
+export type NoticeCode = "TranscriptionFailed" | "PasteFailed" | "PasteBlockedElevated" | "PasteSkippedExcluded" | "NoMicrophone" | "MicrophoneSilent" | "MicPermissionDenied" | "RecordingFailed" | "ModelLoadFailed" | "NoModelSelected" | "PostProcessFailed" | "FileTranscriptionFailed" | "FilePostProcessFailed"
 export type NoticeLevel = 
 /**
  * Nothing came out, or Handy can't do its job.

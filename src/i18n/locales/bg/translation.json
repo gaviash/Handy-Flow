@@ -692,6 +692,34 @@
       "timeout": {
         "title": "Fallback Delay",
         "description": "How long to wait for the rewrite before pasting the cleaned transcript instead."
+      },
+      "context": {
+        "title": "Context and Privacy",
+        "read": {
+          "label": "Read the Destination",
+          "description": "Reads the app, the site and the text around the cursor to adapt the rewrite. Password fields are never read."
+        },
+        "send": {
+          "label": "Send Context to the LLM",
+          "description": "Sends the category, a short masked excerpt around the cursor and the names of the people on the page. Emails and recognizable secrets are never sent."
+        },
+        "excludedApps": {
+          "label": "Excluded Apps",
+          "description": "Process names, one per line. These apps get no context and no automatic paste."
+        },
+        "excludedDomains": {
+          "label": "Excluded Sites",
+          "description": "Domains, one per line, subdomains included. These sites get no context and no automatic paste."
+        },
+        "last": {
+          "label": "Last Dictation",
+          "description": "What the last dictation read and sent to the LLM. Kept in memory only.",
+          "refresh": "Refresh",
+          "none": "No dictation yet.",
+          "sensitive": "Password field: nothing was read, sent or kept.",
+          "excluded": "Excluded app or site: no context was read or sent.",
+          "nothingSent": "Nothing was sent to the LLM."
+        }
       }
     },
     "history": {
@@ -956,6 +984,8 @@
     "pasteFailed": "Текстът не можа да бъде поставен в активното приложение.",
     "pasteBlockedElevatedTitle": "Поставянето е блокирано",
     "pasteBlockedElevated": "Активното приложение работи като администратор, затова Handy не може да поставя в него. Можете да копирате транскрипцията от История.",
+    "pasteSkippedExcludedTitle": "Not Pasted in Excluded App",
+    "pasteSkippedExcluded": "This app or site is excluded, so Handy didn't paste into it. You can copy the transcript from History.",
     "postProcessFailedTitle": "Поставено без постобработка",
     "postProcessFailed": "Постобработката не завърши, затова транскрипцията беше поставена без промени.",
     "filePostProcessFailedTitle": "Транскрибирано без постобработка",

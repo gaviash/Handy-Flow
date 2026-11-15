@@ -1,0 +1,127 @@
+import React, { useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
+import { commands, type ContextReport } from "@/bindings";
+import { ToggleSwitch } from "../../ui/ToggleSwitch";
+import { SettingContainer } from "../../ui/SettingContainer";
+import { Textarea } from "../../ui/Textarea";
+import { Button } from "../../ui/Button";
+import { useSettings } from "../../../hooks/useSettings";
+
+type ListKey = "context_excluded_apps" | "context_excluded_domains";
+
+const ExclusionList: React.FC<{
+  settingKey: ListKey;
+  label: string;
+  description: string;
+}> = ({ settingKey, label, description }) => {
+  const { getSetting, updateSetting } = useSettings();
+  const saved = (getSetting(settingKey) ?? []).join("\n");
+  const [text, setText] = useState(saved);
+  useEffect(() => setText(saved), [saved]);
+
+  return (
+    <SettingContainer
+      title={label}
+      description={description}
+      layout="stacked"
+      grouped={true}
+    >
+      <Textarea
+        className="w-full"
+        variant="compact"
+        value={text}
+        onChange={(e) => setText(e.target.value)}
+        onBlur={() =>
+          updateSetting(
+            settingKey,
+            text
+              .split(/[\n,]/)
+              .map((s) => s.trim())
+              .filter(Boolean),
+          )
+        }
+      />
+    </SettingContainer>
+  );
+};
+
+/** Handy Adaptive (F97, F33, F114): what is read, what is sent, and the last send. */
+export const ContextSettings: React.FC = () => {
+  const { t } = useTranslation();
+  const { getSetting, updateSetting, isUpdating } = useSettings();
+  const [report, setReport] = useState<ContextReport | null>(null);
+  const refresh = () => commands.getLastContextReport().then(setReport);
+  useEffect(() => {
+    refresh();
+  }, []);
+
+  const capture = report?.capture;
+  const target = capture
+    ? [capture.process, capture.host, capture.content]
+        .filter(Boolean)
+        .join(" · ")
+    : "";
+  const status = !capture
+    ? t("settings.postProcessing.context.last.none")
+    : capture.sensitive
+      ? t("settings.postProcessing.context.last.sensitive")
+      : capture.excluded
+        ? t("settings.postProcessing.context.last.excluded")
+        : (report?.sent ??
+          t("settings.postProcessing.context.last.nothingSent"));
+
+  return (
+    <>
+      <ToggleSwitch
+        checked={getSetting("context_enabled") ?? true}
+        onChange={(v) => updateSetting("context_enabled", v)}
+        isUpdating={isUpdating("context_enabled")}
+        label={t("settings.postProcessing.context.read.label")}
+        description={t("settings.postProcessing.context.read.description")}
+        descriptionMode="tooltip"
+        grouped={true}
+      />
+      <ToggleSwitch
+        checked={getSetting("context_send_enabled") ?? true}
+        onChange={(v) => updateSetting("context_send_enabled", v)}
+        isUpdating={isUpdating("context_send_enabled")}
+        label={t("settings.postProcessing.context.send.label")}
+        description={t("settings.postProcessing.context.send.description")}
+        descriptionMode="tooltip"
+        grouped={true}
+      />
+      <ExclusionList
+        settingKey="context_excluded_apps"
+        label={t("settings.postProcessing.context.excludedApps.label")}
+        description={t(
+          "settings.postProcessing.context.excludedApps.description",
+        )}
+      />
+      <ExclusionList
+        settingKey="context_excluded_domains"
+        label={t("settings.postProcessing.context.excludedDomains.label")}
+        description={t(
+          "settings.postProcessing.context.excludedDomains.description",
+        )}
+      />
+      <SettingContainer
+        title={t("settings.postProcessing.context.last.label")}
+        description={t("settings.postProcessing.context.last.description")}
+        layout="stacked"
+        grouped={true}
+      >
+        <div className="w-full space-y-2">
+          <div className="flex items-center justify-between gap-2">
+            <span className="text-sm text-mid-gray">{target}</span>
+            <Button variant="secondary" size="sm" onClick={refresh}>
+              {t("settings.postProcessing.context.last.refresh")}
+            </Button>
+          </div>
+          <pre className="text-xs whitespace-pre-wrap break-words bg-wash border border-line-strong rounded-md p-2 max-h-60 overflow-auto">
+            {status}
+          </pre>
+        </div>
+      </SettingContainer>
+    </>
+  );
+};

@@ -21,6 +21,10 @@ const NOTICE_DISPLAY: Record<NoticeCode, NoticeDisplay> = {
     title: "errors.pasteBlockedElevatedTitle",
     explanation: (t) => t("errors.pasteBlockedElevated"),
   },
+  PasteSkippedExcluded: {
+    title: "errors.pasteSkippedExcludedTitle",
+    explanation: (t) => t("errors.pasteSkippedExcluded"),
+  },
   NoMicrophone: {
     title: "errors.noInputDeviceTitle",
     explanation: (t) => t("errors.noInputDevice"),
