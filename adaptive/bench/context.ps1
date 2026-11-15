@@ -239,4 +239,21 @@ if (Want 'S58') {
   Record 'S58-instruct' ($ok -and (Value $f) -eq "[transformé] $text" -and $s -match '<instruction>\s*Rends ce texte plus formel') @{ field = (Value $f); sent = $s }
   Stop-Process -Id $pad.Id -Force
 }
+if (Want 'REAL') {
+  # Real provider (Groq, or the fallback): the outputs are read by a human.
+  $pad = Start-Pad 'testpad'; $f = Pad-Field $pad; $sw = [Diagnostics.Stopwatch]::StartNew()
+  Dictate 'GE06'; $ok = Wait-Until { Value $f } 20000; Start-Sleep -Milliseconds 300
+  Record 'REAL-rewrite' $ok @{ field = (Value $f); ms = $sw.ElapsedMilliseconds }
+  Stop-Process -Id $pad.Id -Force
+  $text = 'salut, euh je voulais te dire que le rendu est pret mais il y a encore pas mal de faute dans le doc, tu peut regarder ?'
+  $pad = Start-Pad 'testpad' $text 0 $text.Length; $f = Pad-Field $pad; $sw = [Diagnostics.Stopwatch]::StartNew()
+  [HB]::Down(0x11); [HB]::Down(0x12); [HB]::Down(0x50); [HB]::Up(0x50); [HB]::Up(0x12); [HB]::Up(0x11)
+  $ok = Wait-Until { (Value $f) -ne $text } 25000; Start-Sleep -Milliseconds 300
+  Record 'REAL-polish' $ok @{ field = (Value $f); ms = $sw.ElapsedMilliseconds }
+  Stop-Process -Id $pad.Id -Force
+  $pad = Start-Pad 'testpad' $text 0 $text.Length; $f = Pad-Field $pad; $sw = [Diagnostics.Stopwatch]::StartNew()
+  Dictate 'CT09' $null 400 @(0x11, 0x12, 0x20); $ok = Wait-Until { (Value $f) -ne $text } 25000; Start-Sleep -Milliseconds 300
+  Record 'REAL-instruct' $ok @{ field = (Value $f); ms = $sw.ElapsedMilliseconds }
+  Stop-Process -Id $pad.Id -Force
+}
 $results | Format-Table id, pass -AutoSize | Out-String | Write-Host

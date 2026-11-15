@@ -670,7 +670,7 @@
         },
         "baseUrl": {
           "title": "URL de base",
-          "description": "URL de base de l'API pour le fournisseur sélectionné. Seul le fournisseur personnalisé peut être modifié.",
+          "description": "URL de base de l'API du fournisseur sélectionné. Modifiable pour le fournisseur personnalisé et Cloudflare (remplacez ACCOUNT_ID par votre identifiant de compte).",
           "placeholder": "https://api.openai.com/v1",
           "placeholderAnthropic": "https://api.anthropic.com/v1"
         },
@@ -686,6 +686,11 @@
           "placeholderWithOptions": "Rechercher ou sélectionner un modèle",
           "placeholderNoOptions": "Tapez un nom de modèle",
           "refreshModels": "Actualiser les modèles"
+        },
+        "fallback": {
+          "title": "Fournisseur de secours",
+          "description": "Répond quand le fournisseur principal échoue (quota atteint, erreur, trop lent). Pour le configurer, choisissez-le comme fournisseur ci-dessus, saisissez son URL, sa clé et son modèle, puis revenez au fournisseur principal.",
+          "none": "Aucun"
         }
       },
       "prompts": {

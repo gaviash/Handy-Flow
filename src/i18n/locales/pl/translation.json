@@ -686,6 +686,11 @@
           "placeholderWithOptions": "Wyszukaj lub wybierz model",
           "placeholderNoOptions": "Wpisz nazwę modelu",
           "refreshModels": "Odśwież modele"
+        },
+        "fallback": {
+          "title": "Fallback Provider",
+          "description": "Answers when the main provider fails (quota reached, error, too slow). To set it up, pick it as the provider above, enter its URL, key and model, then switch back.",
+          "none": "None"
         }
       },
       "prompts": {

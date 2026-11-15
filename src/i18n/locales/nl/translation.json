@@ -686,6 +686,11 @@
           "placeholderWithOptions": "Zoek of selecteer een model",
           "placeholderNoOptions": "Typ een modelnaam",
           "refreshModels": "Modellen verversen"
+        },
+        "fallback": {
+          "title": "Fallback Provider",
+          "description": "Answers when the main provider fails (quota reached, error, too slow). To set it up, pick it as the provider above, enter its URL, key and model, then switch back.",
+          "none": "None"
         }
       },
       "prompts": {

@@ -230,6 +230,14 @@ async changeSnippetsSetting(snippets: Snippet[]) : Promise<Result<null, string>>
     else return { status: "error", error: e  as any };
 }
 },
+async changePostProcessFallbackProviderSetting(providerId: string) : Promise<Result<null, string>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("change_post_process_fallback_provider_setting", { providerId }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
 async changeUserNameSetting(name: string) : Promise<Result<null, string>> {
     try {
     return { status: "ok", data: await TAURI_INVOKE("change_user_name_setting", { name }) };
@@ -1256,6 +1264,11 @@ snippets?: Snippet[];
  * F63: the user's own name, always a spelling to respect.
  */
 user_name?: string;
+/**
+ * The provider that answers when the main one fails (quota, error,
+ * slowness). Empty: none. Skipped while it has no model or key.
+ */
+post_process_fallback_provider_id?: string;
 /**
  * F122: saved transformations, one shortcut each.
  */

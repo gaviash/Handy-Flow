@@ -431,6 +431,10 @@ pub struct AppSettings {
     /// F63: the user's own name, always a spelling to respect.
     #[serde(default)]
     pub user_name: String,
+    /// The provider that answers when the main one fails (quota, error,
+    /// slowness). Empty: none. Skipped while it has no model or key.
+    #[serde(default = "default_fallback_provider_id")]
+    pub post_process_fallback_provider_id: String,
     /// F120: user snippets, inserted when their trigger is said alone.
     #[serde(default)]
     pub snippets: Vec<crate::adaptive::Snippet>,
@@ -625,6 +629,10 @@ const CURRENT_ADAPTIVE_SETTINGS_VERSION: u32 = 3;
 
 fn default_adaptive_settings_version() -> u32 {
     CURRENT_ADAPTIVE_SETTINGS_VERSION
+}
+
+fn default_fallback_provider_id() -> String {
+    "cloudflare".to_string()
 }
 
 fn default_post_process_timeout_secs() -> u64 {
@@ -884,6 +892,16 @@ fn default_post_process_providers() -> Vec<PostProcessProvider> {
             api_format: PostProcessApiFormat::OpenAi,
         },
         PostProcessProvider {
+            id: "cloudflare".to_string(),
+            label: "Cloudflare Workers AI".to_string(),
+            // The account id is the user's: they replace ACCOUNT_ID in the app.
+            base_url: "https://api.cloudflare.com/client/v4/accounts/ACCOUNT_ID/ai/v1".to_string(),
+            allow_base_url_edit: true,
+            models_endpoint: None,
+            supports_structured_output: false,
+            api_format: PostProcessApiFormat::OpenAi,
+        },
+        PostProcessProvider {
             id: "cerebras".to_string(),
             label: "Cerebras".to_string(),
             base_url: "https://api.cerebras.ai/v1".to_string(),
@@ -947,6 +965,9 @@ fn default_post_process_api_keys() -> SecretMap {
 fn default_model_for_provider(provider_id: &str) -> String {
     if provider_id == APPLE_INTELLIGENCE_PROVIDER_ID {
         return APPLE_INTELLIGENCE_DEFAULT_MODEL_ID.to_string();
+    }
+    if provider_id == "cloudflare" {
+        return "@cf/google/gemma-4-26b-a4b-it".to_string();
     }
     String::new()
 }
@@ -1183,6 +1204,7 @@ pub fn get_default_settings() -> AppSettings {
         styles: crate::context::Styles::default(),
         snippets: Vec::new(),
         user_name: String::new(),
+        post_process_fallback_provider_id: default_fallback_provider_id(),
         transforms: crate::adaptive::default_transforms(),
         bindings,
         shortcut_activation: ShortcutActivation::default(),

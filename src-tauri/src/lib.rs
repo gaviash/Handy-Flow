@@ -721,6 +721,7 @@ pub fn run(cli_args: CliArgs) {
             shortcut::change_styles_setting,
             shortcut::change_snippets_setting,
             shortcut::change_user_name_setting,
+            shortcut::change_post_process_fallback_provider_setting,
             shortcut::change_transforms_setting,
             commands::history::get_dictation_stats,
             learning::get_learned_words,
