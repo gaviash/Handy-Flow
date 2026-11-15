@@ -949,10 +949,19 @@ impl ShortcutAction for TranscribeAction {
                             let excluded = capture.excluded;
                             let (field, terminal) = (capture.field.clone(), capture.terminal);
                             let post_process = post_process && !sensitive;
-                            let llm_context = get_settings(&ah)
+                            let ctx_settings = get_settings(&ah);
+                            let mut llm_context = ctx_settings
                                 .context_send_enabled
                                 .then(|| crate::context::llm_context(&capture))
                                 .flatten();
+                            // The user's custom words are spellings to respect too.
+                            if let Some(c) = llm_context.as_mut() {
+                                for word in &ctx_settings.custom_words {
+                                    if !c.terms.contains(word) {
+                                        c.terms.push(word.clone());
+                                    }
+                                }
+                            }
                             crate::context::set_report(crate::context::ContextReport {
                                 capture: Some(capture),
                                 sent: None,

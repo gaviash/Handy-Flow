@@ -200,6 +200,8 @@ pub struct Capture {
     pub field: Option<Field>,
     /// Names next to email addresses on the page: recipients, quoted authors (F27).
     pub names: Vec<String>,
+    /// Other spellings from the field, page and editor title (F40, F28).
+    pub terms: Vec<String>,
     /// Characters of page text read to find `names` (F114); never kept or sent.
     pub page_chars: u32,
 }
@@ -359,6 +361,8 @@ pub struct LlmContext {
     pub after: String,
     pub selection: String,
     pub names: Vec<String>,
+    /// Spellings to respect: page terms (F40) and the user's custom words.
+    pub terms: Vec<String>,
 }
 
 const BEFORE_CHARS: usize = 300;
@@ -386,7 +390,233 @@ pub fn llm_context(capture: &Capture) -> Option<LlmContext> {
         after,
         selection,
         names: capture.names.clone(),
+        terms: capture.terms.clone(),
     })
+}
+
+/// Words that open a sentence without being a name (fr/en), lowercased.
+const STARTERS: &[&str] = &[
+    "le",
+    "la",
+    "les",
+    "un",
+    "une",
+    "des",
+    "de",
+    "du",
+    "au",
+    "aux",
+    "ce",
+    "cet",
+    "cette",
+    "ces",
+    "je",
+    "tu",
+    "il",
+    "elle",
+    "on",
+    "nous",
+    "vous",
+    "ils",
+    "elles",
+    "mon",
+    "ma",
+    "mes",
+    "ton",
+    "ta",
+    "tes",
+    "son",
+    "sa",
+    "ses",
+    "notre",
+    "votre",
+    "leur",
+    "leurs",
+    "bonjour",
+    "bonsoir",
+    "salut",
+    "merci",
+    "cordialement",
+    "bien",
+    "bonne",
+    "oui",
+    "non",
+    "mais",
+    "et",
+    "ou",
+    "donc",
+    "car",
+    "si",
+    "quand",
+    "comment",
+    "pourquoi",
+    "voici",
+    "voilà",
+    "pour",
+    "avec",
+    "dans",
+    "sur",
+    "par",
+    "en",
+    "objet",
+    "envoyé",
+    "date",
+    "hier",
+    "demain",
+    "aujourd'hui",
+    "the",
+    "a",
+    "an",
+    "you",
+    "he",
+    "she",
+    "we",
+    "they",
+    "it",
+    "this",
+    "that",
+    "these",
+    "those",
+    "hi",
+    "hello",
+    "dear",
+    "thanks",
+    "thank",
+    "best",
+    "regards",
+    "yes",
+    "no",
+    "but",
+    "and",
+    "or",
+    "so",
+    "if",
+    "when",
+    "how",
+    "why",
+    "what",
+    "subject",
+    "sent",
+    "from",
+    "to",
+    "for",
+    "with",
+    "in",
+    "on",
+    "at",
+    "of",
+    "my",
+    "your",
+    "our",
+    "their",
+    "please",
+    "re",
+    "tr",
+    "fw",
+    "cc",
+    "cci",
+    "bcc",
+];
+
+const CODE_EXTENSIONS: &[&str] = &[
+    "py", "rs", "ts", "tsx", "js", "jsx", "json", "md", "go", "java", "kt", "cs", "cpp", "c", "h",
+    "rb", "php", "sql", "yml", "yaml", "toml", "sh", "ps1", "html", "css", "vue", "swift",
+];
+
+/// A code identifier or file name: `compute_invoice_total`, `InvoiceAggregator`,
+/// `billing_service.py`.
+fn is_identifier(t: &str) -> bool {
+    let letters = t.chars().any(char::is_alphabetic);
+    let snake = t.contains('_') && letters && t.chars().all(|c| c.is_alphanumeric() || c == '_');
+    let camel = t.chars().all(char::is_alphanumeric)
+        && t.chars()
+            .zip(t.chars().skip(1))
+            .any(|(a, b)| a.is_lowercase() && b.is_uppercase());
+    let file = t
+        .rsplit_once('.')
+        .is_some_and(|(stem, ext)| !stem.is_empty() && CODE_EXTENSIONS.contains(&ext));
+    snake || camel || file
+}
+
+/// F40: terms of the destination's context — capitalized names (alone or in
+/// groups of up to three), acronyms, code identifiers and file names, plus the
+/// file and project of an editor's title (F28). Most frequent first, at most 20.
+pub fn extract_terms(texts: &[String], title: &str, code: bool, names: &[String]) -> Vec<String> {
+    let mut found: Vec<(String, usize)> = Vec::new();
+    let mut add = |t: String| match found.iter_mut().find(|(f, _)| *f == t) {
+        Some((_, n)) => *n += 1,
+        None => found.push((t, 1)),
+    };
+    let title_parts: Vec<String> = if code {
+        title
+            .split(" - ")
+            .take(2)
+            .map(|s| s.trim().trim_start_matches('●').trim().to_string())
+            .collect()
+    } else {
+        Vec::new()
+    };
+    for part in &title_parts {
+        if !part.is_empty() && !part.contains("Visual Studio") {
+            add(part.clone());
+        }
+    }
+    for text in texts {
+        let raw: Vec<&str> = text.split_whitespace().collect();
+        let mut group: Vec<String> = Vec::new();
+        let mut sentence_start = true;
+        for (i, tok) in raw.iter().enumerate() {
+            let word = tok.trim_matches(|c: char| ",;:!?()[]{}«»\"'“”".contains(c));
+            let word = word
+                .strip_suffix('.')
+                .filter(|w| !is_identifier(tok.trim_end_matches([',', ';', ':'])))
+                .unwrap_or(word);
+            let clean = !word.contains('@') && !word.contains("://") && word.chars().count() >= 2;
+            let next_capital = raw
+                .get(i + 1)
+                .and_then(|n| {
+                    n.trim_start_matches(|c: char| !c.is_alphanumeric())
+                        .chars()
+                        .next()
+                })
+                .is_some_and(char::is_uppercase);
+            let capital = clean && word.chars().next().is_some_and(char::is_uppercase);
+            let acronym = capital
+                && word.chars().count() <= 6
+                && word.chars().all(|c| c.is_uppercase() || c.is_ascii_digit());
+            // A capitalized word opening a sentence counts only when another
+            // one follows (a full name, a list of names), never a lone button.
+            let name_like = capital
+                && !acronym
+                && !STARTERS.contains(&word.to_lowercase().as_str())
+                && (!sentence_start || next_capital || !group.is_empty());
+            // Code tokens: `f(x).y` holds several identifiers.
+            for piece in tok.split(|c: char| !(c.is_alphanumeric() || c == '_' || c == '.')) {
+                let piece = piece.trim_matches('.');
+                if piece.chars().count() >= 3 && is_identifier(piece) {
+                    add(piece.to_string());
+                }
+            }
+            if acronym && word.chars().count() >= 2 {
+                add(word.to_string());
+            }
+            if name_like && !is_identifier(word) {
+                group.push(word.to_string());
+            }
+            let breaks =
+                !name_like || tok.ends_with([',', ';', ':', '.', '!', '?']) || group.len() == 3;
+            if breaks && !group.is_empty() {
+                add(std::mem::take(&mut group).join(" "));
+            }
+            sentence_start = tok.ends_with(['.', '!', '?', ':']);
+        }
+        if !group.is_empty() {
+            add(group.join(" "));
+        }
+    }
+    found.retain(|(t, _)| !names.iter().any(|n| n == t || n.split(' ').any(|p| p == t)));
+    found.sort_by(|a, b| b.1.cmp(&a.1));
+    found.into_iter().map(|(t, _)| t).take(20).collect()
 }
 
 /// F114: what the last dictation read, kept and sent. Memory only.
@@ -574,6 +804,66 @@ mod tests {
                 "Quennehen Aurelie"
             ]
         );
+    }
+
+    #[test]
+    fn extracts_terms_from_context() {
+        let t = |texts: &[&str], title: &str, code: bool| {
+            extract_terms(
+                &texts.iter().map(|s| s.to_string()).collect::<Vec<_>>(),
+                title,
+                code,
+                &["Bérénice Kowalczyk".to_string()],
+            )
+        };
+        // GE05
+        let terms = t(&["Zorblax, Quintavex, Merindor"], "", false);
+        for w in ["Zorblax", "Quintavex", "Merindor"] {
+            assert!(terms.contains(&w.to_string()), "{w} in {terms:?}");
+        }
+        let terms = t(
+            &[
+                "À : Bérénice Kowalczyk <berenice.k@example.com> — Objet : Réunion Kubernetes. Bonjour, peux-tu relire le plan de migration PostgreSQL avant jeudi ? Merci, Ksenia Wróblewska.",
+                "Cc : Kasimir Zbignowski, Aurélie Quennehen — équipe Vélizy.",
+                "Répondre", "Transférer", "Envoyer",
+            ],
+            "",
+            false,
+        );
+        for w in [
+            "PostgreSQL",
+            "Ksenia Wróblewska",
+            "Kasimir Zbignowski",
+            "Aurélie Quennehen",
+            "Vélizy",
+        ] {
+            assert!(terms.contains(&w.to_string()), "{w} in {terms:?}");
+        }
+        for w in [
+            "Bonjour",
+            "Merci",
+            "Bérénice Kowalczyk",
+            "Bérénice",
+            "Envoyer",
+            "Répondre",
+        ] {
+            assert!(!terms.contains(&w.to_string()), "{w} not in {terms:?}");
+        }
+        // GE15 / F28: editor title and identifiers.
+        let terms = t(
+            &["def compute_invoice_total(items): return InvoiceAggregator(items).total"],
+            "● billing_service.py - invoicing - Visual Studio Code",
+            true,
+        );
+        for w in [
+            "compute_invoice_total",
+            "InvoiceAggregator",
+            "billing_service.py",
+            "invoicing",
+        ] {
+            assert!(terms.contains(&w.to_string()), "{w} in {terms:?}");
+        }
+        assert!(t(&["voir https://example.com/Doc et a@b.com"], "", false).is_empty());
     }
 
     #[test]
