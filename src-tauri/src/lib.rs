@@ -719,6 +719,7 @@ pub fn run(cli_args: CliArgs) {
             context::get_last_context_report,
             shortcut::change_learning_enabled_setting,
             shortcut::change_styles_setting,
+            shortcut::change_snippets_setting,
             learning::get_learned_words,
             learning::delete_learned_word,
             learning::clear_learned_words,

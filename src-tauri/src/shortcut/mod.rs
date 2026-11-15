@@ -1015,6 +1015,21 @@ pub fn change_styles_setting(app: AppHandle, styles: crate::context::Styles) -> 
     Ok(())
 }
 
+#[tauri::command]
+#[specta::specta]
+pub fn change_snippets_setting(
+    app: AppHandle,
+    snippets: Vec<crate::adaptive::Snippet>,
+) -> Result<(), String> {
+    let mut settings = settings::get_settings(&app);
+    settings.snippets = snippets
+        .into_iter()
+        .filter(|s| !s.trigger.trim().is_empty() && !s.text.trim().is_empty())
+        .collect();
+    settings::write_settings(&app, settings);
+    Ok(())
+}
+
 fn clean_list(items: Vec<String>) -> Vec<String> {
     items
         .into_iter()

@@ -2,6 +2,7 @@ import { create } from "zustand";
 import { subscribeWithSelector } from "zustand/middleware";
 import { listen } from "@tauri-apps/api/event";
 import type {
+  Snippet,
   Styles,
   AppSettings as Settings,
   AudioDevice,
@@ -223,6 +224,7 @@ const settingUpdaters: {
   context_excluded_apps: (value) =>
     commands.changeContextExcludedAppsSetting(value as string[]),
   styles: (value) => commands.changeStylesSetting(value as Styles),
+  snippets: (value) => commands.changeSnippetsSetting(value as Snippet[]),
   learning_enabled: (value) =>
     commands.changeLearningEnabledSetting(value as boolean),
   context_excluded_domains: (value) =>

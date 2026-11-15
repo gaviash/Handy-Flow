@@ -954,8 +954,17 @@ impl ShortcutAction for TranscribeAction {
                             let sensitive = capture.sensitive;
                             let excluded = capture.excluded;
                             let (field, terminal) = (capture.field.clone(), capture.terminal);
-                            let post_process = post_process && !sensitive;
                             let ctx_settings = get_settings(&ah);
+                            // F120: a trigger said on its own inserts its snippet as is.
+                            let snippet = (!sensitive)
+                                .then(|| {
+                                    crate::adaptive::snippet_for(
+                                        &transcription,
+                                        &ctx_settings.snippets,
+                                    )
+                                })
+                                .flatten();
+                            let post_process = post_process && !sensitive && snippet.is_none();
                             let mut llm_context = ctx_settings
                                 .context_send_enabled
                                 .then(|| crate::context::llm_context(&capture))
@@ -992,7 +1001,7 @@ impl ShortcutAction for TranscribeAction {
                             let Some(processed) = complete_unless_cancelled(
                                 process_transcription_output(
                                     &ah,
-                                    &transcription,
+                                    snippet.as_deref().unwrap_or(&transcription),
                                     post_process,
                                     llm_context.as_ref(),
                                 ),

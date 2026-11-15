@@ -754,6 +754,13 @@
           "excited": "Enthousiaste",
           "default": "Par défaut"
         }
+      },
+      "snippets": {
+        "label": "Snippets",
+        "description": "Dites le déclencheur seul pour insérer son texte tel quel, par exemple votre adresse. Un déclencheur dans une phrase reste une dictée normale.",
+        "trigger": "Déclencheur",
+        "text": "Texte à insérer",
+        "add": "Ajouter un snippet"
       }
     },
     "history": {
