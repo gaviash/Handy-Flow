@@ -23,6 +23,7 @@ import { notify } from "@/stores/noticeStore";
 import {
   commands,
   events,
+  type DictationStats,
   type HistoryEntry,
   type HistoryUpdatePayload,
 } from "@/bindings";
@@ -368,10 +369,41 @@ export const HistorySettings: React.FC = () => {
             />
           </div>
         </div>
+        <DictationStatsLine />
         <div className="bg-background border border-line rounded-lg overflow-visible">
           {content}
         </div>
       </div>
+    </div>
+  );
+};
+
+/** Handy Adaptive (F110): a one-line summary of the kept history. */
+const DictationStatsLine: React.FC = () => {
+  const { t } = useTranslation();
+  const [stats, setStats] = useState<DictationStats | null>(null);
+  useEffect(() => {
+    commands.getDictationStats().then((r) => {
+      if (r.status === "ok") setStats(r.data);
+    });
+  }, []);
+  if (!stats || stats.dictations === 0) return null;
+  return (
+    <div className="px-4 text-xs text-ink-3 space-y-0.5">
+      <p>
+        {t("settings.history.stats.title", {
+          dictations: stats.dictations,
+          words: stats.words,
+          learned: stats.learned_words,
+        })}
+      </p>
+      {stats.top_apps.length > 0 && (
+        <p>
+          {t("settings.history.stats.apps", {
+            apps: stats.top_apps.map(([a, n]) => `${a} (${n})`).join(", "),
+          })}
+        </p>
+      )}
     </div>
   );
 };

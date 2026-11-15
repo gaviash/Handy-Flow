@@ -25,6 +25,7 @@ import { ContextSettings } from "./ContextSettings";
 import { LearningSettings } from "./LearningSettings";
 import { StyleSettings } from "./StyleSettings";
 import { SnippetSettings } from "./SnippetSettings";
+import { TransformSettings } from "./TransformSettings";
 import { useSettings } from "../../../hooks/useSettings";
 
 const PostProcessingSettingsApiComponent: React.FC = () => {
@@ -489,6 +490,10 @@ export const PostProcessingSettings: React.FC = () => {
       <SettingsGroup title={t("settings.postProcessing.api.title")}>
         <PostProcessingSettingsApi />
         <PostProcessTimeout />
+      </SettingsGroup>
+
+      <SettingsGroup title={t("settings.postProcessing.transforms.title")}>
+        <TransformSettings />
       </SettingsGroup>
 
       <SettingsGroup title={t("settings.postProcessing.styles.title")}>

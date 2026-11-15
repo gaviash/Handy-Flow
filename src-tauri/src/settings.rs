@@ -425,6 +425,9 @@ pub struct AppSettings {
     pub context_excluded_apps: Vec<String>,
     #[serde(default = "default_context_excluded_domains")]
     pub context_excluded_domains: Vec<String>,
+    /// F122: saved transformations, one shortcut each (`transform_1`…).
+    #[serde(default = "crate::adaptive::default_transforms")]
+    pub transforms: Vec<crate::adaptive::Transform>,
     /// F63: the user's own name, always a spelling to respect.
     #[serde(default)]
     pub user_name: String,
@@ -1120,6 +1123,43 @@ pub fn get_default_settings() -> AppSettings {
             current_binding: default_post_process_shortcut.to_string(),
         },
     );
+    // Handy Adaptive (F121–F123): Windows only, like the rest of the fork.
+    #[cfg(target_os = "windows")]
+    {
+        let mut add = |id: &str, name: &str, description: &str, keys: &str| {
+            bindings.insert(
+                id.to_string(),
+                ShortcutBinding {
+                    id: id.to_string(),
+                    name: name.to_string(),
+                    description: description.to_string(),
+                    default_binding: keys.to_string(),
+                    current_binding: keys.to_string(),
+                },
+            );
+        };
+        add(
+            "polish",
+            "Polish",
+            "Improves the selected text.",
+            "ctrl+alt+p",
+        );
+        add(
+            "instruct",
+            "Voice Instruction",
+            "Transforms the selected text by a spoken instruction.",
+            "ctrl+alt+space",
+        );
+        // No key by default: a saved transformation is bound by the user.
+        for i in 1..=3 {
+            add(
+                &format!("transform_{i}"),
+                &format!("Transformation {i}"),
+                "Applies a saved transformation to the selected text.",
+                "",
+            );
+        }
+    }
     bindings.insert(
         "cancel".to_string(),
         ShortcutBinding {
@@ -1143,6 +1183,7 @@ pub fn get_default_settings() -> AppSettings {
         styles: crate::context::Styles::default(),
         snippets: Vec::new(),
         user_name: String::new(),
+        transforms: crate::adaptive::default_transforms(),
         bindings,
         shortcut_activation: ShortcutActivation::default(),
         hold_threshold_ms: default_hold_threshold_ms(),

@@ -348,6 +348,26 @@
           "transcribe_with_post_process": {
             "name": "後處理快捷鍵",
             "description": "可選：專用快捷鍵，使用時一律對轉錄結果套用 AI 後處理"
+          },
+          "polish": {
+            "name": "Polish",
+            "description": "Select text, then press this shortcut: the text is improved in place. Undo with Ctrl+Z."
+          },
+          "instruct": {
+            "name": "Voice Instruction",
+            "description": "Select text, hold this shortcut and say what to do (\"make it more formal\"): the text is replaced."
+          },
+          "transform_1": {
+            "name": "Transformation 1",
+            "description": "Applies the first saved transformation to the selected text."
+          },
+          "transform_2": {
+            "name": "Transformation 2",
+            "description": "Applies the second saved transformation to the selected text."
+          },
+          "transform_3": {
+            "name": "Transformation 3",
+            "description": "Applies the third saved transformation to the selected text."
           }
         },
         "errors": {
@@ -767,6 +787,13 @@
         "trigger": "Trigger",
         "text": "Text to insert",
         "add": "Add Snippet"
+      },
+      "transforms": {
+        "title": "Transform Selected Text",
+        "saved": "Saved Transformations",
+        "savedDescription": "Each one has its own shortcut above. Give it a name and say what it does.",
+        "name": "Name",
+        "instruction": "Instruction"
       }
     },
     "history": {
@@ -795,7 +822,11 @@
       "showMore": "顯示更多",
       "showLess": "收合",
       "dropTitle": "拖放到此處進行轉錄",
-      "dropDescription": "它會出現在歷史記錄中。"
+      "dropDescription": "它會出現在歷史記錄中。",
+      "stats": {
+        "title": "Last 30 days: {{dictations}} dictations, {{words}} words, {{learned}} learned words",
+        "apps": "Most used: {{apps}}"
+      }
     },
     "debug": {
       "title": "偵錯",
@@ -1039,7 +1070,9 @@
     "filePostProcessFailedTitle": "已轉錄，未經後處理",
     "filePostProcessFailed": "後處理未完成，因此按原樣儲存轉錄內容。",
     "fileTranscriptionFailedTitle": "檔案轉錄失敗",
-    "transcriptionFailedTitle": "轉錄失敗"
+    "transcriptionFailedTitle": "轉錄失敗",
+    "selectionUnavailableTitle": "Select Some Text First",
+    "selectionUnavailable": "Polish and voice instructions change the selected text (up to 8,000 characters). Nothing was changed."
   },
   "notices": {
     "errorOne": "{{n}} 個錯誤",

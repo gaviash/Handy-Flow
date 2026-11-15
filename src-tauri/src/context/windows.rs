@@ -419,7 +419,8 @@ unsafe fn read_caret(focused: &IUIAutomationElement) -> Option<Field> {
     Some(Field {
         before: normalize_newlines(&bstr(before.GetText(-1))),
         after: normalize_newlines(&bstr(after.GetText(-1))),
-        selection: normalize_newlines(&bstr(sel.GetText(FIELD_CHARS))),
+        // One more than the limit, so a longer selection is refused, not cut.
+        selection: normalize_newlines(&bstr(sel.GetText(super::SELECTION_MAX as i32 + 1))),
         caret_known: true,
     })
 }

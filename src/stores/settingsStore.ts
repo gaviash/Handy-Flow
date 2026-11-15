@@ -3,6 +3,7 @@ import { subscribeWithSelector } from "zustand/middleware";
 import { listen } from "@tauri-apps/api/event";
 import type {
   Snippet,
+  Transform,
   Styles,
   AppSettings as Settings,
   AudioDevice,
@@ -226,6 +227,7 @@ const settingUpdaters: {
   styles: (value) => commands.changeStylesSetting(value as Styles),
   snippets: (value) => commands.changeSnippetsSetting(value as Snippet[]),
   user_name: (value) => commands.changeUserNameSetting(value as string),
+  transforms: (value) => commands.changeTransformsSetting(value as Transform[]),
   learning_enabled: (value) =>
     commands.changeLearningEnabledSetting(value as boolean),
   context_excluded_domains: (value) =>
