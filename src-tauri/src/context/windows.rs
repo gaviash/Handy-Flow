@@ -266,6 +266,8 @@ fn read(
             texts.push(format!("{}{}{}", f.before, f.selection, f.after));
         }
         cap.names = names_near_emails(&texts);
+        let code = cap.content == Some(super::Content::Code);
+        cap.terms = super::extract_terms(&texts, &cap.title, code, &cap.names);
     }
     cap
 }
