@@ -1049,7 +1049,12 @@ impl ShortcutAction for TranscribeAction {
                                         let pasted = if excluded {
                                             Err(None)
                                         } else {
-                                            utils::paste(final_text, ah_clone.clone()).map_err(Some)
+                                            if sensitive {
+                                                utils::paste_secret(final_text, ah_clone.clone())
+                                            } else {
+                                                utils::paste(final_text, ah_clone.clone())
+                                            }
+                                            .map_err(Some)
                                         };
                                         let (outcome, notice) = match pasted {
                                             Err(None) => (
