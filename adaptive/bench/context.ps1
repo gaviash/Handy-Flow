@@ -194,4 +194,20 @@ if (Want 'LEARN') {
   Record 'LEARN' ($ok -and $s -match 'terms: .*Quorvantis \(heard as') @{ pasted = $v; heard = $heard; sent = $s }
   Stop-Process -Id $pad.Id -Force
 }
+if (Want 'S57') {
+  # Needs the snippet "mon adresse" → "12 rue des Lilas, 75011 Paris" in the settings.
+  $pad = Start-Pad 'testpad'; $f = Pad-Field $pad; $m = Mock-Count
+  Dictate 'CT08'; Wait-Until { Value $f } | Out-Null; Start-Sleep -Milliseconds 500
+  $v = Value $f
+  Record 'S57' ($v.Trim() -eq '12 rue des Lilas, 75011 Paris' -and (Mock-Count) -eq $m) @{ field = $v; sent = (Mock-Count) - $m }
+  Stop-Process -Id $pad.Id -Force
+}
+if (Want 'GE09') {
+  # Work chat, casual by default: no final period.
+  $pad = Start-Pad 'slack'; $f = Pad-Field $pad
+  Dictate 'GE09'; Wait-Until { Value $f } | Out-Null; Start-Sleep -Milliseconds 500
+  $v = (Value $f).TrimEnd()
+  Record 'GE09' ($v.Length -gt 20 -and -not $v.EndsWith('.')) @{ field = $v }
+  Stop-Process -Id $pad.Id -Force
+}
 $results | Format-Table id, pass -AutoSize | Out-String | Write-Host
