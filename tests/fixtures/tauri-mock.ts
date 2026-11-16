@@ -103,6 +103,12 @@ export async function mockTauri(page: Page, opts: MockOptions = {}) {
   await page.addInitScript(
     ({ results, label }) => {
       const w = window as any;
+      const persisted = sessionStorage.getItem("mock.settings");
+      if (persisted)
+        Object.assign(
+          results.get_app_settings as object,
+          JSON.parse(persisted),
+        );
       const calls: { cmd: string; args: unknown }[] = (w.__calls = []);
       const callbacks = new Map<number, (data: unknown) => void>();
       const listeners = new Map<string, number[]>();
@@ -148,6 +154,26 @@ export async function mockTauri(page: Page, opts: MockOptions = {}) {
             return null;
           }
           calls.push({ cmd, args });
+          const appearanceCommands: Record<string, [string, string]> = {
+            change_palette_setting: ["palette", "palette"],
+            change_theme_setting: ["theme", "theme"],
+            change_heading_style_setting: ["heading_style", "style"],
+            change_ui_density_setting: ["ui_density", "density"],
+            change_overlay_show_label_setting: [
+              "overlay_show_label",
+              "enabled",
+            ],
+            change_overlay_style_setting: ["overlay_style", "style"],
+          };
+          if (cmd in appearanceCommands) {
+            const [setting, arg] = appearanceCommands[cmd];
+            (results.get_app_settings as Record<string, unknown>)[setting] =
+              args[arg];
+            sessionStorage.setItem(
+              "mock.settings",
+              JSON.stringify(results.get_app_settings),
+            );
+          }
           if (cmd in results) return structuredClone(results[cmd]);
           // change_*_setting(value) keeps get_app_settings in step.
           return null;

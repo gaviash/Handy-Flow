@@ -1,13 +1,9 @@
 import React from "react";
 import { useTranslation } from "react-i18next";
-import { Dropdown } from "../ui/Dropdown";
+import { Segmented } from "../ui/Segmented";
 import { SettingContainer } from "../ui/SettingContainer";
 import { useSettings } from "@/hooks/useSettings";
-import {
-  applyAppearance,
-  getStoredAppearance,
-  THEME_OPTIONS,
-} from "@/lib/utils/appearance";
+import { THEME_OPTIONS, withThemeTransition } from "@/lib/utils/appearance";
 import type { Theme } from "@/bindings";
 
 interface ThemeSelectorProps {
@@ -29,8 +25,9 @@ export const ThemeSelector: React.FC<ThemeSelectorProps> = React.memo(
 
     const handleThemeChange = (value: string) => {
       const theme = value as Theme;
-      applyAppearance({ ...getStoredAppearance(), theme });
-      updateSetting("theme", theme);
+      withThemeTransition(() => {
+        void updateSetting("theme", theme);
+      });
     };
 
     return (
@@ -40,10 +37,11 @@ export const ThemeSelector: React.FC<ThemeSelectorProps> = React.memo(
         descriptionMode={descriptionMode}
         grouped={grouped}
       >
-        <Dropdown
+        <Segmented
+          ariaLabel={t("theme.title")}
           options={themeOptions}
-          selectedValue={currentTheme}
-          onSelect={handleThemeChange}
+          value={currentTheme}
+          onChange={handleThemeChange}
         />
       </SettingContainer>
     );
