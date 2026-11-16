@@ -767,7 +767,11 @@
           "confirmClear": "Effacer tous les mots appris ?"
         },
         "notice": "Appris : {{terms}}",
-        "undo": "Annuler"
+        "undo": "Annuler",
+        "sound": {
+          "label": "Son quand un mot est appris",
+          "description": "Joue le son de notification de Windows quand la pastille annonce un mot appris."
+        }
       },
       "styles": {
         "title": "Styles",

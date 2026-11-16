@@ -410,7 +410,7 @@ fn announce(app: &AppHandle, words: &[String]) {
             &app,
             &Notice::new(NoticeCode::WordsLearned, NoticeSource::Dictation).with_detail(detail),
         );
-        if crate::settings::get_settings(&app).audio_feedback {
+        if crate::settings::get_settings(&app).learned_sound_enabled {
             play_notification_sound();
         }
     });

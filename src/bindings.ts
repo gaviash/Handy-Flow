@@ -189,6 +189,14 @@ async changeContextExcludedDomainsSetting(domains: string[]) : Promise<Result<nu
     else return { status: "error", error: e  as any };
 }
 },
+async changeLearnedSoundEnabledSetting(enabled: boolean) : Promise<Result<null, string>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("change_learned_sound_enabled_setting", { enabled }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
 async changeLearningEnabledSetting(enabled: boolean) : Promise<Result<null, string>> {
     try {
     return { status: "ok", data: await TAURI_INVOKE("change_learning_enabled_setting", { enabled }) };
@@ -1251,7 +1259,11 @@ context_excluded_apps?: string[]; context_excluded_domains?: string[];
 /**
  * F97: learn corrected names and terms from the user's edits.
  */
-learning_enabled?: boolean; 
+learning_enabled?: boolean;
+/**
+ * The system notification sound when a word is learned.
+ */
+learned_sound_enabled?: boolean; 
 /**
  * F58: tone per style category, effective from the first dictation.
  */

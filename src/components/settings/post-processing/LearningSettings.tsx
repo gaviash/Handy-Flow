@@ -33,6 +33,15 @@ export const LearningSettings: React.FC = () => {
         descriptionMode="tooltip"
         grouped={true}
       />
+      <ToggleSwitch
+        checked={getSetting("learned_sound_enabled") ?? true}
+        onChange={(v) => updateSetting("learned_sound_enabled", v)}
+        isUpdating={isUpdating("learned_sound_enabled")}
+        label={t("settings.postProcessing.learning.sound.label")}
+        description={t("settings.postProcessing.learning.sound.description")}
+        descriptionMode="tooltip"
+        grouped={true}
+      />
       <SettingContainer
         title={t("settings.postProcessing.learning.words.label")}
         description={t("settings.postProcessing.learning.words.description")}
