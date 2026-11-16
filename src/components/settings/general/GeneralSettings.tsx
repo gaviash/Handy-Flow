@@ -11,8 +11,6 @@ import { AudioFeedback } from "../AudioFeedback";
 import { useSettings } from "../../../hooks/useSettings";
 import { VolumeSlider } from "../VolumeSlider";
 import { MuteWhileRecording } from "../MuteWhileRecording";
-import { ModelSettingsCard } from "./ModelSettingsCard";
-import { CloudAsrSettings } from "./CloudAsrSettings";
 import { PreferredLanguages } from "../PreferredLanguages";
 import { ChineseScriptSetting } from "../ChineseScript";
 import { isChinese } from "@/lib/utils/languageSuggestions";
@@ -33,14 +31,12 @@ export const GeneralSettings: React.FC = () => {
         {/* Cancel shortcut remains hidden on Linux because of dynamic shortcut instability. */}
         {!isLinux && <ShortcutInput shortcutId="cancel" grouped={true} />}
       </SettingsGroup>
-      <CloudAsrSettings />
       <SettingsGroup title={t("settings.languages.title")}>
         <PreferredLanguages descriptionMode="tooltip" grouped={true} />
         {speaksChinese && (
           <ChineseScriptSetting descriptionMode="tooltip" grouped={true} />
         )}
       </SettingsGroup>
-      <ModelSettingsCard />
       <SettingsGroup title={t("settings.sound.title")}>
         <MicrophoneSelector descriptionMode="tooltip" grouped={true} />
         <ChannelSelector descriptionMode="tooltip" grouped={true} />

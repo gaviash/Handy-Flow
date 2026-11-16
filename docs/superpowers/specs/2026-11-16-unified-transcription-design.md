@@ -1,6 +1,6 @@
 # Modèles : transcription et secours local
 
-Proposition du 2026-11-16, à valider avant implémentation.
+Conception du 2026-11-16, validée par l’utilisateur (« Go »), implémentée et déployée.
 
 ## Intention et périmètre
 
