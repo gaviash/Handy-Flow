@@ -53,3 +53,10 @@ Résultat du banc ASR (20 dictées réelles) : parakeet n'accepte aucun contexte
 - Les tests Rust ont besoin de `src-tauri/transcribe-libs` dans le `PATH` (sinon `STATUS_DLL_NOT_FOUND`).
 - `managers::model::download::tests::http_cancel_during_stalled_body_keeps_partial` échoue sur cette machine, sans lien avec la branche (code non touché) : lancer avec `--skip`.
 - **Ne pas lancer `bun run format` / `format:frontend`** : Prettier réécrit tout le repo en LF. Formater seulement les fichiers touchés.
+
+## Reprise du 2026-11-16 au soir (autre machine)
+
+- Fait : clippy (2 avertissements de la branche corrigés, les autres existaient déjà sur `main`), 398 tests unitaires OK, relecture de la branche.
+- Corrigé à la relecture (`df2101e`) : `same_as` du juge retrouvé par le texte de la règle (une règle supprimée ou élaguée pendant l'appel décalait les numéros) ; l'anti-écho ASR n'efface plus une vraie dictée courte dont les mots courants sont dans le texte avant le curseur (il faut une récitation dans l'ordre).
+- Banc ASR refait sur **Qwen3-ASR 1.7B** (modèle de test choisi par l'utilisateur, dans `Desktop\Handy Flow`) : termes 33/48 → 43/48 avec contexte, WER 0,117 → 0,099, latence inchangée (voir `adaptive/bench/asr-context-results.md`).
+- Reste : vérifications manuelles (points 2 et 3 ci-dessus), à faire par l'utilisateur ou avec son accord ; puis merge dans `main`.
