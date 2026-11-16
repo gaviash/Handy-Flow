@@ -1,3 +1,4 @@
+use crate::asr_context::{AsrCaps, AsrContext, AsrPrompt, AsrSources};
 use crate::audio_toolkit::chunking;
 use crate::audio_toolkit::{
     apply_custom_words, detect_output_language, normalize_transcription_output,
@@ -278,6 +279,13 @@ pub struct TranscriptionManager {
     /// Handy's spoken-language detector, loaded in this process on first
     /// use and unloaded with the model.
     language_detector: Arc<LanguageDetector>,
+    /// Handy Adaptive (spec §7): the app and text before the cursor for the
+    /// next run's ASR context, set by the dictation when the user allows it.
+    asr_screen: Arc<Mutex<Option<(String, String)>>>,
+    /// Frequent expressions, recomputed at most every 5 minutes.
+    asr_expressions: Arc<Mutex<Option<(Instant, Vec<String>)>>>,
+    /// The last run's model took ASR context and the setting allowed it.
+    asr_capable: Arc<AtomicBool>,
 }
 
 impl TranscriptionManager {
@@ -299,6 +307,9 @@ impl TranscriptionManager {
             active_stream_worker: Arc::new(AtomicU64::new(0)),
             job_active: Arc::new(AtomicBool::new(false)),
             language_detector: Arc::new(LanguageDetector::default()),
+            asr_screen: Arc::new(Mutex::new(None)),
+            asr_expressions: Arc::new(Mutex::new(None)),
+            asr_capable: Arc::new(AtomicBool::new(false)),
         };
 
         // Start the idle watcher
@@ -1144,7 +1155,68 @@ impl TranscriptionManager {
             language.intent(),
             language.source
         );
-        run_setup(info, settings, language)
+        // Nothing is gathered for a model that takes no context, or when the
+        // user turned the ASR context off.
+        let capable = asr_caps(info) != AsrCaps::default() && settings.asr_context.enabled;
+        self.asr_capable.store(capable, Ordering::Relaxed);
+        let asr = if capable {
+            self.asr_sources(settings, language.language.clone())
+        } else {
+            self.set_asr_screen(None);
+            AsrSources::default()
+        };
+        run_setup(info, settings, language, &asr)
+    }
+
+    /// Whether the loaded model takes ASR context and the user allows it (as
+    /// of the last run): the dictation waits for the screen only then.
+    pub fn asr_context_wanted(&self) -> bool {
+        self.asr_capable.load(Ordering::Relaxed)
+    }
+
+    /// Handy Adaptive (spec §7): the app and the text before the cursor for
+    /// the next run's ASR context; taken by that run.
+    pub fn set_asr_screen(&self, screen: Option<(String, String)>) {
+        *self.asr_screen.lock().unwrap_or_else(|e| e.into_inner()) = screen;
+    }
+
+    /// What the ASR context may draw from. Custom words only when learning
+    /// is off, as before.
+    fn asr_sources(&self, settings: &AppSettings, language: Option<String>) -> AsrSources {
+        let screen = self.asr_screen.lock().unwrap_or_else(|e| e.into_inner()).take();
+        let mut src = AsrSources {
+            custom_words: settings.custom_words.clone(),
+            language,
+            ..Default::default()
+        };
+        if !settings.learning_enabled {
+            return src;
+        }
+        src.learned = crate::learning::plain_terms(&self.app_handle);
+        src.expressions = self.frequent_expressions();
+        if let Some((app, before)) = screen {
+            src.app = Some(app);
+            src.before = Some(before);
+        }
+        src
+    }
+
+    fn frequent_expressions(&self) -> Vec<String> {
+        let mut cache = self.asr_expressions.lock().unwrap_or_else(|e| e.into_inner());
+        if let Some((at, list)) = cache.as_ref() {
+            if at.elapsed() < Duration::from_secs(300) {
+                return list.clone();
+            }
+        }
+        let now = chrono::Utc::now().timestamp();
+        let list = self
+            .app_handle
+            .try_state::<Arc<crate::managers::history::HistoryManager>>()
+            .and_then(|hm| hm.past_dictations(now - 30 * 86_400).ok())
+            .map(|past| crate::recall::frequent_expressions(&past, now, 3, 20))
+            .unwrap_or_default();
+        *cache = Some((Instant::now(), list.clone()));
+        list
     }
 
     /// The first window of speech in `audio`: silence is always cut out by
@@ -1223,7 +1295,9 @@ impl TranscriptionManager {
                 }
             })
             .map(|mut transcript| {
-                if echoes_vocabulary(&transcript.text, &run_options.vocabulary) {
+                if echoes_vocabulary(&transcript.text, &run_options.vocabulary)
+                    || echoes_prompt(&transcript.text, given_prompt(run_options))
+                {
                     info!("The model returned the custom words, not speech; dropping them");
                     transcript.text.clear();
                 }
@@ -1291,7 +1365,7 @@ struct RunSetup {
 impl RunSetup {
     /// Custom words went to the model as vocabulary; skip fuzzy correction.
     fn custom_words_prompted(&self) -> bool {
-        !self.run_options.vocabulary.is_empty()
+        !self.run_options.vocabulary.is_empty() || given_prompt(&self.run_options).is_some()
     }
 
     /// The language the runs were in. When the model decided, the language
@@ -1329,7 +1403,12 @@ impl RunSetup {
 /// The loaded model's live capabilities (cheap GGUF-metadata reads) are the
 /// source of truth, not the ModelManager copy; translate is gated on what the
 /// model advertises.
-fn run_setup(info: &LoadedInfo, settings: &AppSettings, language: LanguageDecision) -> RunSetup {
+fn run_setup(
+    info: &LoadedInfo,
+    settings: &AppSettings,
+    language: LanguageDecision,
+    asr: &AsrSources,
+) -> RunSetup {
     let model_supports_translate = info.capabilities.supports_translate;
     let languages = info.capabilities.languages.clone();
     debug!(
@@ -1373,19 +1452,32 @@ fn run_setup(info: &LoadedInfo, settings: &AppSettings, language: LanguageDecisi
         language
     };
 
-    let run_options = RunOptions {
+    let mut run_options = RunOptions {
         task: run_plan.task,
         language: run_plan.language,
         target_language: run_plan.target_language,
-        vocabulary: vocabulary_for_model(info.supports_vocabulary, &settings.custom_words),
         ..Default::default()
     };
+    // Handy Adaptive (spec §7): custom and learned words, frequent
+    // expressions, per what the model accepts. Models that take none get
+    // nothing (and rely on fuzzy correction, as before).
+    let asr_context = crate::asr_context::build(asr_caps(info), asr, &settings.asr_context);
+    apply_asr_context(&mut run_options, &asr_context);
 
     debug!(
         "transcribe-cpp run: task={:?}, language={:?}, vocabulary_terms={}",
         run_options.task,
         run_options.language,
         run_options.vocabulary.len()
+    );
+    let (kind, chars) = match &asr_context.prompt {
+        AsrPrompt::None => ("none", 0),
+        AsrPrompt::Context(p) => ("context", p.chars().count()),
+        AsrPrompt::Initial(p) => ("initial", p.chars().count()),
+    };
+    debug!(
+        "asr_context: vocabulary_terms={}, prompt_chars={chars}, kind={kind}",
+        asr_context.vocabulary.len()
     );
 
     RunSetup {
@@ -1610,15 +1702,57 @@ fn with_model_detected_language(
     }
 }
 
-/// Custom words for transcribe-cpp's `vocabulary` slot, in priority order.
-/// Empty for models without Feature::Vocabulary, which would warn on every run
-/// and rely on fuzzy correction instead.
-fn vocabulary_for_model(supports_vocabulary: bool, custom_words: &[String]) -> Vec<String> {
-    if supports_vocabulary {
-        custom_words.to_vec()
-    } else {
-        Vec::new()
+/// What the loaded model accepts as ASR context.
+fn asr_caps(info: &LoadedInfo) -> AsrCaps {
+    AsrCaps {
+        vocabulary: info.supports_vocabulary,
+        context_prompt: info.supports_context_prompt,
+        initial_prompt: info.supports_initial_prompt,
     }
+}
+
+/// Puts the ASR context in its slots. `build` already left out what the
+/// model doesn't take, so models without Feature::Vocabulary never warn.
+fn apply_asr_context(options: &mut RunOptions, ctx: &AsrContext) {
+    options.vocabulary = ctx.vocabulary.clone();
+    match &ctx.prompt {
+        AsrPrompt::None => {}
+        AsrPrompt::Context(p) => options.prompt = Some(p.clone()),
+        AsrPrompt::Initial(p) => {
+            options.family = Some(transcribe_cpp::RunExtension::Whisper(
+                transcribe_cpp::WhisperRunOptions {
+                    initial_prompt: Some(p.clone()),
+                    ..Default::default()
+                },
+            ))
+        }
+    }
+}
+
+/// The prompt read back instead of speech: three words or more, nearly all
+/// of them from the prompt.
+fn echoes_prompt(text: &str, prompt: Option<&str>) -> bool {
+    let Some(prompt) = prompt else {
+        return false;
+    };
+    let words = |s: &str| -> Vec<String> {
+        s.split(|c: char| !c.is_alphanumeric())
+            .filter(|w| !w.is_empty())
+            .map(str::to_lowercase)
+            .collect()
+    };
+    let given: std::collections::HashSet<String> = words(prompt).into_iter().collect();
+    let said = words(text);
+    let from_prompt = said.iter().filter(|w| given.contains(*w)).count();
+    said.len() >= 3 && from_prompt * 10 >= said.len() * 9
+}
+
+/// The prompt text a run was given, in either slot.
+fn given_prompt(options: &RunOptions) -> Option<&str> {
+    options.prompt.as_deref().or(match &options.family {
+        Some(transcribe_cpp::RunExtension::Whisper(w)) => w.initial_prompt.as_deref(),
+        _ => None,
+    })
 }
 
 /// Whether `text` is the custom words read back instead of a transcript. A
@@ -2001,6 +2135,51 @@ pub fn get_available_accelerators(tm: &TranscriptionManager) -> AvailableAcceler
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn asr_context_reaches_the_run_options() {
+        use crate::asr_context::{AsrContext, AsrPrompt};
+        let mut o = RunOptions::default();
+        apply_asr_context(&mut o, &AsrContext::default());
+        assert_eq!(o, RunOptions::default());
+
+        let mut o = RunOptions::default();
+        apply_asr_context(
+            &mut o,
+            &AsrContext {
+                vocabulary: vec!["log".into()],
+                prompt: AsrPrompt::Context("Vocabulaire : log.".into()),
+            },
+        );
+        assert_eq!(o.vocabulary, vec!["log"]);
+        assert_eq!(o.prompt.as_deref(), Some("Vocabulaire : log."));
+
+        let mut o = RunOptions::default();
+        apply_asr_context(
+            &mut o,
+            &AsrContext {
+                vocabulary: Vec::new(),
+                prompt: AsrPrompt::Initial("Vocabulaire : log.".into()),
+            },
+        );
+        assert!(matches!(
+            o.family,
+            Some(transcribe_cpp::RunExtension::Whisper(transcribe_cpp::WhisperRunOptions {
+                initial_prompt: Some(_),
+                ..
+            }))
+        ));
+        assert!(o.vocabulary.is_empty() && o.prompt.is_none());
+    }
+
+    #[test]
+    fn a_recited_prompt_is_not_a_transcript() {
+        let p = "Vocabulaire : log, Claude, Handy. Expressions : « de manière claire ».";
+        assert!(echoes_prompt("Vocabulaire : log, Claude, Handy.", Some(p)));
+        assert!(!echoes_prompt("regarde le log de Claude dans le terminal", Some(p)));
+        assert!(!echoes_prompt("log Claude", Some(p)), "too short to tell");
+        assert!(!echoes_prompt("Vocabulaire log Claude", None));
+    }
 
     fn languages(codes: &[&str]) -> Vec<String> {
         codes.iter().map(|code| (*code).to_string()).collect()

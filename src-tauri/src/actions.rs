@@ -1003,6 +1003,9 @@ impl ShortcutAction for TranscribeAction {
         // destination. Read it now, alongside the transcription. The WAV save
         // waits only for the password check (F79: nothing kept).
         let (sensitive_tx, sensitive_rx) = std::sync::mpsc::channel::<bool>();
+        // Handy Adaptive (spec §7): the app and text before the cursor, for an
+        // ASR model that takes context. Never from a password or excluded field.
+        let (screen_tx, screen_rx) = std::sync::mpsc::channel::<Option<(String, String)>>();
         let ctx_settings = get_settings(app);
         let capture_task = tauri::async_runtime::spawn_blocking(move || {
             let capture = crate::context::capture(
@@ -1011,6 +1014,16 @@ impl ShortcutAction for TranscribeAction {
                 &ctx_settings.context_excluded_domains,
             );
             let _ = sensitive_tx.send(capture.sensitive);
+            let screen = (!capture.sensitive && !capture.excluded).then(|| {
+                let before = capture
+                    .field
+                    .as_ref()
+                    .filter(|f| f.caret_known)
+                    .map(|f| crate::context::redact(&crate::context::tail(&f.before, 200)))
+                    .unwrap_or_default();
+                (capture.process.clone(), before)
+            });
+            let _ = screen_tx.send(screen);
             capture
         });
 
@@ -1100,6 +1113,16 @@ impl ShortcutAction for TranscribeAction {
                     // result when it has one (all audio was already fed to it),
                     // otherwise a batch run of the samples. A cancel is surfaced
                     // as an error, so it never starts a batch run.
+                    // Spec §7: only a model that takes context, with the screen
+                    // option on, waits for the capture, and at most capture_wait_ms.
+                    let asr = get_settings(&ah).asr_context;
+                    if asr.screen
+                        && get_settings(&ah).learning_enabled
+                        && tm.asr_context_wanted()
+                    {
+                        let wait = Duration::from_millis(asr.capture_wait_ms);
+                        tm.set_asr_screen(screen_rx.recv_timeout(wait).ok().flatten());
+                    }
                     let transcription_time = Instant::now();
                     let transcription_result = tm.transcribe_recording(samples);
 
