@@ -511,6 +511,96 @@ pub fn terms_for(app: &AppHandle, transcription: &str) -> Vec<String> {
     with_memory(app, |m| crate::recall::relevant_terms(&m.words, transcription, 40))
 }
 
+/// Every style rule, pending ones too, in stored order (the judge's `same_as`
+/// numbers refer to this order).
+pub fn all_rules(app: &AppHandle) -> Vec<String> {
+    with_memory(app, |m| m.rules.iter().map(|r| r.rule.clone()).collect())
+}
+
+/// Applies the judge's verdicts with the local guards; returns what became
+/// usable (terms and rules) to announce.
+pub(crate) fn apply_verdicts(
+    m: &mut Memory,
+    verdicts: &[crate::judge::Verdict],
+    _app_name: &str,
+    now: i64,
+) -> Vec<String> {
+    use crate::judge::VerdictKind;
+    let mut news = Vec::new();
+    for v in verdicts {
+        match v.kind {
+            VerdictKind::Misheard => {
+                let (Some(heard), Some(term)) = (v.heard.as_deref(), v.term.as_deref()) else {
+                    continue;
+                };
+                let (heard, term) = (heard.trim(), term.trim());
+                if !is_misheard_pair(heard, term) {
+                    log::debug!("Learning: judge item rejected (not a misheard pair)");
+                    continue;
+                }
+                let c = Candidate {
+                    term: term.into(),
+                    heard: heard.into(),
+                    kind: WordKind::Misheard,
+                };
+                if record_word(m, &c, now) {
+                    news.push(c.term);
+                }
+            }
+            VerdictKind::StyleRule | VerdictKind::Filler => {
+                let existing = v.same_as.and_then(|i| m.rules.get_mut(i));
+                match existing {
+                    Some(r) => {
+                        r.count += 1;
+                        r.last_seen = now;
+                        if !r.active && (r.count >= 2 || v.consistent_with_history) {
+                            r.active = true;
+                            news.push(r.rule.clone());
+                        }
+                    }
+                    None => {
+                        let Some(rule) = v.rule.as_deref().map(str::trim).filter(|r| !r.is_empty())
+                        else {
+                            continue;
+                        };
+                        let active = v.consistent_with_history;
+                        m.rules.push(StyleRule {
+                            rule: rule.into(),
+                            count: 1,
+                            active,
+                            last_seen: now,
+                            apps: Vec::new(),
+                        });
+                        if active {
+                            news.push(rule.into());
+                        }
+                    }
+                }
+            }
+            VerdictKind::ContentChange | VerdictKind::Unclear => {}
+        }
+    }
+    news
+}
+
+/// Stores the judge's verdicts and announces what became usable.
+pub fn record_verdicts(app: &AppHandle, verdicts: &[crate::judge::Verdict], app_name: &str) {
+    if verdicts.is_empty() {
+        return;
+    }
+    let now = chrono::Utc::now().timestamp();
+    let news = with_memory(app, |m| {
+        let news = apply_verdicts(m, verdicts, app_name, now);
+        save(app, m);
+        news
+    });
+    if !news.is_empty() {
+        log::info!("Learning: the judge made {} item(s) usable", news.len());
+        let _ = app.emit("learned-words", &news);
+        announce(app, &news);
+    }
+}
+
 /// Active style rules that hold in `app_name` (or everywhere).
 pub fn active_rules(app: &AppHandle, app_name: &str) -> Vec<String> {
     with_memory(app, |m| {
@@ -715,7 +805,7 @@ pub fn observe(
     field: &crate::context::Field,
     inserted: &str,
     history_id: Option<i64>,
-    _app_name: String,
+    app_name: String,
 ) {
     if !crate::settings::get_settings(app).learning_enabled {
         return;
@@ -793,6 +883,20 @@ pub fn observe(
                 last.as_ref().is_some_and(|fin| fin != &inserted),
                 found.len()
             );
+            // The judge reads the correction in the background (style rules,
+            // misheard words the local layer couldn't tell).
+            let settings = crate::settings::get_settings(&app);
+            if let Some(fin) = last.as_ref().filter(|fin| *fin != &inserted) {
+                if settings.learning_enabled && settings.context_send_enabled {
+                    tauri::async_runtime::spawn(crate::judge::run(
+                        app.clone(),
+                        inserted.clone(),
+                        fin.clone(),
+                        app_name.clone(),
+                        found.clone(),
+                    ));
+                }
+            }
             // What the user kept feeds the next dictations' context.
             if let (Some(id), Some(fin)) = (history_id, &last) {
                 use tauri::Manager;
@@ -999,6 +1103,47 @@ mod tests {
         assert!(super::candidates("on part à deux", "on part à trois").is_empty());
         assert!(!is_misheard_pair("mardi", "jeudi"));
         assert!(is_misheard_pair("gag", "log"));
+    }
+
+    #[test]
+    fn verdicts_respect_the_guards() {
+        use crate::judge::{Verdict, VerdictKind};
+        let v = |kind, heard: Option<&str>, term: Option<&str>, rule: Option<&str>, same_as, ok| Verdict {
+            kind,
+            heard: heard.map(Into::into),
+            term: term.map(Into::into),
+            rule: rule.map(Into::into),
+            same_as,
+            consistent_with_history: ok,
+        };
+        let mut m = Memory::default();
+        // A meaning change learns nothing, even proposed as misheard.
+        apply_verdicts(
+            &mut m,
+            &[
+                v(VerdictKind::Misheard, Some("mardi"), Some("jeudi"), None, None, true),
+                v(VerdictKind::ContentChange, None, None, None, None, true),
+            ],
+            "Code",
+            0,
+        );
+        assert!(m.words.is_empty() && m.rules.is_empty());
+        // A misheard word from the judge is pending until seen twice too.
+        apply_verdicts(&mut m, &[v(VerdictKind::Misheard, Some("gag"), Some("log"), None, None, true)], "Code", 0);
+        assert!(!m.words[0].active);
+        // A lone rule not backed by history waits for a second sighting.
+        let rule = "Préférer « de manière claire et concise ».";
+        apply_verdicts(&mut m, &[v(VerdictKind::StyleRule, None, None, Some(rule), None, false)], "Code", 0);
+        assert!(!m.rules[0].active);
+        let on = apply_verdicts(&mut m, &[v(VerdictKind::StyleRule, None, None, Some("…"), Some(0), false)], "Code", 1);
+        assert!(m.rules[0].active && m.rules[0].count == 2);
+        assert_eq!(on, vec![rule.to_string()]);
+        // A rule consistent with history is active at once.
+        apply_verdicts(&mut m, &[v(VerdictKind::Filler, None, None, Some("Supprimer « donc voilà »."), None, true)], "Code", 2);
+        assert!(m.rules[1].active);
+        // A `same_as` out of range is a new rule, not a crash.
+        apply_verdicts(&mut m, &[v(VerdictKind::StyleRule, None, None, Some("Autre."), Some(99), false)], "Code", 3);
+        assert_eq!(m.rules.len(), 3);
     }
 
     fn word(term: &str, heard: &str, count: u32, last_seen: i64, kind: WordKind, active: bool) -> Learned {
