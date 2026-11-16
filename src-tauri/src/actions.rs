@@ -1277,6 +1277,9 @@ impl ShortcutAction for TranscribeAction {
                                 return;
                             }
 
+                            // Handy Adaptive: the observation records what the user kept.
+                            let observed_app = app_label.clone();
+                            let mut history_id = None;
                             // Save to history if WAV was saved
                             if wav_saved && !sensitive {
                                 match hm.save_entry(
@@ -1288,11 +1291,12 @@ impl ShortcutAction for TranscribeAction {
                                     language,
                                 ) {
                                     Ok(entry) if !app_label.is_empty() => {
+                                        history_id = Some(entry.id);
                                         if let Err(err) = hm.set_entry_app(entry, app_label) {
                                             error!("Failed to record the dictation's app: {}", err);
                                         }
                                     }
-                                    Ok(_) => {}
+                                    Ok(entry) => history_id = Some(entry.id),
                                     Err(err) => error!("Failed to save history entry: {}", err),
                                 }
                             }
@@ -1333,7 +1337,7 @@ impl ShortcutAction for TranscribeAction {
                                 let observed = field
                                     .clone()
                                     .filter(|_| !sensitive && !excluded && !terminal)
-                                    .map(|f| (f, final_text.clone()));
+                                    .map(|f| (f, final_text.clone(), history_id, observed_app));
                                 // Taken before the paste thread exists, and so
                                 // before the next session can start.
                                 let session = RECORDING_SESSION.load(Ordering::SeqCst);
@@ -1380,8 +1384,14 @@ impl ShortcutAction for TranscribeAction {
                                                     "Text pasted successfully in {:?}",
                                                     paste_time.elapsed()
                                                 );
-                                                if let Some((f, text)) = &observed {
-                                                    crate::learning::observe(&ah_clone, f, text);
+                                                if let Some((f, text, id, app)) = &observed {
+                                                    crate::learning::observe(
+                                                        &ah_clone,
+                                                        f,
+                                                        text,
+                                                        *id,
+                                                        app.clone(),
+                                                    );
                                                 }
                                                 // Leave a newer session's notice alone.
                                                 if owns_ui() {
