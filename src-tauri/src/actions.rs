@@ -147,7 +147,12 @@ struct TranscribeAction {
 }
 
 /// F121–F123: applies `instruction` to `text` with the rewrite provider.
-async fn transform_text(settings: &AppSettings, instruction: &str, text: &str) -> Option<String> {
+async fn transform_text(
+    settings: &AppSettings,
+    instruction: &str,
+    text: &str,
+    context: Option<&crate::context::LlmContext>,
+) -> Option<String> {
     let provider = settings.active_post_process_provider().cloned()?;
     let model = settings
         .post_process_models
@@ -159,7 +164,8 @@ async fn transform_text(settings: &AppSettings, instruction: &str, text: &str) -
         .get(&provider.id)
         .cloned()
         .unwrap_or_default();
-    let message = crate::adaptive::transform_user_message(instruction, text);
+    let message = crate::adaptive::transform_user_message(instruction, text, context);
+    crate::context::record_sent(&message);
     let call = crate::llm_client::send_chat_completion_with_schema(
         &provider,
         key,
@@ -288,9 +294,29 @@ impl ShortcutAction for TransformAction {
                 );
                 return;
             };
+            let context = crate::context::enriched_context(
+                &app,
+                &settings,
+                &capture,
+                &selection,
+                &settings.transform_context,
+            );
+            crate::context::set_report(crate::context::ContextReport {
+                kind: if slot.is_some() {
+                    crate::context::ReportKind::Transform
+                } else {
+                    crate::context::ReportKind::Polish
+                },
+                capture: Some(capture),
+                ..Default::default()
+            });
             show_processing_overlay(&app);
-            let result =
-                tauri::async_runtime::block_on(transform_text(&settings, &instruction, &selection));
+            let result = tauri::async_runtime::block_on(transform_text(
+                &settings,
+                &instruction,
+                &selection,
+                context.as_ref(),
+            ));
             match result {
                 // Pasting over the selection replaces it; the app's undo reverts it.
                 Some(text) => match utils::paste(text, app.clone()) {
@@ -1116,12 +1142,20 @@ impl ShortcutAction for TranscribeAction {
                     // Spec §7: only a model that takes context, with the screen
                     // option on, waits for the capture, and at most capture_wait_ms.
                     let asr = get_settings(&ah).asr_context;
+                    let mut screen_waited = None;
                     if asr.screen && get_settings(&ah).learning_enabled && tm.asr_context_wanted() {
                         let wait = Duration::from_millis(asr.capture_wait_ms);
-                        tm.set_asr_screen(screen_rx.recv_timeout(wait).ok().flatten());
+                        let screen = screen_rx.recv_timeout(wait).ok();
+                        screen_waited = Some(screen.is_some());
+                        tm.set_asr_screen(screen.flatten());
                     }
                     let transcription_time = Instant::now();
                     let transcription_result = tm.transcribe_recording(samples);
+                    // F114: what the speech model was given, for Settings → Context.
+                    let asr_report = tm.take_asr_report().map(|mut r| {
+                        r.screen_waited = screen_waited;
+                        r
+                    });
 
                     // Await WAV save and verify
                     let wav_saved = match wav_handle.await {
@@ -1182,61 +1216,42 @@ impl ShortcutAction for TranscribeAction {
                                 })
                                 .flatten();
                             let post_process = post_process && !sensitive && snippet.is_none();
-                            let mut llm_context = ctx_settings
-                                .context_send_enabled
-                                .then(|| crate::context::llm_context(&capture))
-                                .flatten();
-                            // The user's custom words and learned spellings are
-                            // spellings to respect too.
-                            if let Some(c) = llm_context.as_mut() {
-                                c.tone = ctx_settings.styles.tone(c.style);
-                                // F63: the user's own name.
-                                let me = ctx_settings.user_name.trim();
-                                if !me.is_empty() && !c.names.iter().any(|n| n == me) {
-                                    c.names.push(me.to_string());
-                                }
-                                for word in ctx_settings
-                                    .custom_words
-                                    .iter()
-                                    .cloned()
-                                    .chain(crate::learning::terms_for(&ah, &transcription))
-                                    .collect::<Vec<_>>()
-                                    .iter()
-                                {
-                                    if !c.terms.contains(word) {
-                                        c.terms.push(word.clone());
-                                    }
-                                }
-                            }
+                            // Handy Adaptive: the rewrite's context, as the user allows it.
+                            let llm_context = crate::context::enriched_context(
+                                &ah,
+                                &ctx_settings,
+                                &capture,
+                                &transcription,
+                                &ctx_settings.rewrite_context,
+                            );
                             // F109: where the dictation went, for History.
-                            let app_label = [Some(capture.process.clone()), capture.host.clone()]
-                                .into_iter()
-                                .flatten()
-                                .filter(|s| !s.is_empty())
-                                .collect::<Vec<_>>()
-                                .join(" · ");
-                            // Handy Adaptive: what the user wrote before and their rules.
-                            if let Some(c) = llm_context
-                                .as_mut()
-                                .filter(|_| crate::settings::get_settings(&ah).learning_enabled)
-                            {
-                                let now = chrono::Utc::now().timestamp();
-                                match hm.past_dictations(now - 30 * 86_400) {
-                                    Ok(past) => {
-                                        c.past = crate::recall::similar_dictations(
-                                            &past,
-                                            &transcription,
-                                            &app_label,
-                                            now,
-                                        )
-                                    }
-                                    Err(e) => warn!("Couldn't read past dictations: {e}"),
-                                }
-                                c.rules = crate::learning::active_rules(&ah, &app_label);
-                            }
+                            let app_label = crate::context::app_label(&capture);
+                            // F123: a spoken instruction gets the selection's context.
+                            let transform_context = instruct
+                                .then(|| {
+                                    let selected = capture
+                                        .field
+                                        .as_ref()
+                                        .map(|f| f.selection.clone())
+                                        .unwrap_or_default();
+                                    crate::context::enriched_context(
+                                        &ah,
+                                        &ctx_settings,
+                                        &capture,
+                                        &selected,
+                                        &ctx_settings.transform_context,
+                                    )
+                                })
+                                .flatten();
                             crate::context::set_report(crate::context::ContextReport {
+                                kind: if instruct {
+                                    crate::context::ReportKind::Instruction
+                                } else {
+                                    crate::context::ReportKind::Dictation
+                                },
                                 capture: Some(capture),
-                                sent: None,
+                                asr: asr_report,
+                                ..Default::default()
                             });
 
                             if post_process {
@@ -1272,7 +1287,13 @@ impl ShortcutAction for TranscribeAction {
                                 show_processing_overlay(&ah);
                                 (
                                     None,
-                                    transform_text(&ctx_settings, &transcription, &selection).await,
+                                    transform_text(
+                                        &ctx_settings,
+                                        &transcription,
+                                        &selection,
+                                        transform_context.as_ref(),
+                                    )
+                                    .await,
                                 )
                             } else {
                                 (field, None)
@@ -1763,7 +1784,7 @@ mod tests {
     fn a_transformation_falls_back_and_a_refusal_keeps_the_text() {
         let settings = with_fallback(r#"{"choices":[{"message":{"content":"Texte poli."}}]}"#);
         assert_eq!(
-            tauri::async_runtime::block_on(transform_text(&settings, "Polis", "texte poli")),
+            tauri::async_runtime::block_on(transform_text(&settings, "Polis", "texte poli", None)),
             Some("Texte poli.".to_string())
         );
         let refusal =
@@ -1771,7 +1792,7 @@ mod tests {
         let mut settings = post_process_settings(&serve_once(refusal));
         settings.post_process_fallback_provider_id.clear();
         assert_eq!(
-            tauri::async_runtime::block_on(transform_text(&settings, "Polis", "texte poli")),
+            tauri::async_runtime::block_on(transform_text(&settings, "Polis", "texte poli", None)),
             None
         );
     }

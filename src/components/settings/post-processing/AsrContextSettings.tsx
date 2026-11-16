@@ -24,8 +24,10 @@ export const AsrContextSettings: React.FC = () => {
   const { t } = useTranslation();
   const { getSetting, updateSetting, isUpdating } = useSettings();
   const [support, setSupport] = useState<AsrSupport | null>(null);
+  const [expressions, setExpressions] = useState<string[]>([]);
   useEffect(() => {
     commands.getAsrSupport().then(setSupport);
+    commands.getFrequentExpressions().then(setExpressions);
   }, []);
   const asr = getSetting("asr_context") ?? DEFAULTS;
   const busy = isUpdating("asr_context");
@@ -90,6 +92,23 @@ export const AsrContextSettings: React.FC = () => {
       {toggle("enabled", "enabled")}
       {toggle("learned_words", "learnedWords", !asr.enabled)}
       {toggle("expressions", "expressions", !asr.enabled)}
+      <SettingContainer
+        title={t(key("expressionsList.label"))}
+        description={t(key("expressionsList.description"))}
+        layout="stacked"
+        grouped={true}
+      >
+        <details className="w-full border border-line-strong rounded-md bg-wash">
+          <summary className="px-2 py-1 text-sm cursor-pointer select-none">
+            {t(key("expressionsList.count"), { count: expressions.length })}
+          </summary>
+          <ul className="px-4 pb-2 text-xs list-disc">
+            {expressions.map((e) => (
+              <li key={e}>{e}</li>
+            ))}
+          </ul>
+        </details>
+      </SettingContainer>
       {toggle("screen", "screen", !asr.enabled)}
       {number("max_terms", "maxTerms", 1, 200)}
       {number("capture_wait_ms", "captureWait", 0, 1000)}

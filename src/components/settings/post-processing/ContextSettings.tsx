@@ -1,10 +1,9 @@
 import React, { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { commands, type ContextReport } from "@/bindings";
+import { ContextParts, ContextReports } from "./ContextReports";
 import { ToggleSwitch } from "../../ui/ToggleSwitch";
 import { SettingContainer } from "../../ui/SettingContainer";
 import { Textarea } from "../../ui/Textarea";
-import { Button } from "../../ui/Button";
 import { Input } from "../../ui/Input";
 import { useSettings } from "../../../hooks/useSettings";
 
@@ -74,26 +73,6 @@ const UserName: React.FC = () => {
 export const ContextSettings: React.FC = () => {
   const { t } = useTranslation();
   const { getSetting, updateSetting, isUpdating } = useSettings();
-  const [report, setReport] = useState<ContextReport | null>(null);
-  const refresh = () => commands.getLastContextReport().then(setReport);
-  useEffect(() => {
-    refresh();
-  }, []);
-
-  const capture = report?.capture;
-  const target = capture
-    ? [capture.process, capture.host, capture.content]
-        .filter(Boolean)
-        .join(" · ")
-    : "";
-  const status = !capture
-    ? t("settings.postProcessing.context.last.none")
-    : capture.sensitive
-      ? t("settings.postProcessing.context.last.sensitive")
-      : capture.excluded
-        ? t("settings.postProcessing.context.last.excluded")
-        : (report?.sent ??
-          t("settings.postProcessing.context.last.nothingSent"));
 
   return (
     <>
@@ -130,24 +109,9 @@ export const ContextSettings: React.FC = () => {
           "settings.postProcessing.context.excludedDomains.description",
         )}
       />
-      <SettingContainer
-        title={t("settings.postProcessing.context.last.label")}
-        description={t("settings.postProcessing.context.last.description")}
-        layout="stacked"
-        grouped={true}
-      >
-        <div className="w-full space-y-2">
-          <div className="flex items-center justify-between gap-2">
-            <span className="text-sm text-mid-gray">{target}</span>
-            <Button variant="secondary" size="sm" onClick={refresh}>
-              {t("settings.postProcessing.context.last.refresh")}
-            </Button>
-          </div>
-          <pre className="text-xs whitespace-pre-wrap break-words bg-wash border border-line-strong rounded-md p-2 max-h-60 overflow-auto">
-            {status}
-          </pre>
-        </div>
-      </SettingContainer>
+      <ContextParts setting="rewrite_context" />
+      <ContextParts setting="transform_context" />
+      <ContextReports />
     </>
   );
 };
