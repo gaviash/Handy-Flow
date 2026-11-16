@@ -320,6 +320,12 @@ async changeCloudAsrSetting(value: CloudAsrSettings) : Promise<Result<null, stri
     else return { status: "error", error: e  as any };
 }
 },
+/**
+ * Settings → Context: turns the mode on now when switched on.
+ */
+async changeVscodeScreenReaderSetting(enabled: boolean) : Promise<void> {
+    await TAURI_INVOKE("change_vscode_screen_reader_setting", { enabled });
+},
 async changeLanguageDetectionSetting(mode: LanguageDetectionMode) : Promise<Result<null, string>> {
     try {
     return { status: "ok", data: await TAURI_INVOKE("change_language_detection_setting", { mode }) };
@@ -1349,6 +1355,11 @@ transform_context?: LlmContextParts;
  */
 cloud_asr?: CloudAsrSettings; 
 /**
+ * Turn on VS Code's Screen Reader Optimized mode, so its editor text can
+ * be read for the context and the learning.
+ */
+vscode_screen_reader?: boolean; 
+/**
  * Defaults to empty on partial stores; the load path merges in the
  * default bindings for any missing keys before the settings are used.
  */
@@ -1551,7 +1562,11 @@ export type Content = "email" | "work_chat" | "personal_chat" | "ai" | "document
 /**
  * F114: what one dictation or transformation read and sent. Memory only.
  */
-export type ContextReport = { kind: ReportKind; 
+export type ContextReport = { 
+/**
+ * Set by [`set_report`]; what [`record_sent`] finds the report by.
+ */
+id: number; kind: ReportKind; 
 /**
  * Unix seconds.
  */

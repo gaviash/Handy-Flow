@@ -245,6 +245,8 @@ const settingUpdaters: {
     commands.changeTransformContextSetting(value as LlmContextParts),
   cloud_asr: (value) =>
     commands.changeCloudAsrSetting(value as CloudAsrSettings),
+  vscode_screen_reader: (value) =>
+    commands.changeVscodeScreenReaderSetting(value as boolean),
   context_excluded_domains: (value) =>
     commands.changeContextExcludedDomainsSetting(value as string[]),
   language_detection: (value) =>

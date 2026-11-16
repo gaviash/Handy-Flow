@@ -1001,8 +1001,6 @@ impl TranscriptionManager {
     /// Transcribe a finished recording: what its live decode produced, or a
     /// batch run of the whole recording when there is no live result.
     pub fn transcribe_recording(&self, samples: Vec<f32>) -> Result<Transcription> {
-        // A live result runs no setup: no report, not an older one.
-        self.take_asr_report();
         let started = Instant::now();
         let live = self.finalize_live(samples.len())?;
         self.complete(started, samples, live)
@@ -1027,6 +1025,8 @@ impl TranscriptionManager {
         debug!("Audio vector length: {}", audio_len);
         if audio.is_empty() {
             debug!("Empty audio vector");
+            // Nothing ran: no report, not an older one.
+            self.take_asr_report();
             self.maybe_unload_immediately("empty audio");
             return Ok(Transcription {
                 text: String::new(),
@@ -1206,9 +1206,12 @@ impl TranscriptionManager {
         let src = if settings.asr_context.enabled {
             self.asr_sources(&settings, language)
         } else {
-            self.set_asr_screen(None);
             AsrSources::default()
         };
+        // Put the screen back: a local run after a failed call uses it too.
+        if let (Some(app), Some(before)) = (&src.app, &src.before) {
+            self.set_asr_screen(Some((app.clone(), before.clone())));
+        }
         let prompt = match crate::asr_context::build(caps, &src, &settings.asr_context).prompt {
             AsrPrompt::None => None,
             AsrPrompt::Context(p) | AsrPrompt::Initial(p) => Some(p),
