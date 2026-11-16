@@ -456,6 +456,10 @@ pub struct AppSettings {
     /// Which parts Polish, spoken instructions and saved transformations get.
     #[serde(default)]
     pub transform_context: crate::context::LlmContextParts,
+    /// Handy Adaptive: transcription by an API (Groq Whisper…) instead of the
+    /// local model, which stays the fallback.
+    #[serde(default)]
+    pub cloud_asr: crate::cloud_asr::CloudAsrSettings,
     /// Defaults to empty on partial stores; the load path merges in the
     /// default bindings for any missing keys before the settings are used.
     #[serde(default)]
@@ -637,7 +641,7 @@ fn default_settings_schema_version() -> u32 {
     CURRENT_SETTINGS_SCHEMA_VERSION
 }
 
-const CURRENT_ADAPTIVE_SETTINGS_VERSION: u32 = 3;
+const CURRENT_ADAPTIVE_SETTINGS_VERSION: u32 = 4;
 
 fn default_adaptive_settings_version() -> u32 {
     CURRENT_ADAPTIVE_SETTINGS_VERSION
@@ -1217,6 +1221,7 @@ pub fn get_default_settings() -> AppSettings {
         asr_context: Default::default(),
         rewrite_context: Default::default(),
         transform_context: Default::default(),
+        cloud_asr: Default::default(),
         styles: crate::context::Styles::default(),
         snippets: Vec::new(),
         user_name: String::new(),
@@ -1550,6 +1555,17 @@ fn apply_settings_migrations(
             settings.extra_recording_buffer_ms = 120;
         }
     }
+    if windows && adaptive_version < 4 {
+        // Speech by API: Groq Whisper with the Groq key the rewrite already
+        // uses (user decision, 2026-11-16). Without a key, the local model.
+        let has_groq_key = settings
+            .post_process_api_keys
+            .get("groq")
+            .is_some_and(|k| !k.trim().is_empty());
+        if has_groq_key && settings.cloud_asr.provider_id.is_empty() {
+            settings.cloud_asr.provider_id = "groq".to_string();
+        }
+    }
     if adaptive_version < u64::from(CURRENT_ADAPTIVE_SETTINGS_VERSION) {
         settings.adaptive_settings_version = CURRENT_ADAPTIVE_SETTINGS_VERSION;
         updated = true;
@@ -1721,10 +1737,14 @@ fn self_update_possible() -> bool {
 /// can't work against an immutable /nix/store install — or when this build
 /// cannot install its own update (see `linux_self_update_possible`).
 pub fn update_checks_forced_disabled() -> bool {
+    // Handy Adaptive: the updater points at the official Handy releases; an
+    // update would replace this fork with them. Always off in the fork.
+    const FORK: bool = true;
     use std::sync::OnceLock;
     static IS_UPDATER_DISABLED: OnceLock<bool> = OnceLock::new();
-    *IS_UPDATER_DISABLED
-        .get_or_init(|| utils::env_flag_enabled("HANDY_DISABLE_UPDATER") || !self_update_possible())
+    *IS_UPDATER_DISABLED.get_or_init(|| {
+        FORK || utils::env_flag_enabled("HANDY_DISABLE_UPDATER") || !self_update_possible()
+    })
 }
 
 /// Effective updater state: the user's stored preference, overridden to `false`
@@ -2271,6 +2291,32 @@ mod tests {
             settings.post_process_selected_prompt_id.as_deref(),
             Some("mine")
         );
+    }
+
+    #[cfg(target_os = "windows")]
+    #[test]
+    fn speech_by_groq_api_when_a_groq_key_is_set() {
+        let raw = serde_json::json!({ "selected_model": "m", "adaptive_settings_version": 3 });
+        let mut settings = get_default_settings();
+        apply_settings_migrations(&mut settings, &raw);
+        assert_eq!(settings.cloud_asr.provider_id, "", "no key: local model");
+
+        let mut settings = get_default_settings();
+        settings
+            .post_process_api_keys
+            .insert("groq".into(), "k".into());
+        apply_settings_migrations(&mut settings, &raw);
+        assert_eq!(settings.cloud_asr.provider_id, "groq");
+        assert_eq!(settings.cloud_asr.model(), "whisper-large-v3");
+
+        // Already migrated: going back to the local model sticks.
+        settings.cloud_asr.provider_id.clear();
+        let raw = serde_json::json!({
+            "selected_model": "m",
+            "adaptive_settings_version": CURRENT_ADAPTIVE_SETTINGS_VERSION
+        });
+        apply_settings_migrations(&mut settings, &raw);
+        assert_eq!(settings.cloud_asr.provider_id, "");
     }
 
     #[test]

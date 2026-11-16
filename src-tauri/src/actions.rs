@@ -1142,17 +1142,83 @@ impl ShortcutAction for TranscribeAction {
                     // Spec §7: only a model that takes context, with the screen
                     // option on, waits for the capture, and at most capture_wait_ms.
                     let asr = get_settings(&ah).asr_context;
+                    // Handy Adaptive: speech by API (Groq Whisper…), local as fallback.
+                    let cloud = crate::cloud_asr::configured(&get_settings(&ah));
                     let mut screen_waited = None;
-                    if asr.screen && get_settings(&ah).learning_enabled && tm.asr_context_wanted() {
+                    let wants_context = match &cloud {
+                        Some(_) => asr.enabled,
+                        None => tm.asr_context_wanted(),
+                    };
+                    if asr.screen && get_settings(&ah).learning_enabled && wants_context {
                         let wait = Duration::from_millis(asr.capture_wait_ms);
                         let screen = screen_rx.recv_timeout(wait).ok();
                         screen_waited = Some(screen.is_some());
                         tm.set_asr_screen(screen.flatten());
                     }
                     let transcription_time = Instant::now();
-                    let transcription_result = tm.transcribe_recording(samples);
+                    let mut cloud_report = None;
+                    let mut cloud_text = None;
+                    let mut cloud_cancelled = false;
+                    if let Some(c) = cloud.as_ref().filter(|_| !samples.is_empty()) {
+                        let language = crate::cloud_asr::language(&get_settings(&ah));
+                        let label = format!("{} {}", c.provider.id, c.model);
+                        let (prompt, mut report) = tm.cloud_context(&label, language.clone());
+                        // Escape stops the call at once, without a local run.
+                        match complete_unless_cancelled(
+                            crate::cloud_asr::transcribe(
+                                c,
+                                &samples,
+                                language.as_deref(),
+                                prompt.as_deref(),
+                            ),
+                            || rm.was_cancelled_since(cancel_generation),
+                        )
+                        .await
+                        {
+                            None => cloud_cancelled = true,
+                            Some(Ok(raw)) => {
+                                log::info!(
+                                    "Speech API '{label}' transcribed {:.1}s of audio in {:?}",
+                                    samples.len() as f64 / 16_000.0,
+                                    transcription_time.elapsed()
+                                );
+                                // The live decode, if any, is no longer needed.
+                                tm.cancel_stream();
+                                let (t, echo) =
+                                    tm.finish_cloud_text(raw, language, prompt.as_deref());
+                                report.echo_dropped = echo;
+                                cloud_text = Some(t);
+                            }
+                            Some(Err(e)) => {
+                                warn!("Speech API '{label}' failed ({e}); using the local model");
+                                report.cloud_error = Some(e);
+                            }
+                        }
+                        cloud_report = Some(report);
+                    }
+                    let transcription_result = match cloud_text {
+                        Some(t) => Ok(t),
+                        None if cloud_cancelled => {
+                            tm.cancel_stream();
+                            Err(anyhow::anyhow!("cancelled during the speech API call"))
+                        }
+                        None => tm.transcribe_recording(samples),
+                    };
                     // F114: what the speech model was given, for Settings → Context.
-                    let asr_report = tm.take_asr_report().map(|mut r| {
+                    let asr_report = match cloud_report {
+                        // A failed API call keeps its error; the local run's
+                        // report says what the local model got.
+                        Some(r) if r.cloud_error.is_some() => tm
+                            .take_asr_report()
+                            .map(|mut l| {
+                                l.cloud_error = r.cloud_error.clone();
+                                l
+                            })
+                            .or(Some(r)),
+                        Some(r) => Some(r),
+                        None => tm.take_asr_report(),
+                    }
+                    .map(|mut r| {
                         r.screen_waited = screen_waited;
                         r
                     });

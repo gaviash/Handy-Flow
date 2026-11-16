@@ -769,7 +769,8 @@
             "before": "Text before the cursor:",
             "prompt": "Prompt sent",
             "screenLate": "The screen came too late: sent without the app and text.",
-            "echo": "The model read its context back instead of speech: the text was dropped."
+            "echo": "The model read its context back instead of speech: the text was dropped.",
+            "cloudError": "The speech API failed, the local model transcribed: {{error}}"
           },
           "llm": {
             "title": "LLM (rewrite or transformation)"
@@ -1085,6 +1086,27 @@
           "description": "Cihaz üzerinde makine öğrenmesi çıkarımı için yüksek performanslı tensör kütüphanesi",
           "details": "Handy'nin yerel konuşmadan metne dönüştürme özelliği transcribe.cpp ve ggml üzerine kuruludur. Georgi Gerganov'a ve katkıda bulunanlara harika çalışmaları için teşekkür ederiz."
         }
+      }
+    },
+    "cloudAsr": {
+      "title": "Transcription by API",
+      "provider": {
+        "label": "Speech Provider",
+        "description": "Transcribe with an online API instead of the local model. The local model takes over if the API fails or is too slow. The same context as the local model is sent as Whisper's prompt.",
+        "local": "Local model (on this computer)",
+        "custom": "Custom (OpenAI-compatible)"
+      },
+      "model": {
+        "label": "Model",
+        "description": "The speech model of this provider. Groq: whisper-large-v3 (most accurate) or whisper-large-v3-turbo (faster)."
+      },
+      "apiKey": {
+        "label": "API Key",
+        "description": "The same key as the rewrite for this provider."
+      },
+      "timeout": {
+        "label": "Max Wait (s)",
+        "description": "Past this delay, the local model transcribes instead."
       }
     }
   },
