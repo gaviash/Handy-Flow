@@ -510,9 +510,11 @@ fn set_kept_text_on(conn: &Connection, id: i64, text: &str) -> Result<()> {
 
 fn past_dictations_on(conn: &Connection, since: i64) -> Result<Vec<PastDictation>> {
     let mut stmt = conn.prepare(
-        "SELECT COALESCE(kept_text, post_processed_text, transcription_text), app, timestamp
+        // Rewritten dictations only: a raw transcription holds the very
+        // mistakes the rewrite is there to fix.
+        "SELECT COALESCE(kept_text, post_processed_text), app, timestamp
          FROM transcription_history
-         WHERE timestamp >= ?1 AND transcription_text != ''
+         WHERE timestamp >= ?1 AND COALESCE(post_processed_text, '') != ''
          ORDER BY timestamp DESC LIMIT 500",
     )?;
     let rows = stmt.query_map(params![since], |r| {
@@ -914,6 +916,7 @@ mod tests {
         insert_entry(&conn, 10, "raw old", Some("old"));
         insert_entry(&conn, 100, "raw a", Some("rewritten a"));
         insert_entry(&conn, 200, "raw b", None);
+        insert_entry(&conn, 300, "raw c", Some("rewritten c"));
         let id: i64 = conn
             .query_row(
                 "SELECT id FROM transcription_history WHERE timestamp = 100",
@@ -924,8 +927,8 @@ mod tests {
         set_kept_text_on(&conn, id, "kept a").unwrap();
         let past = past_dictations_on(&conn, 50).unwrap();
         let texts: Vec<_> = past.iter().map(|p| p.text.as_str()).collect();
-        // Most recent first; kept text, else the rewrite, else the transcript.
-        assert_eq!(texts, vec!["raw b", "kept a"]);
+        // Most recent first; kept text, else the rewrite; never a raw transcript.
+        assert_eq!(texts, vec!["rewritten c", "kept a"]);
         assert_eq!(past[1].timestamp, 100);
     }
 
