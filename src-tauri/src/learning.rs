@@ -127,6 +127,72 @@ pub struct Learned {
     pub count: u32,
     /// Unix seconds.
     pub last_seen: i64,
+    #[serde(default)]
+    pub kind: WordKind,
+    /// A pending word (seen once, needs a second sighting) is not used yet.
+    #[serde(default = "yes")]
+    pub active: bool,
+}
+
+fn yes() -> bool {
+    true
+}
+
+/// A name or technical term, or a common word the recognizer mishears.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize, Type)]
+#[serde(rename_all = "lowercase")]
+pub enum WordKind {
+    #[default]
+    Term,
+    Misheard,
+}
+
+/// A phrasing preference drawn from the user's corrections by the judge.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Type)]
+pub struct StyleRule {
+    pub rule: String,
+    pub count: u32,
+    pub active: bool,
+    /// Unix seconds.
+    pub last_seen: i64,
+    /// Apps the rule holds in; empty = everywhere.
+    #[serde(default)]
+    pub apps: Vec<String>,
+}
+
+/// Everything learned, as stored (encrypted) in `learned.bin`.
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+pub struct Memory {
+    pub words: Vec<Learned>,
+    #[serde(default)]
+    pub rules: Vec<StyleRule>,
+}
+
+pub const WORDS_MAX: usize = 2000;
+pub const RULES_MAX: usize = 100;
+const PENDING_DAYS: i64 = 30;
+
+/// Reads the memory, including the older format: a bare array of words.
+fn parse_memory(json: &[u8]) -> Memory {
+    serde_json::from_slice::<Memory>(json)
+        .or_else(|_| serde_json::from_slice::<Vec<Learned>>(json).map(|words| Memory { words, rules: Vec::new() }))
+        .unwrap_or_default()
+}
+
+/// Drops pending entries unseen for 30 days, then the least used and oldest
+/// entries over the caps.
+pub(crate) fn prune(m: &mut Memory, now: i64) {
+    let expired = now - PENDING_DAYS * 86_400;
+    m.words.retain(|w| w.active || w.last_seen >= expired);
+    m.rules.retain(|r| r.active || r.last_seen >= expired);
+    if m.words.len() > WORDS_MAX {
+        m.words.sort_by(|a, b| b.count.cmp(&a.count).then(b.last_seen.cmp(&a.last_seen)));
+        m.words.truncate(WORDS_MAX);
+    }
+    if m.rules.len() > RULES_MAX {
+        m.rules.sort_by(|a, b| b.count.cmp(&a.count).then(b.last_seen.cmp(&a.last_seen)));
+        m.rules.truncate(RULES_MAX);
+    }
 }
 
 /// Forms heard kept per learned word.
@@ -258,7 +324,7 @@ pub fn candidates(inserted: &str, fin: &str) -> Vec<(String, String)> {
 
 // ---------------------------------------------------------------- memory
 
-static MEMORY: Mutex<Option<Vec<Learned>>> = Mutex::new(None);
+static MEMORY: Mutex<Option<Memory>> = Mutex::new(None);
 
 fn memory_path(app: &AppHandle) -> Option<PathBuf> {
     crate::portable::app_data_dir(app)
@@ -303,20 +369,20 @@ mod dpapi {
     }
 }
 
-fn with_memory<T>(app: &AppHandle, f: impl FnOnce(&mut Vec<Learned>) -> T) -> T {
+fn with_memory<T>(app: &AppHandle, f: impl FnOnce(&mut Memory) -> T) -> T {
     let mut guard = MEMORY.lock().unwrap_or_else(|e| e.into_inner());
     let entries = guard.get_or_insert_with(|| {
         memory_path(app)
             .and_then(|p| std::fs::read(p).ok())
             .and_then(|b| dpapi::run(&b, false))
-            .and_then(|b| serde_json::from_slice(&b).ok())
+            .and_then(|b| Some(parse_memory(&b)))
             .unwrap_or_default()
     });
     f(entries)
 }
 
-fn save(app: &AppHandle, entries: &[Learned]) {
-    let (Some(path), Ok(json)) = (memory_path(app), serde_json::to_vec(entries)) else {
+fn save(app: &AppHandle, m: &mut Memory) {
+    let (Some(path), Ok(json)) = (memory_path(app), { prune(m, chrono::Utc::now().timestamp()); serde_json::to_vec(&*m) }) else {
         return;
     };
     let Some(bytes) = dpapi::run(&json, true) else {
@@ -336,7 +402,7 @@ fn save(app: &AppHandle, entries: &[Learned]) {
 /// Learned spellings as terms for the rewrite, most used first.
 pub fn terms(app: &AppHandle) -> Vec<String> {
     with_memory(app, |m| {
-        let mut m = m.clone();
+        let mut m = m.words.iter().filter(|w| w.active).cloned().collect::<Vec<_>>();
         m.sort_by(|a, b| b.count.cmp(&a.count).then(b.last_seen.cmp(&a.last_seen)));
         m.iter()
             .take(30)
@@ -364,7 +430,7 @@ fn learn(app: &AppHandle, inserted: &str, fin: &str) -> usize {
     with_memory(app, |m| {
         for (term, heard) in found {
             log::info!("Learned a spelling ({} chars)", term.chars().count());
-            match m.iter_mut().find(|l| l.term == term) {
+            match m.words.iter_mut().find(|l| l.term == term) {
                 Some(l) => {
                     l.count += 1;
                     l.last_seen = now;
@@ -375,11 +441,13 @@ fn learn(app: &AppHandle, inserted: &str, fin: &str) -> usize {
                 }
                 None => {
                     new_terms.push(term.clone());
-                    m.push(Learned {
+                    m.words.push(Learned {
                         term,
                         heard: vec![heard],
                         count: 1,
                         last_seen: now,
+                        kind: WordKind::Term,
+                        active: true,
                     })
                 }
             }
@@ -434,20 +502,20 @@ fn play_notification_sound() {
 fn play_notification_sound() {}
 
 pub fn count(app: &AppHandle) -> usize {
-    with_memory(app, |m| m.len())
+    with_memory(app, |m| m.words.len())
 }
 
 #[tauri::command]
 #[specta::specta]
 pub fn get_learned_words(app: AppHandle) -> Vec<Learned> {
-    with_memory(&app, |m| m.clone())
+    with_memory(&app, |m| m.words.clone())
 }
 
 #[tauri::command]
 #[specta::specta]
 pub fn delete_learned_word(app: AppHandle, term: String) {
     with_memory(&app, |m| {
-        m.retain(|l| l.term != term);
+        m.words.retain(|l| l.term != term);
         save(&app, m);
     });
 }
@@ -456,7 +524,8 @@ pub fn delete_learned_word(app: AppHandle, term: String) {
 #[specta::specta]
 pub fn clear_learned_words(app: AppHandle) {
     with_memory(&app, |m| {
-        m.clear();
+        m.words.clear();
+        m.rules.clear();
         save(&app, m);
     });
 }
@@ -465,7 +534,7 @@ pub fn clear_learned_words(app: AppHandle) {
 #[tauri::command]
 #[specta::specta]
 pub fn export_learned_words(app: AppHandle, path: String) -> Result<(), String> {
-    let json = with_memory(&app, |m| serde_json::to_string_pretty(m)).map_err(|e| e.to_string())?;
+    let json = with_memory(&app, |m| serde_json::to_string_pretty(&m.words)).map_err(|e| e.to_string())?;
     std::fs::write(path, json).map_err(|e| e.to_string())
 }
 
@@ -788,5 +857,48 @@ mod tests {
             ),
             vec![("PostgreSQL".into(), "postgéré".into())]
         ); // L03
+    }
+
+    fn word(term: &str, heard: &str, count: u32, last_seen: i64, kind: WordKind, active: bool) -> Learned {
+        Learned {
+            term: term.into(),
+            heard: vec![heard.into()],
+            count,
+            last_seen,
+            kind,
+            active,
+        }
+    }
+
+    #[test]
+    fn old_memory_array_still_loads() {
+        let m = parse_memory(br#"[{"term":"Claude","heard":["Cloud"],"count":2,"last_seen":0}]"#);
+        assert_eq!(m.words.len(), 1);
+        assert_eq!(m.words[0].kind, WordKind::Term);
+        assert!(m.words[0].active);
+        assert!(m.rules.is_empty());
+        // The new format round-trips.
+        let json = serde_json::to_vec(&m).unwrap();
+        assert_eq!(parse_memory(&json).words, m.words);
+    }
+
+    #[test]
+    fn prune_expires_pending_and_caps() {
+        let day = 86_400;
+        let mut m = Memory::default();
+        m.words.push(word("log", "gag", 1, 0, WordKind::Misheard, false));
+        m.words.push(word("Qwen", "Quen", 1, 0, WordKind::Term, true));
+        prune(&mut m, 31 * day);
+        assert_eq!(
+            m.words.iter().map(|w| w.term.as_str()).collect::<Vec<_>>(),
+            vec!["Qwen"]
+        );
+        m.words = (0..WORDS_MAX + 5)
+            .map(|i| word(&format!("w{i}"), "", 1, i as i64, WordKind::Term, true))
+            .collect();
+        prune(&mut m, 0);
+        assert_eq!(m.words.len(), WORDS_MAX);
+        // The least used and oldest goes first.
+        assert!(!m.words.iter().any(|w| w.term == "w0"));
     }
 }
