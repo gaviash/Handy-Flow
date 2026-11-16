@@ -19,7 +19,9 @@
     "postProcessing": "Efterbearbetning",
     "history": "Historik",
     "debug": "Felsökning",
-    "about": "Om"
+    "about": "Om",
+    "appearance": "Appearance",
+    "label": "Sections"
   },
   "onboarding": {
     "customModelDescription": "Stöds inte officiellt",
@@ -1086,6 +1088,9 @@
           "details": "Handy Flow använder ggml för snabb, lokal tal-till-text-behandling. Tack till det fantastiska arbete som utförts av Georgi Gerganov med medarbetare."
         }
       }
+    },
+    "appearance": {
+      "title": "Appearance"
     }
   },
   "footer": {

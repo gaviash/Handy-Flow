@@ -19,7 +19,9 @@
     "postProcessing": "Постобробка",
     "history": "Історія",
     "debug": "Дебаг",
-    "about": "Інфо"
+    "about": "Інфо",
+    "appearance": "Appearance",
+    "label": "Sections"
   },
   "onboarding": {
     "customModelDescription": "Офіційно не підтримується",
@@ -1086,6 +1088,9 @@
           "details": "Handy Flow використовує ggml для швидкої локальної обробки мовлення в текст. Дякуємо за чудову роботу Георгію Герганову та контриб'юторам."
         }
       }
+    },
+    "appearance": {
+      "title": "Appearance"
     }
   },
   "footer": {

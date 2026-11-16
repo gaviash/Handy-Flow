@@ -19,7 +19,9 @@
     "postProcessing": "Pós-Processamento",
     "history": "Histórico",
     "debug": "Depuração",
-    "about": "Sobre"
+    "about": "Sobre",
+    "appearance": "Appearance",
+    "label": "Sections"
   },
   "onboarding": {
     "customModelDescription": "Não suportado oficialmente",
@@ -1086,6 +1088,9 @@
           "details": "O Handy Flow usa ggml para processamento rápido e local de fala para texto. Agradecemos ao incrível trabalho de Georgi Gerganov e colaboradores."
         }
       }
+    },
+    "appearance": {
+      "title": "Appearance"
     }
   },
   "footer": {

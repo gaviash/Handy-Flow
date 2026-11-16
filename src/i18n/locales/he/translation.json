@@ -19,7 +19,9 @@
     "postProcessing": "עיבוד משלים",
     "history": "היסטוריה",
     "debug": "ניפוי שגיאות",
-    "about": "אודות"
+    "about": "אודות",
+    "appearance": "Appearance",
+    "label": "Sections"
   },
   "onboarding": {
     "customModelDescription": "לא נתמך באופן רשמי",
@@ -1086,6 +1088,9 @@
           "details": "Handy Flow משתמש ב-ggml לתמלול מהיר ומקומי. תודה לעבודה המדהימה של Georgi Gerganov וכל התורמים."
         }
       }
+    },
+    "appearance": {
+      "title": "Appearance"
     }
   },
   "footer": {

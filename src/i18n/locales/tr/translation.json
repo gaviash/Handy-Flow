@@ -19,7 +19,9 @@
     "postProcessing": "Son İşlem",
     "history": "Geçmiş",
     "debug": "Hata Ayıklama",
-    "about": "Hakkında"
+    "about": "Hakkında",
+    "appearance": "Appearance",
+    "label": "Sections"
   },
   "onboarding": {
     "customModelDescription": "Resmi olarak desteklenmiyor",
@@ -1086,6 +1088,9 @@
           "details": "Handy Flow'nin yerel konuşmadan metne dönüştürme özelliği transcribe.cpp ve ggml üzerine kuruludur. Georgi Gerganov'a ve katkıda bulunanlara harika çalışmaları için teşekkür ederiz."
         }
       }
+    },
+    "appearance": {
+      "title": "Appearance"
     }
   },
   "footer": {
