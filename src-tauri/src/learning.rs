@@ -151,6 +151,11 @@ pub fn candidates(inserted: &str, fin: &str) -> Vec<(String, String)> {
     let mut out = Vec::new();
     let mut k = 0;
     let changed = |t: &(Tag, Option<usize>, Option<usize>)| !matches!(t.0, Tag::Same | Tag::Case);
+    // Punctuation after a word ends a term: "Quen, GEMA" → "Qwen, gemma" is two.
+    let ends_item = |t: &(Tag, Option<usize>, Option<usize>)| {
+        let w = t.2.map(|j| b[j]).or(t.1.map(|i| a[i])).unwrap_or("");
+        w.ends_with([',', ';', ':', '.', '!', '?'])
+    };
     while k < tags.len() {
         if !changed(&tags[k]) {
             k += 1;
@@ -159,6 +164,9 @@ pub fn candidates(inserted: &str, fin: &str) -> Vec<(String, String)> {
         let start = k;
         while k < tags.len() && changed(&tags[k]) {
             k += 1;
+            if ends_item(&tags[k - 1]) {
+                break;
+            }
         }
         let run = &tags[start..k];
         // A split or merge ("GPTOC" → "GPT OSS") still holds a substitution.
@@ -168,9 +176,10 @@ pub fn candidates(inserted: &str, fin: &str) -> Vec<(String, String)> {
         let bounded = |t: Option<&(Tag, Option<usize>, Option<usize>)>| {
             t.is_none_or(|t| matches!(t.0, Tag::Same | Tag::Case))
         };
+        let after_item = start.checked_sub(1).is_some_and(|s| ends_item(&tags[s]));
         if run.len() > 4
-            || !bounded(start.checked_sub(1).and_then(|s| tags.get(s)))
-            || !bounded(tags.get(k))
+            || !(after_item || bounded(start.checked_sub(1).and_then(|s| tags.get(s))))
+            || !(ends_item(&tags[k - 1]) || bounded(tags.get(k)))
         {
             continue;
         }
@@ -413,6 +422,22 @@ pub fn region<'a>(text: &'a str, before: &str, after: &str) -> Option<&'a str> {
     Some(&rest[..end])
 }
 
+/// The anchors around the one occurrence of `inserted` in `text`.
+pub fn anchors_around(text: &str, inserted: &str) -> Option<(String, String)> {
+    let mut found = text.match_indices(inserted);
+    let (i, _) = found.next()?;
+    if inserted.is_empty() || found.next().is_some() {
+        return None;
+    }
+    Some((
+        crate::context::tail_chars(&text[..i], ANCHOR_CHARS),
+        text[i + inserted.len()..]
+            .chars()
+            .take(ANCHOR_CHARS)
+            .collect(),
+    ))
+}
+
 /// F80–F83: watches the field the text was pasted into, then learns from the
 /// last reading whose anchors still hold.
 pub fn observe(app: &AppHandle, field: &crate::context::Field, inserted: &str) {
@@ -423,8 +448,8 @@ pub fn observe(app: &AppHandle, field: &crate::context::Field, inserted: &str) {
         log::debug!("Learning: not observing, the field's caret position is unknown");
         return;
     }
-    let before: String = crate::context::tail_chars(&field.before, ANCHOR_CHARS);
-    let after: String = field.after.chars().take(ANCHOR_CHARS).collect();
+    let mut before: String = crate::context::tail_chars(&field.before, ANCHOR_CHARS);
+    let mut after: String = field.after.chars().take(ANCHOR_CHARS).collect();
     let inserted = inserted.trim().to_string();
     let id = OBSERVATION.fetch_add(1, Ordering::SeqCst) + 1;
     let app = app.clone();
@@ -448,7 +473,17 @@ pub fn observe(app: &AppHandle, field: &crate::context::Field, inserted: &str) {
                 }
                 match crate::context::read_watched() {
                     // An empty field was sent or cleared: keep the last reading.
-                    Some(text) if !text.trim().is_empty() => match region(&text, &before, &after) {
+                    Some(text) if !text.trim().is_empty() => match {
+                        // The anchors read at release can vanish (a placeholder
+                        // read as text, spaces rewritten): take them around the
+                        // pasted text itself once it shows up.
+                        if last.is_none() {
+                            if let Some((b, a)) = anchors_around(&text, &inserted) {
+                                (before, after) = (b, a);
+                            }
+                        }
+                        region(&text, &before, &after)
+                    } {
                         // Tracked only once the pasted text has shown up there.
                         Some(r) if last.is_some() || r.trim() == inserted => {
                             last = Some(r.trim().to_string())
@@ -495,6 +530,24 @@ mod tests {
     use super::*;
 
     #[test]
+    fn re_anchors_when_a_placeholder_was_read_at_release() {
+        let pasted = "Alors que j'ai bien corrigé Gemma et Quinn.";
+        // At release the empty input read as its placeholder: no anchor fits.
+        let (before, after) = ("Ask Claude to edit…", "");
+        assert_eq!(region(pasted, before, after), None);
+        // Once the pasted text shows up, anchors come from the field itself.
+        let (b, a) = anchors_around(pasted, pasted).unwrap();
+        let fin = "Alors que j'ai bien corrigé Gemma et Qwen.";
+        let r = region(fin, &b, &a).unwrap();
+        assert_eq!(candidates(pasted, r), vec![("Qwen".into(), "Quinn".into())]);
+        // Text typed before and after in the same field stays outside.
+        let field = format!("Bonjour, {pasted} Merci");
+        let (b, a) = anchors_around(&field, pasted).unwrap();
+        assert_eq!(region(&field, &b, &a), Some(pasted));
+        assert_eq!(anchors_around("a a", "a"), None);
+    }
+
+    #[test]
     fn learns_the_users_vs_code_corrections() {
         assert_eq!(
             candidates(
@@ -519,6 +572,17 @@ mod tests {
             ),
             vec![
                 ("GPT OSS".into(), "GPTOC".into()),
+                ("gemma".into(), "GEMA".into())
+            ]
+        );
+        // Two neighbouring fixes in a list stay two terms.
+        assert_eq!(
+            candidates(
+                "Donc, au niveau du benchmark, entre Quen, GEMA et GPT OSS, c'est quoi le meilleur ?",
+                "donc, au niveau du benchmark, entre Qwen, gemma et GPT OSS, c'est quoi le meilleur ?"
+            ),
+            vec![
+                ("Qwen".into(), "Quen".into()),
                 ("gemma".into(), "GEMA".into())
             ]
         );
