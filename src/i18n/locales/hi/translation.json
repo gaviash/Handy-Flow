@@ -771,6 +771,12 @@
         "sound": {
           "label": "Sound When a Word Is Learned",
           "description": "Plays the Windows notification sound when the pill shows a learned word."
+        },
+        "pending": "लंबित",
+        "rules": {
+          "label": "शैली नियम",
+          "description": "Handy आपके सुधारों से जो लेखन-पसंद सीखता है और अगली डिक्टेशन में लागू करता है।",
+          "empty": "अभी कोई नियम नहीं।"
         }
       },
       "styles": {

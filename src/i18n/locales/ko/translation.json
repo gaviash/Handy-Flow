@@ -771,6 +771,12 @@
         "sound": {
           "label": "Sound When a Word Is Learned",
           "description": "Plays the Windows notification sound when the pill shows a learned word."
+        },
+        "pending": "대기 중",
+        "rules": {
+          "label": "스타일 규칙",
+          "description": "Handy가 수정 내용에서 배운 표현 선호로, 다음 받아쓰기에 적용됩니다.",
+          "empty": "아직 규칙이 없습니다."
         }
       },
       "styles": {

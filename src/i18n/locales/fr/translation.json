@@ -771,6 +771,12 @@
         "sound": {
           "label": "Son quand un mot est appris",
           "description": "Joue le son de notification de Windows quand la pastille annonce un mot appris."
+        },
+        "pending": "en attente",
+        "rules": {
+          "label": "Règles de style",
+          "description": "Préférences de formulation tirées de vos corrections, appliquées à vos prochaines dictées.",
+          "empty": "Aucune règle pour l'instant."
         }
       },
       "styles": {

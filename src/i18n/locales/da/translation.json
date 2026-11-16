@@ -771,6 +771,12 @@
         "sound": {
           "label": "Sound When a Word Is Learned",
           "description": "Plays the Windows notification sound when the pill shows a learned word."
+        },
+        "pending": "afventer",
+        "rules": {
+          "label": "Stilregler",
+          "description": "Formuleringer, Handy lærer af dine rettelser og bruger i dine næste dikteringer.",
+          "empty": "Ingen regler endnu."
         }
       },
       "styles": {

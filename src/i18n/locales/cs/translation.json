@@ -771,6 +771,12 @@
         "sound": {
           "label": "Sound When a Word Is Learned",
           "description": "Plays the Windows notification sound when the pill shows a learned word."
+        },
+        "pending": "čeká",
+        "rules": {
+          "label": "Pravidla stylu",
+          "description": "Preference formulací, které Handy odvodí z vašich oprav a použije v dalších diktátech.",
+          "empty": "Zatím žádné pravidlo."
         }
       },
       "styles": {

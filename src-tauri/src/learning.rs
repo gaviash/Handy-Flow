@@ -702,6 +702,21 @@ pub fn delete_learned_word(app: AppHandle, term: String) {
 
 #[tauri::command]
 #[specta::specta]
+pub fn get_style_rules(app: AppHandle) -> Vec<StyleRule> {
+    with_memory(&app, |m| m.rules.clone())
+}
+
+#[tauri::command]
+#[specta::specta]
+pub fn delete_style_rule(app: AppHandle, rule: String) {
+    with_memory(&app, |m| {
+        m.rules.retain(|r| r.rule != rule);
+        save(&app, m);
+    });
+}
+
+#[tauri::command]
+#[specta::specta]
 pub fn clear_learned_words(app: AppHandle) {
     with_memory(&app, |m| {
         m.words.clear();
