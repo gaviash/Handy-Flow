@@ -767,7 +767,11 @@
           "confirmClear": "Clear all learned words?"
         },
         "notice": "Learned: {{terms}}",
-        "undo": "Undo"
+        "undo": "Undo",
+        "sound": {
+          "label": "Sound When a Word Is Learned",
+          "description": "Plays the Windows notification sound when the pill shows a learned word."
+        }
       },
       "styles": {
         "title": "Styles",

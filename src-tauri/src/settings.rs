@@ -444,6 +444,9 @@ pub struct AppSettings {
     /// F97: learn corrected names and terms from the user's edits.
     #[serde(default = "default_true")]
     pub learning_enabled: bool,
+    /// The system notification sound when a word is learned.
+    #[serde(default = "default_true")]
+    pub learned_sound_enabled: bool,
     /// Defaults to empty on partial stores; the load path merges in the
     /// default bindings for any missing keys before the settings are used.
     #[serde(default)]
@@ -1201,6 +1204,7 @@ pub fn get_default_settings() -> AppSettings {
         context_excluded_apps: default_context_excluded_apps(),
         context_excluded_domains: default_context_excluded_domains(),
         learning_enabled: true,
+        learned_sound_enabled: true,
         styles: crate::context::Styles::default(),
         snippets: Vec::new(),
         user_name: String::new(),

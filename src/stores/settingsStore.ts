@@ -232,6 +232,8 @@ const settingUpdaters: {
   transforms: (value) => commands.changeTransformsSetting(value as Transform[]),
   learning_enabled: (value) =>
     commands.changeLearningEnabledSetting(value as boolean),
+  learned_sound_enabled: (value) =>
+    commands.changeLearnedSoundEnabledSetting(value as boolean),
   context_excluded_domains: (value) =>
     commands.changeContextExcludedDomainsSetting(value as string[]),
   language_detection: (value) =>
