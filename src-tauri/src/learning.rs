@@ -569,7 +569,7 @@ fn with_memory<T>(app: &AppHandle, f: impl FnOnce(&mut Memory) -> T) -> T {
         memory_path(app)
             .and_then(|p| std::fs::read(p).ok())
             .and_then(|b| dpapi::run(&b, false))
-            .and_then(|b| Some(parse_memory(&b)))
+            .map(|b| parse_memory(&b))
             .unwrap_or_default()
     });
     f(entries)
@@ -685,14 +685,41 @@ pub(crate) fn apply_verdicts(
     news
 }
 
+/// `same_as` from an index in `rules_sent` to the same rule's index now, or
+/// `None` once that rule is gone.
+fn remap_same_as(
+    verdicts: &[crate::judge::Verdict],
+    rules_sent: &[String],
+    rules_now: &[StyleRule],
+) -> Vec<crate::judge::Verdict> {
+    verdicts
+        .iter()
+        .map(|v| crate::judge::Verdict {
+            same_as: v
+                .same_as
+                .and_then(|i| rules_sent.get(i))
+                .and_then(|t| rules_now.iter().position(|r| &r.rule == t)),
+            ..v.clone()
+        })
+        .collect()
+}
+
 /// Stores the judge's verdicts and announces what became usable.
-pub fn record_verdicts(app: &AppHandle, verdicts: &[crate::judge::Verdict], app_name: &str) {
+/// `rules_sent` is the numbered list the judge saw: rules may have been
+/// deleted or pruned during the call, so `same_as` is matched by text.
+pub fn record_verdicts(
+    app: &AppHandle,
+    verdicts: &[crate::judge::Verdict],
+    rules_sent: &[String],
+    app_name: &str,
+) {
     if verdicts.is_empty() {
         return;
     }
     let now = chrono::Utc::now().timestamp();
     let news = with_memory(app, |m| {
-        let news = apply_verdicts(m, verdicts, app_name, now);
+        let verdicts = remap_same_as(verdicts, rules_sent, &m.rules);
+        let news = apply_verdicts(m, &verdicts, app_name, now);
         save(app, m);
         news
     });
@@ -1243,6 +1270,32 @@ mod tests {
         assert!(super::candidates("on part à deux", "on part à trois").is_empty());
         assert!(!is_misheard_pair("mardi", "jeudi"));
         assert!(is_misheard_pair("gag", "log"));
+    }
+
+    #[test]
+    fn same_as_follows_the_rule_text_not_its_old_position() {
+        use crate::judge::{Verdict, VerdictKind};
+        let rule = |r: &str| StyleRule {
+            rule: r.into(),
+            count: 1,
+            active: false,
+            last_seen: 0,
+            apps: Vec::new(),
+        };
+        let v = |same_as| Verdict {
+            kind: VerdictKind::StyleRule,
+            heard: None,
+            term: None,
+            rule: None,
+            same_as,
+            consistent_with_history: false,
+        };
+        let sent = vec!["A".to_string(), "B".to_string()];
+        // "A" was deleted during the call: the judge's 1 ("B") is now 0.
+        let now = vec![rule("B")];
+        let out = remap_same_as(&[v(Some(1)), v(Some(0)), v(Some(9))], &sent, &now);
+        let got: Vec<_> = out.iter().map(|v| v.same_as).collect();
+        assert_eq!(got, vec![Some(0), None, None]);
     }
 
     #[test]
