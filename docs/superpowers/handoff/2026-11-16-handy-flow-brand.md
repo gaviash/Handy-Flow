@@ -1,60 +1,47 @@
-# Handoff — Handy Flow brand (stopped at Task 10)
+# Suivi — Handy Flow : branding, thèmes et finitions
 
-**Plan:** `docs/superpowers/plans/2026-11-16-handy-flow-brand.md` · **Spec:** `docs/superpowers/specs/2026-11-16-handy-flow-brand-design.md` · **Visual reference:** `docs/branding/pilote-handy-flow-v2.html`
+Branche locale : `feat/handy-flow-brand`. Plan : `docs/superpowers/plans/2026-11-16-handy-flow-brand.md`. Spec : `docs/superpowers/specs/2026-11-16-handy-flow-brand-design.md`. Les tâches 0 à 15 sont terminées.
 
-**Where:** branch `feat/handy-flow-brand`, worktree `Handy/.claude/worktrees/handy-flow-brand`. Not pushed. Execution mode: inline (superpowers:executing-plans), with the `impeccable` skill for the UI tasks.
+## Livré
 
-**Detailed ledger** (git-ignored, read it first): `.superpowers/sdd/2026-11-16-handy-flow-brand/progress.md`. It lists every task done and every ruling.
+- Identité Handy Flow, fontes embarquées, huit palettes clair/sombre, icônes et updater amont désactivé. Identifiant, chemins de données et marqueur portable conservés.
+- Écran Apparence : palettes avec aperçu propre, mode Système/Clair/Sombre, titres Éditorial/Moderne, densité et styles Pastille/Onde/Live. Application immédiate et persistance via les commandes Rust.
+- Primitives, focus visible, sélection, scrollbars, contraste des boutons et réduction du mouvement ; navigation au clavier des sélecteurs.
+- Overlay recoloré à chaud : libellé d’écoute en Pastille, masqué en Onde, nom accessible conservé. Les neuf barres restent pilotées par le vrai niveau audio ; dimensions natives inchangées.
+- Carte de raccourci en tête, raccourci accessible avec bouton/kbd, actions d’historique au survol et au focus, titres de page et crédit MIT à Handy dans À propos.
+- Icône de fenêtre et icône colorée du tray liées à la palette. Les variantes monochromes et les signaux d’enregistrement restent en place.
 
-## Done (committed)
+## Vérifications
 
-| Task | Result |
-|---|---|
-| 0 | Fonts: Figtree and Instrument Serif in woff2, plus `OFL.txt` |
-| 1 | Name changed to Handy Flow (`productName`, `mainBinaryName`, titles, tray tooltip, CLI); updater forced off; `identifier` unchanged |
-| 2 | 26 locales renamed; `bun run check:branding` |
-| 3 | Windows autostart: removes the old `Handy` Run entry only if it points to this install |
-| 4 | Icons per palette (`scripts/render-icons.ts`) and `tauri icon`. Build 1 OK: `target/fast/Handy Flow.exe`, ProductName "Handy Flow" |
-| 5 | Rust settings `palette`, `heading_style`, `ui_density`, `overlay_show_label`, plus commands and the `appearance-changed` event; `bindings.ts` regenerated |
-| 6 | `src/styles/palettes.css` (8 palettes, `light-dark()`), `theme.css` cut down to aliases; `bun run check:themes` (WCAG) |
-| 7 | `src/lib/utils/appearance.ts` (+ test `bun run test:appearance`); `theme.ts` removed |
-| 8 | Playwright harness with a mocked Tauri IPC (`tests/fixtures/tauri-mock.ts`, port 1430, installed Chrome); `tests/branding.spec.ts` 3/3; house prompt renamed "Handy Flow" (by id, idempotent) |
-| 9 | `HandyFlowWordmark`, bundled fonts, sidebar redone (nav of buttons, Appearance section), `ThemeSelector` moved from About to Appearance (minimal stub) |
+- Rust : `cargo test --manifest-path src-tauri/Cargo.toml --profile fast --lib` : **419 réussis, 23 ignorés préexistants, 0 échec** (DLL de transcribe-libs dans PATH).
+- Playwright headless : **45/45**, nouvelle exécution sans mise à jour des captures après leur examen. Captures Général/Apparence des 8 palettes × 2 modes, fenêtre française minimale 720 × 600, états de l’overlay Rose/Sauge/Contraste.
+- Assertions Bun : apparence, clavier, installateur portable et presse-papiers réussies. Le test presse-papiers journalise intentionnellement son erreur simulée.
+- `check:branding`, `check:themes`, `check:translations`, TypeScript et ESLint réussis.
+- `cargo clippy --manifest-path src-tauri/Cargo.toml --profile fast` réussi avec avertissements préexistants (20 dans la bibliothèque, dépendance rdev inutilisée dans le manifeste).
+- Formatage ciblé Prettier et `cargo fmt --check` réussis. **Le contrôle global `bun run format:check` reste en échec sur 265 fichiers préexistants**, notamment à cause des fins de ligne du checkout Windows. Pas de reformatage massif.
+- Revue indépendante de toute la branche : quatre points corrigés (rangée Onde, libellé Pastille, fixture Windows limitée à Windows, titre Modèles dupliqué), avec tests de régression.
+- Impeccable était déjà installé dans `C:\Users\gavri\.agents\skills\impeccable`. Context et craft-floor chargés, détecteur exécuté : rebond de l’overlay corrigé. Deux alertes de bordure concernent le padding transparent des scrollbars ; deux alertes de police concernent Instrument Serif, imposée par la référence validée.
 
-Last green state: Rust `cargo test --profile fast --lib` 418/418; check:branding, check:themes, check:translations, test:appearance, Playwright branding all pass; lint clean.
+## Builds et limites
 
-## In progress: Task 10 (UI primitives)
+- Incrément 1 validé lors de la session précédente ; incrément 2 réussi en 2 min 13.
+- Incrément 3 : **réussi en 2 min 15**. Sortie : `src-tauri/target/fast/Handy Flow.exe`.
+- Les DLL et `resources/` ont été copiés à côté de l’exécutable, dans le worktree uniquement, puis vérifiés par SHA-256. L’exécutable n’a pas été lancé.
+- **Aucune copie, installation ou modification dans `Desktop\Handy Flow` ou `Desktop\Handy`.** Le checkout principal et son travail cloud_asr restent intacts. Aucun push, PR ou merge.
+- Aucun lancement de l’app native pour test, aucune prise du clavier, du focus ou du microphone. Les tests de navigateur sont headless et simulent l’IPC Tauri.
+- macOS/Linux : revue des chemins et compilation conditionnelle ; pas de compilation ni de contrôle visuel sur ces systèmes. La fixture IPC est explicitement Windows.
+- Police embarquée limitée au sous-ensemble latin ; les autres écritures gardent leur repli système, comme décidé précédemment.
+- Pas de carte de statut du modèle supplémentaire dans la barre latérale : le footer existant l’affiche déjà.
 
-- `tests/ui.spec.ts` is written (WIP, committed with this note). It is in RED, as expected:
-  - The "switch paints accent" test already passes, because the alias `background-ui` = `accent` comes from Task 6.
-  - Three tests fail: on-accent button, density, and reduced-motion on the switch.
-  - The last run (on-accent Donate button) was interrupted.
-- What remains: implement what the plan's Task 10 says.
-  - `Switch.tsx`: 40×24, `bg-accent` when on, knob `on-accent`, 250ms ease-glide.
-  - `Button.tsx` primary: `text-on-accent bg-accent` (white on light pink fails contrast).
-  - `SettingsGroup`/`SettingContainer`: class `row-setting`, padding following `data-density`, `bg-raised`, radius 14px.
-  - New `Segmented.tsx` (its keyboard test goes in `appearance.spec`, Task 11).
-  - Global `:focus-visible`, `::selection`, scrollbars, and global `prefers-reduced-motion` in `App.css`.
-- Then Tasks 11 to 15 as the plan says.
+## Vérifications manuelles restantes
 
-## Rules (from the user — must follow)
+À effectuer sur le build du worktree, au moment choisi par l’utilisateur :
 
-- **NEVER replace or touch `Desktop\Handy Flow`.** Another version will be installed there. Every build stays in the worktree.
-- No test that takes over the PC (keyboard, focus, audio). Playwright runs headless only.
-- Builds: `bun run tauri build --no-bundle -- --profile fast`, one per increment. Never run `bun run build` or edit sources while a build is running.
-- Do not touch the uncommitted cloud_asr work in the main checkout (`Handy/`, branch `feat/adaptive-learning-context`).
+1. Nom Handy Flow dans le Gestionnaire des tâches, titre, infobulle et icône de la barre des tâches.
+2. Une seule entrée de démarrage pour cette installation ; Handy d’origine intact.
+3. Changer de palette pendant que la pastille est ouverte, puis dicter : couleur et résultat corrects ; tester Pastille, Onde et Live.
+4. Clair, Sombre et Système suivent le choix et Windows ; réduction des animations respectée.
+5. Historique, modèles, réglages et clés API toujours disponibles dans l’installation utilisée.
+6. Tray lisible sur barre claire et sombre ; icône de fenêtre suivant la palette.
 
-## Practical gotchas
-
-- Rust tests: `PATH="$(pwd)/src-tauri/transcribe-libs:$PATH" cargo test --manifest-path src-tauri/Cargo.toml --profile fast --lib`. Without that PATH entry the test binary fails with STATUS_DLL_NOT_FOUND.
-- `bindings.ts`:
-  - `cargo build`, then `src-tauri/target/debug/handy.exe --list-devices` (headless; no window or shortcuts).
-  - The export path is relative to the current directory (`../src/bindings.ts`). Run it **from `src-tauri/`**, otherwise the file lands in `.claude/worktrees/src/`.
-- Settings fixture: `UPDATE_FIXTURES=1` + the cargo test `default_settings_fixture_is_current` → `tests/fixtures/app-settings.json`.
-- Only run Prettier on the files you touched: it reformats others (line endings) that must be restored.
-- The worktree guard refuses compound shell commands that contain `git`: run `git` on its own, with literal arguments.
-- `src-tauri/target/fast` was seeded from the main checkout (stale CMake caches were removed). Incremental builds now take about 1–4 min.
-
-## Also done during the session (user request)
-
-193 branches deleted from the GitHub fork (`gaviash/Handy-Flow`). They were exact copies of `cjpais/Handy` branches. Kept: `main`, `feat/adaptive-learning-context`, `adaptive/etape-1`. The main checkout still has stale `origin/*` remote-tracking refs (`git fetch --prune` cleans them up).
+Le journal détaillé reste dans `.superpowers/sdd/2026-11-16-handy-flow-brand/progress.md` (ignoré par git).
