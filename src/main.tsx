@@ -3,21 +3,24 @@ import ReactDOM from "react-dom/client";
 import { platform } from "@tauri-apps/plugin-os";
 import App from "./App";
 import { installCompatShims } from "./lib/compat";
+import { listen } from "@tauri-apps/api/event";
 import {
-  applyTheme,
-  getStoredTheme,
-  syncThemeFromSettings,
-} from "./lib/utils/theme";
+  applyAppearance,
+  getStoredAppearance,
+  syncAppearanceFromSettings,
+  type Appearance,
+} from "./lib/utils/appearance";
 
 installCompatShims();
 
 // Set platform before render so CSS can scope per-platform (e.g. scrollbar styles)
 document.documentElement.dataset.platform = platform();
 
-// Apply the last-known theme synchronously before render to avoid a flash of
-// the wrong palette, then reconcile with the persisted setting once it loads.
-applyTheme(getStoredTheme());
-syncThemeFromSettings();
+// Apply the last-known appearance synchronously before render to avoid a flash
+// of the wrong palette, then reconcile with the persisted setting once it loads.
+applyAppearance(getStoredAppearance());
+syncAppearanceFromSettings();
+listen<Appearance>("appearance-changed", (event) => applyAppearance(event.payload));
 
 // Initialize i18n
 import "./i18n";

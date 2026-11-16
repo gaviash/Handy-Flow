@@ -3,7 +3,11 @@ import { useTranslation } from "react-i18next";
 import { Dropdown } from "../ui/Dropdown";
 import { SettingContainer } from "../ui/SettingContainer";
 import { useSettings } from "@/hooks/useSettings";
-import { applyTheme, THEME_OPTIONS } from "@/lib/utils/theme";
+import {
+  applyAppearance,
+  getStoredAppearance,
+  THEME_OPTIONS,
+} from "@/lib/utils/appearance";
 import type { Theme } from "@/bindings";
 
 interface ThemeSelectorProps {
@@ -25,7 +29,7 @@ export const ThemeSelector: React.FC<ThemeSelectorProps> = React.memo(
 
     const handleThemeChange = (value: string) => {
       const theme = value as Theme;
-      applyTheme(theme);
+      applyAppearance({ ...getStoredAppearance(), theme });
       updateSetting("theme", theme);
     };
 
