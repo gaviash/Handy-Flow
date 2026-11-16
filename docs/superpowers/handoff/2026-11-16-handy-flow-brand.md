@@ -1,6 +1,6 @@
 # Suivi — Handy Flow : branding, thèmes et finitions
 
-Branche locale : `feat/handy-flow-brand`. Plan : `docs/superpowers/plans/2026-11-16-handy-flow-brand.md`. Spec : `docs/superpowers/specs/2026-11-16-handy-flow-brand-design.md`. Les tâches 0 à 15 sont terminées.
+Branche : `feat/handy-flow-brand`, poussée sur `origin` (`gaviash/Handy-Flow`) à la demande de l’utilisateur. Plan : `docs/superpowers/plans/2026-11-16-handy-flow-brand.md`. Spec : `docs/superpowers/specs/2026-11-16-handy-flow-brand-design.md`. Les tâches 0 à 15 sont terminées.
 
 ## Livré
 
@@ -27,7 +27,7 @@ Branche locale : `feat/handy-flow-brand`. Plan : `docs/superpowers/plans/2026-11
 - Incrément 1 validé lors de la session précédente ; incrément 2 réussi en 2 min 13.
 - Incrément 3 : **réussi en 2 min 15**. Sortie : `src-tauri/target/fast/Handy Flow.exe`.
 - Les DLL et `resources/` ont été copiés à côté de l’exécutable, dans le worktree uniquement, puis vérifiés par SHA-256. L’exécutable n’a pas été lancé.
-- **Aucune copie, installation ou modification dans `Desktop\Handy Flow` ou `Desktop\Handy`.** Le checkout principal et son travail cloud_asr restent intacts. Aucun push, PR ou merge.
+- **Aucune copie, installation ou modification dans `Desktop\Handy Flow` ou `Desktop\Handy`.** Le checkout principal et son travail cloud_asr restent intacts. Aucun PR ou merge ; commits poussés sur le fork uniquement.
 - Aucun lancement de l’app native pour test, aucune prise du clavier, du focus ou du microphone. Les tests de navigateur sont headless et simulent l’IPC Tauri.
 - macOS/Linux : revue des chemins et compilation conditionnelle ; pas de compilation ni de contrôle visuel sur ces systèmes. La fixture IPC est explicitement Windows.
 - Police embarquée limitée au sous-ensemble latin ; les autres écritures gardent leur repli système, comme décidé précédemment.
