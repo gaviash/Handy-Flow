@@ -242,6 +242,9 @@ impl Drop for StreamWorkerGuard {
     }
 }
 
+/// Frequent expressions and when they were computed.
+type ExpressionsCache = Arc<Mutex<Option<(Instant, Vec<String>)>>>;
+
 #[derive(Clone)]
 pub struct TranscriptionManager {
     /// The transcribe-cpp engine: owns the worker process, its model, and
@@ -283,7 +286,7 @@ pub struct TranscriptionManager {
     /// next run's ASR context, set by the dictation when the user allows it.
     asr_screen: Arc<Mutex<Option<(String, String)>>>,
     /// Frequent expressions, recomputed at most every 5 minutes.
-    asr_expressions: Arc<Mutex<Option<(Instant, Vec<String>)>>>,
+    asr_expressions: ExpressionsCache,
     /// The last run's model took ASR context and the setting allowed it.
     asr_capable: Arc<AtomicBool>,
 }
@@ -1747,8 +1750,8 @@ fn apply_asr_context(options: &mut RunOptions, ctx: &AsrContext) {
     }
 }
 
-/// The prompt read back instead of speech: three words or more, nearly all
-/// of them from the prompt.
+/// The prompt read back instead of speech: three words or more, recited in
+/// the prompt's order.
 fn echoes_prompt(text: &str, prompt: Option<&str>) -> bool {
     let Some(prompt) = prompt else {
         return false;
@@ -1759,10 +1762,11 @@ fn echoes_prompt(text: &str, prompt: Option<&str>) -> bool {
             .map(str::to_lowercase)
             .collect()
     };
-    let given: std::collections::HashSet<String> = words(prompt).into_iter().collect();
+    // A run of the prompt's words in order: the prompt holds the text before
+    // the cursor, so a real dictation often shares its common words.
     let said = words(text);
-    let from_prompt = said.iter().filter(|w| given.contains(*w)).count();
-    said.len() >= 3 && from_prompt * 10 >= said.len() * 9
+    said.len() >= 3
+        && format!(" {} ", words(prompt).join(" ")).contains(&format!(" {} ", said.join(" ")))
 }
 
 /// The prompt text a run was given, in either slot.
@@ -2201,6 +2205,10 @@ mod tests {
             Some(p)
         ));
         assert!(!echoes_prompt("log Claude", Some(p)), "too short to tell");
+        // Common words also found in the text before the cursor are speech.
+        let p = "Texte : je pense que tu es d'accord, je suis là. Vocabulaire : log.";
+        assert!(!echoes_prompt("Je suis d'accord.", Some(p)));
+        assert!(echoes_prompt("je pense que tu es d'accord", Some(p)));
         assert!(!echoes_prompt("Vocabulaire log Claude", None));
     }
 
