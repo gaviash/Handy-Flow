@@ -1208,10 +1208,6 @@ impl TranscriptionManager {
         } else {
             AsrSources::default()
         };
-        // Put the screen back: a local run after a failed call uses it too.
-        if let (Some(app), Some(before)) = (&src.app, &src.before) {
-            self.set_asr_screen(Some((app.clone(), before.clone())));
-        }
         let prompt = match crate::asr_context::build(caps, &src, &settings.asr_context).prompt {
             AsrPrompt::None => None,
             AsrPrompt::Context(p) | AsrPrompt::Initial(p) => Some(p),
