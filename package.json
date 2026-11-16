@@ -19,6 +19,8 @@
     "test:playwright:ui": "playwright test --ui",
     "check:translations": "bun scripts/check-translations.ts",
     "check:branding": "bun scripts/check-branding.ts",
+    "check:themes": "bun scripts/check-themes.ts",
+    "test:appearance": "bun src/lib/utils/appearance.test.ts",
     "check:model-languages": "bun scripts/check-model-language-coverage.ts",
     "sync:catalog": "bun scripts/sync-catalog.ts",
     "check:catalog": "bun scripts/sync-catalog.ts --check",
