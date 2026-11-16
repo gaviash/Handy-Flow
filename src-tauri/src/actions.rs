@@ -1233,6 +1233,8 @@ impl ShortcutAction for TranscribeAction {
                         }
                         None => tm.transcribe_recording(samples),
                     };
+                    // This dictation's screen never reaches the next one.
+                    tm.set_asr_screen(None);
                     // F114: what the speech model was given, for Settings → Context.
                     let asr_report = match cloud_report {
                         // A failed API call keeps its error; the local run's
