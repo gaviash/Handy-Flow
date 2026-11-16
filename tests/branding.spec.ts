@@ -41,6 +41,17 @@ test("sidebar shows the Handy Flow wordmark", async ({ page }) => {
   await expect(page.getByLabel("Handy Flow").first()).toBeVisible();
 });
 
+test("About credits the original project beside the wordmark", async ({
+  page,
+}) => {
+  await page.goto("/");
+  await page.getByRole("button", { name: "About", exact: true }).click();
+  await expect(
+    page.getByText("Based on Handy, MIT license", { exact: true }),
+  ).toBeVisible();
+  await expect(page.getByLabel("Handy Flow")).toHaveCount(2);
+});
+
 test("no visible text calls the app Handy alone", async ({ page }) => {
   await page.goto("/");
   const nav = page

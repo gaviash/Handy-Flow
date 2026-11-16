@@ -12,6 +12,10 @@ export function Segmented<T extends string>({
   ariaLabel: string;
 }) {
   const group = useRef<HTMLDivElement>(null);
+  const tabStop = Math.max(
+    0,
+    options.findIndex((option) => option.value === value),
+  );
   return (
     <div
       ref={group}
@@ -25,7 +29,7 @@ export function Segmented<T extends string>({
           type="button"
           role="radio"
           aria-checked={value === option.value}
-          tabIndex={value === option.value ? 0 : -1}
+          tabIndex={index === tabStop ? 0 : -1}
           className={`rounded-[7px] px-3 py-1 text-sm transition-colors duration-150 ease-glide ${value === option.value ? "bg-accent text-on-accent font-semibold" : "text-ink-2 hover:bg-raised"}`}
           onClick={() => onChange(option.value)}
           onKeyDown={(event) => {

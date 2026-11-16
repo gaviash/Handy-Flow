@@ -10,7 +10,7 @@ const LOCALES = join(ROOT, "src/i18n/locales");
 /** Keys that name the original project on purpose (credit, donations). */
 export const ALLOW = new Set([
   "settings.about.supportDevelopment.description",
-  "settings.about.forkOf",
+  "about.forkOf",
 ]);
 
 const BARE_HANDY = /\bHandy\b(?! Flow)/;

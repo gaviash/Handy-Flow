@@ -9,6 +9,8 @@ import { AppDataDirectory } from "../AppDataDirectory";
 import { AppLanguageSelector } from "../AppLanguageSelector";
 import { ShowWhatsNewOnUpdate } from "../ShowWhatsNewOnUpdate";
 import { LogDirectory } from "../debug";
+import HandyFlowWordmark from "../../icons/HandyFlowWordmark";
+import roseIcon from "../../../../src-tauri/resources/icons/palette-rose.png";
 
 export const AboutSettings: React.FC = () => {
   const { t } = useTranslation();
@@ -38,6 +40,13 @@ export const AboutSettings: React.FC = () => {
 
   return (
     <div className="max-w-3xl w-full mx-auto space-y-6">
+      <header className="flex items-center gap-4">
+        <img src={roseIcon} alt="" width={56} height={56} />
+        <div>
+          <HandyFlowWordmark size={30} />
+          <p className="mt-2 text-sm text-ink-2">{t("about.forkOf")}</p>
+        </div>
+      </header>
       <SettingsGroup title={t("settings.about.title")}>
         <AppLanguageSelector descriptionMode="tooltip" grouped={true} />
         <SettingContainer
