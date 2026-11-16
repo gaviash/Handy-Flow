@@ -524,21 +524,22 @@ pub fn read_watched() -> Option<String> {
         WATCHED.with(|w| {
             let el = w.borrow().clone()?;
             // SAFETY: live COM interfaces on the worker thread.
+            // TextPattern first, as the capture whose anchors are matched here
+            // (and as Wispr); ValuePattern only when there's none.
             unsafe {
-                if let Ok(v) =
-                    el.GetCurrentPatternAs::<IUIAutomationValuePattern>(UIA_ValuePatternId)
-                {
-                    if let Ok(b) = v.CurrentValue() {
-                        let s = b.to_string();
-                        return (s.chars().count() <= WATCH_CHARS as usize)
-                            .then(|| normalize_newlines(&s));
-                    }
-                }
-                let tp = el
+                if let Some(text) = el
                     .GetCurrentPatternAs::<IUIAutomationTextPattern>(UIA_TextPatternId)
+                    .ok()
+                    .and_then(|tp| tp.DocumentRange().ok())
+                    .and_then(|r| r.GetText(WATCH_CHARS).ok())
+                {
+                    return Some(normalize_newlines(&text.to_string()));
+                }
+                let v = el
+                    .GetCurrentPatternAs::<IUIAutomationValuePattern>(UIA_ValuePatternId)
                     .ok()?;
-                let text = tp.DocumentRange().ok()?.GetText(WATCH_CHARS).ok()?;
-                Some(normalize_newlines(&text.to_string()))
+                let s = v.CurrentValue().ok()?.to_string();
+                (s.chars().count() <= WATCH_CHARS as usize).then(|| normalize_newlines(&s))
             }
         })
     })
@@ -562,6 +563,100 @@ mod tests {
 
     /// Manual check: `cargo test --release --lib context::windows -- --ignored --nocapture`,
     /// then focus a field within 3 s.
+    /// Manual probe: what the learning observation reads from the focused field.
+    #[test]
+    #[ignore]
+    fn compares_value_and_text_readings() {
+        use windows::Win32::UI::Accessibility::*;
+        std::thread::sleep(std::time::Duration::from_secs(2));
+        super::run(super::DEADLINE, |a| unsafe {
+            let el = a.GetFocusedElement().unwrap();
+            println!(
+                "type {:?} class {:?}",
+                el.CurrentLocalizedControlType().map(|b| b.to_string()),
+                el.CurrentClassName().map(|b| b.to_string())
+            );
+            if let Ok(v) = el.GetCurrentPatternAs::<IUIAutomationValuePattern>(UIA_ValuePatternId) {
+                let s = v.CurrentValue().map(|b| b.to_string()).unwrap_or_default();
+                println!(
+                    "Value: {} chars, ends {:?}",
+                    s.chars().count(),
+                    s.chars()
+                        .rev()
+                        .take(40)
+                        .collect::<String>()
+                        .chars()
+                        .rev()
+                        .collect::<String>()
+                );
+            }
+            if let Ok(tp) = el.GetCurrentPatternAs::<IUIAutomationTextPattern>(UIA_TextPatternId) {
+                let s = tp
+                    .DocumentRange()
+                    .unwrap()
+                    .GetText(15000)
+                    .unwrap()
+                    .to_string();
+                println!(
+                    "Text: {} chars, ends {:?}",
+                    s.chars().count(),
+                    s.chars()
+                        .rev()
+                        .take(40)
+                        .collect::<String>()
+                        .chars()
+                        .rev()
+                        .collect::<String>()
+                );
+            }
+        });
+    }
+
+    /// Manual probe: Notepad's editors read without focusing them.
+    #[test]
+    #[ignore]
+    fn reads_notepad_without_focus() {
+        use windows::Win32::UI::Accessibility::*;
+        super::run(super::DEADLINE * 4, |a| unsafe {
+            let root = a.GetRootElement().unwrap();
+            let cond = a
+                .CreatePropertyCondition(
+                    UIA_ClassNamePropertyId,
+                    &windows::Win32::System::Variant::VARIANT::from("RichEditD2DPT"),
+                )
+                .unwrap();
+            let all = root.FindAll(TreeScope_Descendants, &cond).unwrap();
+            for i in 0..all.Length().unwrap() {
+                let el = all.GetElement(i).unwrap();
+                let v = el
+                    .GetCurrentPatternAs::<IUIAutomationValuePattern>(UIA_ValuePatternId)
+                    .ok()
+                    .and_then(|v| v.CurrentValue().ok())
+                    .map(|b| b.to_string());
+                let t = el
+                    .GetCurrentPatternAs::<IUIAutomationTextPattern>(UIA_TextPatternId)
+                    .ok()
+                    .and_then(|t| t.DocumentRange().ok()?.GetText(15000).ok())
+                    .map(|b| b.to_string());
+                let tail = |s: &Option<String>| {
+                    s.as_ref().map(|s| {
+                        (
+                            s.chars().count(),
+                            s.chars()
+                                .rev()
+                                .take(30)
+                                .collect::<String>()
+                                .chars()
+                                .rev()
+                                .collect::<String>(),
+                        )
+                    })
+                };
+                println!("editor {i}: Value {:?} | Text {:?}", tail(&v), tail(&t));
+            }
+        });
+    }
+
     #[test]
     #[ignore]
     fn reads_the_focused_field() {

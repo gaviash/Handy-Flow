@@ -435,6 +435,36 @@ pub fn unify(s: &str) -> String {
         .collect()
 }
 
+/// Why `inserted` isn't in `text`, without either text: lengths, the longest
+/// pasted prefix found, and the two characters that differ after it.
+pub fn mismatch(text: &str, inserted: &str) -> String {
+    let chars: Vec<char> = inserted.chars().collect();
+    let found = |n: usize| text.contains(&chars[..n].iter().collect::<String>());
+    let (mut lo, mut hi) = (0, chars.len());
+    while lo < hi {
+        let mid = (lo + hi).div_ceil(2);
+        if found(mid) {
+            lo = mid;
+        } else {
+            hi = mid - 1;
+        }
+    }
+    let prefix: String = chars[..lo].iter().collect();
+    let field_next = text
+        .find(&prefix)
+        .and_then(|i| text[i + prefix.len()..].chars().next());
+    format!(
+        "pasted text not found: field {} chars, pasted {} chars, same for {} chars, \
+         then pasted {:?} vs field {:?}, case-insensitive match: {}",
+        text.chars().count(),
+        chars.len(),
+        lo,
+        chars.get(lo).map(|c| format!("U+{:04X}", *c as u32)),
+        field_next.map(|c| format!("U+{:04X}", c as u32)),
+        text.to_lowercase().contains(&inserted.to_lowercase())
+    )
+}
+
 /// The anchors around the one occurrence of `inserted` in `text`.
 pub fn anchors_around(text: &str, inserted: &str) -> Option<(String, String)> {
     let mut found = text.match_indices(inserted);
@@ -502,17 +532,16 @@ pub fn observe(app: &AppHandle, field: &crate::context::Field, inserted: &str) {
                             last = Some(r.trim().to_string())
                         }
                         _ if last.is_none() && started.elapsed() < Duration::from_secs(3) => {}
-                        Some(r) if last.is_none() => {
+                        Some(_) if last.is_none() => {
                             ended = "the pasted text never showed up in the field";
-                            log::debug!(
-                                "Learning: field region has {} chars, pasted {}",
-                                r.trim().chars().count(),
-                                inserted.chars().count()
-                            );
+                            log::debug!("Learning: {}", mismatch(&text, &inserted));
                             break;
                         }
                         _ => {
                             ended = "the text around the dictation changed";
+                            if last.is_none() {
+                                log::debug!("Learning: {}", mismatch(&text, &inserted));
+                            }
                             break;
                         }
                     },
@@ -543,6 +572,14 @@ pub fn observe(app: &AppHandle, field: &crate::context::Field, inserted: &str) {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn explains_a_mismatch_without_the_text() {
+        let m = mismatch("Bonjour Adrien, ça va", "Bonjour Adryen, ça va");
+        assert!(m.contains("same for 11 chars"), "{m}");
+        assert!(m.contains("U+0079") && m.contains("U+0069"), "{m}");
+        assert!(!m.contains("Bonjour"));
+    }
 
     #[test]
     fn finds_the_pasted_text_despite_a_narrow_no_break_space() {
