@@ -1237,7 +1237,7 @@
     "transcribing": "Транскрибиране...",
     "processing": "Обработка...",
     "loadingModel": "Зареждане на модела...",
-    "recording": "Recording..."
+    "recording": "Listening"
   },
   "secureInput": {
     "blockedWithCulprit_one": "{{name}} може да блокира 1 бърз клавиш",

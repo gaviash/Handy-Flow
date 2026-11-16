@@ -360,7 +360,7 @@ function App() {
                 key={currentSection}
                 className={`flex flex-col items-center p-4 gap-4 animate-rise ${currentSection === "models" ? "h-full" : ""}`}
               >
-                {!["general", "appearance", "about"].includes(
+                {!["general", "appearance", "about", "models"].includes(
                   currentSection,
                 ) && (
                   <h1 className="page-title max-w-3xl w-full mx-auto">

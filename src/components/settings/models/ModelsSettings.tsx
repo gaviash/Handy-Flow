@@ -140,7 +140,7 @@ export const ModelsSettings: React.FC<ModelsSettingsProps> = ({
       {/* The title, and across from it where to change the languages the
           grades are for. */}
       <div className="mb-[16px] flex flex-none items-center justify-between gap-[12px] px-[12px]">
-        <h1 className="text-xl font-semibold">{t("settings.models.title")}</h1>
+        <h1 className="page-title">{t("settings.models.title")}</h1>
         {onChangeLanguages && (
           <button
             type="button"

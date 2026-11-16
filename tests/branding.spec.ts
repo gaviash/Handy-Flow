@@ -36,6 +36,12 @@ test("window title says Handy Flow", async ({ page }) => {
   await expect(page).toHaveTitle("Handy Flow");
 });
 
+test("Models has one page title", async ({ page }) => {
+  await page.goto("/");
+  await page.getByRole("button", { name: "Models", exact: true }).click();
+  await expect(page.getByRole("heading", { level: 1 })).toHaveCount(1);
+});
+
 test("sidebar shows the Handy Flow wordmark", async ({ page }) => {
   await page.goto("/");
   await expect(page.getByLabel("Handy Flow").first()).toBeVisible();
