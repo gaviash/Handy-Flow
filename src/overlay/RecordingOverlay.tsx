@@ -301,7 +301,7 @@ const RecordingOverlay: React.FC = () => {
   const cancelBtn = (
     <button
       className="sx"
-      aria-label="cancel"
+      aria-label={t("common.cancel")}
       onClick={() => commands.cancelOperation()}
     >
       <svg viewBox="0 0 16 16" aria-hidden="true">
@@ -453,6 +453,13 @@ const RecordingOverlay: React.FC = () => {
       {noticeProbe}
       <div
         className={`scard compact ${working && isVisible ? "cworking" : ""} ${noticeClass}`}
+        aria-label={
+          shownNotice
+            ? noticeTitle
+            : working
+              ? workLabel
+              : t("overlay.recording")
+        }
         style={shownNotice ? { width: noticeWidth } : undefined}
         onClick={dismissNotice}
       >
