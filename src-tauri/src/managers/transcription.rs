@@ -1190,6 +1190,76 @@ impl TranscriptionManager {
         setup
     }
 
+    /// Handy Adaptive: the prompt for a speech API (Whisper's conditioning
+    /// text), from the same sources and settings as a local model's context,
+    /// and the report of it.
+    pub fn cloud_context(
+        &self,
+        model: &str,
+        language: Option<String>,
+    ) -> (Option<String>, crate::context::AsrReport) {
+        let settings = get_settings(&self.app_handle);
+        let caps = AsrCaps {
+            initial_prompt: true,
+            ..Default::default()
+        };
+        let src = if settings.asr_context.enabled {
+            self.asr_sources(&settings, language)
+        } else {
+            self.set_asr_screen(None);
+            AsrSources::default()
+        };
+        let prompt = match crate::asr_context::build(caps, &src, &settings.asr_context).prompt {
+            AsrPrompt::None => None,
+            AsrPrompt::Context(p) | AsrPrompt::Initial(p) => Some(p),
+        };
+        let report = crate::context::AsrReport {
+            model: model.to_string(),
+            accepts_vocabulary: false,
+            accepts_prompt: true,
+            enabled: settings.asr_context.enabled,
+            vocabulary: Vec::new(),
+            prompt: prompt.clone(),
+            expressions: src.expressions,
+            app: src.app,
+            before: src.before,
+            ..Default::default()
+        };
+        (prompt, report)
+    }
+
+    /// Handy Adaptive: a speech API's text, finished like a local one (script,
+    /// custom words already prompted, filler words), or empty when it only
+    /// read its prompt back.
+    pub fn finish_cloud_text(
+        &self,
+        raw: String,
+        language: Option<String>,
+        prompt: Option<&str>,
+    ) -> (Transcription, bool) {
+        let settings = get_settings(&self.app_handle);
+        let echo = echoes_prompt(&raw, prompt);
+        let raw = if echo { String::new() } else { raw };
+        let evidence = match &language {
+            Some(l) => OutputLanguageEvidence::UserSelected(l.clone()),
+            None => OutputLanguageEvidence::Unknown,
+        };
+        let text =
+            post_process_transcription_text(raw, &settings, prompt.is_some(), &evidence, &[]);
+        let source = if language.is_some() {
+            crate::language_detection::LanguageSource::Selected
+        } else {
+            crate::language_detection::LanguageSource::Model
+        };
+        (
+            Transcription {
+                text,
+                language: Some(LanguageDecision { language, source }),
+            },
+            echo,
+        )
+    }
+
     /// What the speech model was given for the last transcription (F114).
     pub fn take_asr_report(&self) -> Option<crate::context::AsrReport> {
         self.asr_report

@@ -312,6 +312,14 @@ async getAsrSupport() : Promise<AsrSupport | null> {
 async getFrequentExpressions() : Promise<string[]> {
     return await TAURI_INVOKE("get_frequent_expressions");
 },
+async changeCloudAsrSetting(value: CloudAsrSettings) : Promise<Result<null, string>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("change_cloud_asr_setting", { value }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
 async changeLanguageDetectionSetting(mode: LanguageDetectionMode) : Promise<Result<null, string>> {
     try {
     return { status: "ok", data: await TAURI_INVOKE("change_language_detection_setting", { mode }) };
@@ -1336,6 +1344,11 @@ rewrite_context?: LlmContextParts;
  */
 transform_context?: LlmContextParts; 
 /**
+ * Handy Adaptive: transcription by an API (Groq Whisper…) instead of the
+ * local model, which stays the fallback.
+ */
+cloud_asr?: CloudAsrSettings; 
+/**
  * Defaults to empty on partial stores; the load path merges in the
  * default bindings for any missing keys before the settings are used.
  */
@@ -1446,7 +1459,11 @@ screen_waited: boolean | null;
 /**
  * The model read its context back instead of speech; nothing was kept.
  */
-echo_dropped: boolean }
+echo_dropped: boolean; 
+/**
+ * The speech API failed and the local model transcribed: why.
+ */
+cloud_error: string | null }
 /**
  * What the loaded model accepts, for the settings page (`None` = no model).
  */
@@ -1510,6 +1527,23 @@ export type ChineseScript =
  */
 "traditional_hk"
 export type ClipboardHandling = "dont_modify" | "copy_to_clipboard"
+/**
+ * Settings → Models → Transcription by API.
+ */
+export type CloudAsrSettings = { 
+/**
+ * A post-processing provider id ("groq", "openai", "custom"); empty =
+ * the local model.
+ */
+provider_id: string; 
+/**
+ * The model per provider, as the rewrite keeps it.
+ */
+models: Partial<{ [key in string]: string }>; 
+/**
+ * How long the API may take before the local model transcribes.
+ */
+timeout_secs: number }
 /**
  * What the target is for (F22). Independent of `Style` and the terminal flag.
  */

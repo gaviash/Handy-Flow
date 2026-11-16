@@ -713,6 +713,8 @@ pub struct AsrReport {
     pub screen_waited: Option<bool>,
     /// The model read its context back instead of speech; nothing was kept.
     pub echo_dropped: bool,
+    /// The speech API failed and the local model transcribed: why.
+    pub cloud_error: Option<String>,
 }
 
 /// F114: what one dictation or transformation read and sent. Memory only.

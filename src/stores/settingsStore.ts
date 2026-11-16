@@ -15,6 +15,7 @@ import type {
   LanguageDetectionMode,
   AsrContextSettings,
   LlmContextParts,
+  CloudAsrSettings,
 } from "@/bindings";
 import { commands } from "@/bindings";
 import { notify } from "@/stores/noticeStore";
@@ -242,6 +243,8 @@ const settingUpdaters: {
     commands.changeRewriteContextSetting(value as LlmContextParts),
   transform_context: (value) =>
     commands.changeTransformContextSetting(value as LlmContextParts),
+  cloud_asr: (value) =>
+    commands.changeCloudAsrSetting(value as CloudAsrSettings),
   context_excluded_domains: (value) =>
     commands.changeContextExcludedDomainsSetting(value as string[]),
   language_detection: (value) =>

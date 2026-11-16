@@ -769,7 +769,8 @@
             "before": "Texte avant le curseur :",
             "prompt": "Prompt envoyé",
             "screenLate": "L'écran est arrivé trop tard : envoyé sans l'application ni le texte.",
-            "echo": "Le modèle a relu son contexte au lieu de la parole : le texte a été jeté."
+            "echo": "Le modèle a relu son contexte au lieu de la parole : le texte a été jeté.",
+            "cloudError": "L'API de transcription a échoué, le modèle local a transcrit : {{error}}"
           },
           "llm": {
             "title": "LLM (reformulation ou transformation)"
@@ -1085,6 +1086,27 @@
           "description": "Inférence haute performance du modèle de reconnaissance vocale automatique Whisper d'OpenAI",
           "details": "Handy utilise ggml pour un traitement rapide et local de la parole en texte. Merci au travail incroyable de Georgi Gerganov et des contributeurs."
         }
+      }
+    },
+    "cloudAsr": {
+      "title": "Transcription par API",
+      "provider": {
+        "label": "Fournisseur de transcription",
+        "description": "Transcrire avec une API en ligne au lieu du modèle local. Le modèle local prend le relais si l'API échoue ou tarde. Le même contexte que pour le modèle local est envoyé comme prompt de Whisper.",
+        "local": "Modèle local (sur cet ordinateur)",
+        "custom": "Personnalisé (compatible OpenAI)"
+      },
+      "model": {
+        "label": "Modèle",
+        "description": "Le modèle de transcription de ce fournisseur. Groq : whisper-large-v3 (le plus juste) ou whisper-large-v3-turbo (plus rapide)."
+      },
+      "apiKey": {
+        "label": "Clé API",
+        "description": "La même clé que pour la reformulation chez ce fournisseur."
+      },
+      "timeout": {
+        "label": "Attente max (s)",
+        "description": "Au-delà de ce délai, le modèle local transcrit à la place."
       }
     }
   },

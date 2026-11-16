@@ -10,6 +10,7 @@ mod catalog;
 mod chinese_script;
 pub mod cli;
 mod clipboard;
+mod cloud_asr;
 mod commands;
 mod context;
 pub mod engine_supervisor;
@@ -739,6 +740,7 @@ pub fn run(cli_args: CliArgs) {
             learning::change_asr_context_setting,
             learning::get_asr_support,
             learning::get_frequent_expressions,
+            cloud_asr::change_cloud_asr_setting,
             shortcut::change_language_detection_setting,
             shortcut::change_language_detection_window_setting,
             shortcut::change_paste_delay_ms_setting,
