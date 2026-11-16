@@ -15,6 +15,75 @@ use tauri_plugin_clipboard_manager::ClipboardExt;
 #[cfg(target_os = "linux")]
 use crate::utils::{is_gnome_wayland, is_kde_wayland, is_wayland};
 
+/// Handy Flow (F121): copies the focused app's selection with Ctrl+C and puts
+/// the user's clipboard back. For apps whose selection UI Automation can't read
+/// (Google Docs, Word, VS Code's editor). `None` when nothing was copied.
+// shortcut: VS Code copies the whole line when nothing is selected, so Polish
+// without a selection there polishes that line; detect it if users hit it.
+#[cfg(windows)]
+pub fn copy_selection(app_handle: &AppHandle) -> Option<String> {
+    use windows::Win32::UI::Input::KeyboardAndMouse::GetAsyncKeyState;
+    // The shortcut's own Alt/Shift would turn Ctrl+C into another chord.
+    let held = || {
+        [0x10, 0x11, 0x12, 0x5B, 0x5C] // Shift, Ctrl, Alt, Win
+            .iter()
+            .any(|&vk| unsafe { GetAsyncKeyState(vk) } as u16 & 0x8000 != 0)
+    };
+    for _ in 0..75 {
+        if !held() {
+            break;
+        }
+        std::thread::sleep(Duration::from_millis(20));
+    }
+    let _paste = PASTE_LOCK.lock().unwrap_or_else(PoisonError::into_inner);
+    let clipboard = app_handle.clipboard();
+    let saved_text = clipboard.read_text().ok().filter(|t| !t.is_empty());
+    let saved_image = if saved_text.is_none() {
+        clipboard.read_image().ok().map(|image| image.to_owned())
+    } else {
+        None
+    };
+    // Tells "nothing selected" apart from a copy equal to the old clipboard.
+    const MARK: &str = "\u{2063}handy-flow-copy\u{2063}";
+    write_text_to_clipboard(app_handle, MARK).ok()?;
+    let sent = with_enigo(app_handle, |enigo| {
+        enigo
+            .key(Key::Control, Direction::Press)
+            .map_err(|e| e.to_string())?;
+        let click = enigo.key(Key::Other(0x43), Direction::Click); // VK_C
+        enigo
+            .key(Key::Control, Direction::Release)
+            .map_err(|e| e.to_string())?;
+        click.map_err(|e| e.to_string())
+    });
+    let mut copied = None;
+    if sent.is_ok() {
+        for _ in 0..25 {
+            std::thread::sleep(Duration::from_millis(20));
+            match clipboard.read_text() {
+                Ok(text) if text != MARK => {
+                    copied = Some(text);
+                    break;
+                }
+                _ => {}
+            }
+        }
+    }
+    if let Some(text) = saved_text {
+        let _ = write_text_to_clipboard(app_handle, &text);
+    } else if let Some(image) = saved_image {
+        let _ = clipboard.write_image(&image);
+    } else {
+        let _ = clipboard.clear();
+    }
+    copied.filter(|t| !t.trim().is_empty())
+}
+
+#[cfg(not(windows))]
+pub fn copy_selection(_app_handle: &AppHandle) -> Option<String> {
+    None
+}
+
 /// Serializes pastes: overlapping ones would restore each other's transcript as
 /// the user's clipboard. Only taken by `paste`, which never runs on the main thread.
 static PASTE_LOCK: Mutex<()> = Mutex::new(());

@@ -243,13 +243,19 @@ async fn ask_fallback(
 }
 
 /// The selection a transformation may replace, or the reason it can't (F121).
-fn transformable_selection(capture: &crate::context::Capture) -> Option<String> {
-    let selection = capture.field.as_ref()?.selection.clone();
-    let ok = !capture.sensitive
-        && !capture.excluded
-        && !selection.trim().is_empty()
-        && selection.chars().count() <= crate::context::SELECTION_MAX;
-    ok.then_some(selection)
+fn transformable_selection(app: &AppHandle, capture: &crate::context::Capture) -> Option<String> {
+    // Ctrl+C would interrupt a terminal's running command.
+    if capture.sensitive || capture.excluded || capture.terminal {
+        return None;
+    }
+    let selection = capture
+        .field
+        .as_ref()
+        .map(|f| f.selection.clone())
+        .filter(|s| !s.trim().is_empty())
+        // Google Docs, Word, VS Code's editor: UI Automation sees no selection.
+        .or_else(|| crate::clipboard::copy_selection(app))?;
+    (selection.chars().count() <= crate::context::SELECTION_MAX).then_some(selection)
 }
 
 /// F121/F122: Polish or a saved transformation of the selected text, on a key press.
@@ -275,7 +281,7 @@ impl ShortcutAction for TransformAction {
                 &settings.context_excluded_apps,
                 &settings.context_excluded_domains,
             );
-            let Some(selection) = transformable_selection(&capture) else {
+            let Some(selection) = transformable_selection(&app, &capture) else {
                 notices::raise(
                     &app,
                     Notice::new(NoticeCode::SelectionUnavailable, NoticeSource::Dictation),
@@ -1204,14 +1210,16 @@ impl ShortcutAction for TranscribeAction {
                             // F123: a spoken instruction transforms the selection; nothing
                             // else is pasted, and the result is not joined or observed.
                             let (field, instruct_result) = if instruct {
-                                let Some(selection) =
-                                    field.as_ref().map(|f| f.selection.clone()).filter(|s| {
-                                        !sensitive
-                                            && !excluded
-                                            && !s.trim().is_empty()
-                                            && s.chars().count() <= crate::context::SELECTION_MAX
-                                    })
-                                else {
+                                let Some(selection) = transformable_selection(
+                                    &ah,
+                                    &crate::context::Capture {
+                                        sensitive,
+                                        excluded,
+                                        terminal,
+                                        field: field.clone(),
+                                        ..Default::default()
+                                    },
+                                ) else {
                                     notices::raise(
                                         &ah,
                                         Notice::new(

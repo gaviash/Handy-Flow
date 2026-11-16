@@ -150,16 +150,21 @@ pub fn candidates(inserted: &str, fin: &str) -> Vec<(String, String)> {
     };
     let mut out = Vec::new();
     let mut k = 0;
+    let changed = |t: &(Tag, Option<usize>, Option<usize>)| !matches!(t.0, Tag::Same | Tag::Case);
     while k < tags.len() {
-        if tags[k].0 != Tag::Sub {
+        if !changed(&tags[k]) {
             k += 1;
             continue;
         }
         let start = k;
-        while k < tags.len() && tags[k].0 == Tag::Sub {
+        while k < tags.len() && changed(&tags[k]) {
             k += 1;
         }
         let run = &tags[start..k];
+        // A split or merge ("GPTOC" → "GPT OSS") still holds a substitution.
+        if !run.iter().any(|t| t.0 == Tag::Sub) {
+            continue;
+        }
         let bounded = |t: Option<&(Tag, Option<usize>, Option<usize>)>| {
             t.is_none_or(|t| matches!(t.0, Tag::Same | Tag::Case))
         };
@@ -183,14 +188,23 @@ pub fn candidates(inserted: &str, fin: &str) -> Vec<(String, String)> {
             .join(" ");
         let (hk, tk) = (heard.to_lowercase(), term.to_lowercase());
         // A capital only marks a name when it doesn't just open a sentence.
-        let first = run[0].2;
-        let opens = first.is_none_or(|j| j == 0 || b[j - 1].ends_with(['.', '!', '?']));
-        let capital = term.split(' ').enumerate().any(|(n, w)| {
-            w.chars()
-                .enumerate()
-                .any(|(i, c)| c.is_uppercase() && (i > 0 || n > 0 || !opens))
-        });
-        let looks_like_term = capital || term.chars().any(|c| c.is_ascii_digit() || c == '_');
+        let opens = |first: Option<usize>, words: &[&str]| {
+            first.is_none_or(|j| j == 0 || words[j - 1].ends_with(['.', '!', '?']))
+        };
+        let capital = |s: &str, opens: bool| {
+            s.split(' ').enumerate().any(|(n, w)| {
+                w.chars()
+                    .enumerate()
+                    .any(|(i, c)| c.is_uppercase() && (i > 0 || n > 0 || !opens))
+            })
+        };
+        let term_opens = opens(run.iter().find_map(|t| t.2), &b);
+        let heard_opens = opens(run.iter().find_map(|t| t.1), &a);
+        // A name the ASR capitalized mid-sentence stays one when the user
+        // writes it in lowercase ("Coen" → "qwen").
+        let looks_like_term = capital(&term, term_opens)
+            || capital(&heard, heard_opens)
+            || term.chars().any(|c| c.is_ascii_digit() || c == '_');
         // Truncation, plural, conjugation: one form extends the other.
         let affix =
             hk.starts_with(&tk) || tk.starts_with(&hk) || hk.ends_with(&tk) || tk.ends_with(&hk);
@@ -291,10 +305,11 @@ pub fn terms(app: &AppHandle) -> Vec<String> {
     })
 }
 
-fn learn(app: &AppHandle, inserted: &str, fin: &str) {
+fn learn(app: &AppHandle, inserted: &str, fin: &str) -> usize {
     let found = candidates(inserted, fin);
+    let n = found.len();
     if found.is_empty() {
-        return;
+        return 0;
     }
     let now = chrono::Utc::now().timestamp();
     // F95: new spellings are announced once, grouped, with an undo.
@@ -324,6 +339,7 @@ fn learn(app: &AppHandle, inserted: &str, fin: &str) {
     if !new_terms.is_empty() {
         let _ = app.emit("learned-words", &new_terms);
     }
+    n
 }
 
 pub fn count(app: &AppHandle) -> usize {
@@ -400,7 +416,11 @@ pub fn region<'a>(text: &'a str, before: &str, after: &str) -> Option<&'a str> {
 /// F80–F83: watches the field the text was pasted into, then learns from the
 /// last reading whose anchors still hold.
 pub fn observe(app: &AppHandle, field: &crate::context::Field, inserted: &str) {
-    if !field.caret_known || !crate::settings::get_settings(app).learning_enabled {
+    if !crate::settings::get_settings(app).learning_enabled {
+        return;
+    }
+    if !field.caret_known {
+        log::debug!("Learning: not observing, the field's caret position is unknown");
         return;
     }
     let before: String = crate::context::tail_chars(&field.before, ANCHOR_CHARS);
@@ -412,13 +432,20 @@ pub fn observe(app: &AppHandle, field: &crate::context::Field, inserted: &str) {
         .name("observe".into())
         .spawn(move || {
             if !crate::context::watch_focused() {
+                log::debug!("Learning: not observing, the focused field can't be watched");
                 return;
             }
             let started = Instant::now();
             let mut last: Option<String> = None;
+            // Lengths only in the log: the text itself stays private.
+            let mut ended = "the 60 s window closed";
             // A newer dictation ended this one: learn from the last reading,
             // never read its field again.
-            while OBSERVATION.load(Ordering::SeqCst) == id && started.elapsed() < WINDOW {
+            while started.elapsed() < WINDOW {
+                if OBSERVATION.load(Ordering::SeqCst) != id {
+                    ended = "a newer dictation started";
+                    break;
+                }
                 match crate::context::read_watched() {
                     // An empty field was sent or cleared: keep the last reading.
                     Some(text) if !text.trim().is_empty() => match region(&text, &before, &after) {
@@ -427,23 +454,78 @@ pub fn observe(app: &AppHandle, field: &crate::context::Field, inserted: &str) {
                             last = Some(r.trim().to_string())
                         }
                         _ if last.is_none() && started.elapsed() < Duration::from_secs(3) => {}
-                        _ => break,
+                        Some(r) if last.is_none() => {
+                            ended = "the pasted text never showed up in the field";
+                            log::debug!(
+                                "Learning: field region has {} chars, pasted {}",
+                                r.trim().chars().count(),
+                                inserted.chars().count()
+                            );
+                            break;
+                        }
+                        _ => {
+                            ended = "the text around the dictation changed";
+                            break;
+                        }
                     },
-                    _ => break,
+                    Some(_) => {
+                        ended = "the field was emptied (sent)";
+                        break;
+                    }
+                    None => {
+                        ended = "the field could no longer be read";
+                        break;
+                    }
                 }
                 std::thread::sleep(Duration::from_secs(1));
             }
-            if let Some(fin) = last {
-                if fin != inserted {
-                    learn(&app, &inserted, &fin);
-                }
-            }
+            let found = match &last {
+                Some(fin) if fin != &inserted => learn(&app, &inserted, fin),
+                _ => 0,
+            };
+            log::debug!(
+                "Learning: observation ended ({ended}); edited: {}, learned: {found}",
+                last.as_ref().is_some_and(|fin| fin != &inserted)
+            );
         });
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn learns_the_users_vs_code_corrections() {
+        assert_eq!(
+            candidates(
+                "Tu regarderas, j'ai écrit Gma, GPT, OSS, etc.",
+                "Tu regarderas, j'ai écrit Gemma, GPT, OSS, etc."
+            ),
+            vec![("Gemma".into(), "Gma".into())]
+        );
+        // A lowercase correction of a name the ASR capitalized.
+        assert_eq!(
+            candidates(
+                "Alors au final, Coen est meilleur que GPT OSS ou pas ?",
+                "Alors au final, qwen est meilleur que GPT OSS ou pas ?"
+            ),
+            vec![("qwen".into(), "Coen".into())]
+        );
+        // One heard word split in two.
+        assert_eq!(
+            candidates(
+                "Est-ce que GPTOC c'est mieux ou c'est GEMA le meilleur ?",
+                "Est-ce que GPT OSS c'est mieux ou c'est gemma le meilleur ?"
+            ),
+            vec![
+                ("GPT OSS".into(), "GPTOC".into()),
+                ("gemma".into(), "GEMA".into())
+            ]
+        );
+        // Still nothing for a lowercase fix of a common word, or a sentence start.
+        assert!(candidates("Je mange une pome ce soir.", "Je mange une pomme ce soir.").is_empty());
+        assert!(candidates("Rapport prêt pour demain.", "Rappel prêt pour demain.").is_empty());
+    }
 
     #[test]
     fn learns_names_and_terms_a01_to_a06() {
