@@ -1046,7 +1046,9 @@ impl ShortcutAction for TranscribeAction {
                 &ctx_settings.context_excluded_domains,
             );
             let _ = sensitive_tx.send(capture.sensitive);
-            let _ = private_tx.send(capture.sensitive || capture.excluded);
+            // Windows: a password check that didn't happen counts as private.
+            let unchecked = cfg!(target_os = "windows") && !capture.password_checked;
+            let _ = private_tx.send(capture.sensitive || capture.excluded || unchecked);
             let screen = (!capture.sensitive && !capture.excluded).then(|| {
                 let before = capture
                     .field
@@ -1206,6 +1208,9 @@ impl ShortcutAction for TranscribeAction {
                                     // Speech may still be there: the local model decides.
                                     warn!("Speech API '{label}' returned no text; using the local model");
                                     report.cloud_error = Some("empty result".into());
+                                    tm.set_asr_screen(
+                                        report.app.clone().zip(report.before.clone()),
+                                    );
                                 } else {
                                     // The live decode, if any, is no longer needed.
                                     tm.cancel_stream();
@@ -1214,6 +1219,7 @@ impl ShortcutAction for TranscribeAction {
                             }
                             Some(Err(e)) => {
                                 warn!("Speech API '{label}' failed ({e}); using the local model");
+                                tm.set_asr_screen(report.app.clone().zip(report.before.clone()));
                                 report.cloud_error = Some(e);
                             }
                         }

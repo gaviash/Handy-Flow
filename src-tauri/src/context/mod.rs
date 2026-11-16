@@ -238,6 +238,9 @@ pub struct Capture {
     pub terminal: bool,
     /// Password or secure field (F32, F79): nothing else is read.
     pub sensitive: bool,
+    /// The focused field answered the password check (`sensitive` is known,
+    /// not a default after a timeout).
+    pub password_checked: bool,
     /// Excluded app or domain (F33): no context, no automatic paste.
     pub excluded: bool,
     pub field: Option<Field>,

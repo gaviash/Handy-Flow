@@ -1505,6 +1505,11 @@ export type Capture = { process: string; title: string; host: string | null; con
  */
 sensitive: boolean; 
 /**
+ * The focused field answered the password check (`sensitive` is known,
+ * not a default after a timeout).
+ */
+password_checked: boolean; 
+/**
  * Excluded app or domain (F33): no context, no automatic paste.
  */
 excluded: boolean; field: Field | null; 
