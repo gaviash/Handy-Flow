@@ -269,7 +269,7 @@ pub fn letter_form(text: &str) -> String {
 
 /// Lowercase in French: a single-word insertion like "Mercredi." can be
 /// lowered; any other single capitalized word may be a name and is kept.
-const FR_COMMON_NAMES: &[&str] = &[
+pub(crate) const FR_COMMON_NAMES: &[&str] = &[
     "lundi",
     "mardi",
     "mercredi",

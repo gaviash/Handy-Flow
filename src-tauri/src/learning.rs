@@ -229,7 +229,11 @@ fn add_heard(l: &mut Learned, heard: String) -> bool {
 /// (capital, digit or `_`), stays close to what was inserted (≤ 0.6) and is
 /// not a truncation. Case-only, meaning changes, common-word fixes and
 /// rewrites give nothing. At most 4 per dictation.
-pub fn candidates(inserted: &str, fin: &str) -> Vec<(String, String)> {
+/// Also misheard common words (1 to 3 words, close spelling, no meaning word),
+/// which stay pending until seen twice (see [`record_word`]).
+/// Each rejected run is logged with a reason, never with its text.
+pub fn candidates(inserted: &str, fin: &str) -> Vec<Candidate> {
+    let reject = |reason: &str| log::debug!("Learning: rejected ({reason})");
     let a: Vec<&str> = inserted.split_whitespace().collect();
     let b: Vec<&str> = fin.split_whitespace().collect();
     let tags = align(&a, &b);
@@ -239,6 +243,7 @@ pub fn candidates(inserted: &str, fin: &str) -> Vec<(String, String)> {
         .count();
     // A rewrite, not a correction.
     if edited * 2 > a.len().max(b.len()) {
+        reject("rewrite");
         return Vec::new();
     }
     let trim = |w: &str| {
@@ -268,16 +273,21 @@ pub fn candidates(inserted: &str, fin: &str) -> Vec<(String, String)> {
         let run = &tags[start..k];
         // A split or merge ("GPTOC" → "GPT OSS") still holds a substitution.
         if !run.iter().any(|t| t.0 == Tag::Sub) {
+            reject("no_substitution");
             continue;
         }
         let bounded = |t: Option<&(Tag, Option<usize>, Option<usize>)>| {
             t.is_none_or(|t| matches!(t.0, Tag::Same | Tag::Case))
         };
         let after_item = start.checked_sub(1).is_some_and(|s| ends_item(&tags[s]));
-        if run.len() > 4
-            || !(after_item || bounded(start.checked_sub(1).and_then(|s| tags.get(s))))
+        if run.len() > 4 {
+            reject("too_long");
+            continue;
+        }
+        if !(after_item || bounded(start.checked_sub(1).and_then(|s| tags.get(s))))
             || !(ends_item(&tags[k - 1]) || bounded(tags.get(k)))
         {
+            reject("unbounded");
             continue;
         }
         let heard = run
@@ -314,12 +324,108 @@ pub fn candidates(inserted: &str, fin: &str) -> Vec<(String, String)> {
         // Truncation, plural, conjugation: one form extends the other.
         let affix =
             hk.starts_with(&tk) || tk.starts_with(&hk) || hk.ends_with(&tk) || tk.ends_with(&hk);
-        if !term.is_empty() && looks_like_term && !affix && distance(&hk, &tk) <= 0.6 {
-            out.push((term, heard));
+        let kind = if term.is_empty() {
+            Err("no_substitution")
+        } else if affix {
+            Err("affix")
+        } else if looks_like_term {
+            if distance(&hk, &tk) <= 0.6 {
+                Ok(WordKind::Term)
+            } else {
+                Err("too_far")
+            }
+        } else if run.len() > 3 {
+            Err("too_long")
+        } else if has_meaning_word(&hk) || has_meaning_word(&tk) {
+            Err("meaning_word")
+        } else if distance(&hk, &tk) <= MISHEARD_DISTANCE {
+            Ok(WordKind::Misheard)
+        } else {
+            Err("too_far")
+        };
+        match kind {
+            Ok(kind) => out.push(Candidate { term, heard, kind }),
+            Err(reason) => reject(reason),
         }
     }
     out.truncate(4);
     out
+}
+
+/// A correction the layer may learn (F85–F87).
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Candidate {
+    pub term: String,
+    pub heard: String,
+    pub kind: WordKind,
+}
+
+/// "gag" / "log" = 0.67: common words get more slack than names, and the
+/// meaning-word list plus two sightings guard against meaning changes.
+const MISHEARD_DISTANCE: f64 = 0.7;
+
+/// Words whose swap changes the meaning ("mardi" → "jeudi", "oui" → "non"):
+/// never learned as misheard, however close they sound.
+const MEANING_WORDS: &[&str] = &[
+    // numbers
+    "zéro", "zero", "un", "une", "deux", "trois", "quatre", "cinq", "six", "sept", "huit", "neuf",
+    "dix", "onze", "douze", "treize", "quatorze", "quinze", "seize", "vingt", "trente", "cent",
+    "mille", "one", "two", "three", "four", "five", "seven", "eight", "nine", "ten", "eleven",
+    "twelve", "twenty", "hundred", "thousand",
+    // yes / no / negation
+    "oui", "non", "si", "yes", "no", "ne", "pas", "jamais", "rien", "plus", "not", "never",
+    // personal pronouns
+    "je", "tu", "il", "elle", "on", "nous", "vous", "ils", "elles", "moi", "toi", "lui", "eux",
+    "i", "you", "he", "she", "we", "they", "me", "him", "her", "us", "them",
+    // English days and months (French ones come from adaptive)
+    "monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday", "january",
+    "february", "march", "april", "may", "june", "july", "august", "september", "october",
+    "november", "december",
+];
+
+fn has_meaning_word(s: &str) -> bool {
+    s.split_whitespace().any(|w| {
+        MEANING_WORDS.contains(&w) || crate::adaptive::FR_COMMON_NAMES.contains(&w)
+    })
+}
+
+/// Whether `heard` → `term` can be a misheard common word (also checked on
+/// what the LLM judge proposes).
+pub fn is_misheard_pair(heard: &str, term: &str) -> bool {
+    let (h, t) = (heard.to_lowercase(), term.to_lowercase());
+    !h.is_empty()
+        && !t.is_empty()
+        && h != t
+        && !has_meaning_word(&h)
+        && !has_meaning_word(&t)
+        && distance(&h, &t) <= MISHEARD_DISTANCE
+}
+
+/// Records a sighting; `true` when the word becomes usable or gains a form
+/// (news to announce). A misheard word is pending until seen twice.
+pub(crate) fn record_word(m: &mut Memory, c: &Candidate, now: i64) -> bool {
+    match m.words.iter_mut().find(|l| l.term == c.term) {
+        Some(l) => {
+            l.count += 1;
+            l.last_seen = now;
+            let new_form = add_heard(l, c.heard.clone());
+            let activated = !l.active && l.count >= 2;
+            l.active |= activated;
+            activated || (l.active && new_form)
+        }
+        None => {
+            let active = c.kind == WordKind::Term;
+            m.words.push(Learned {
+                term: c.term.clone(),
+                heard: vec![c.heard.clone()],
+                count: 1,
+                last_seen: now,
+                kind: c.kind,
+                active,
+            });
+            active
+        }
+    }
 }
 
 // ---------------------------------------------------------------- memory
@@ -418,38 +524,24 @@ pub fn terms(app: &AppHandle) -> Vec<String> {
     })
 }
 
-fn learn(app: &AppHandle, inserted: &str, fin: &str) -> usize {
+/// Records the corrections found; returns them all (pending ones too).
+fn learn(app: &AppHandle, inserted: &str, fin: &str) -> Vec<Candidate> {
     let found = candidates(inserted, fin);
-    let n = found.len();
     if found.is_empty() {
-        return 0;
+        return found;
     }
     let now = chrono::Utc::now().timestamp();
     // F95: new spellings are announced once, grouped, with an undo.
     let mut new_terms = Vec::new();
     with_memory(app, |m| {
-        for (term, heard) in found {
-            log::info!("Learned a spelling ({} chars)", term.chars().count());
-            match m.words.iter_mut().find(|l| l.term == term) {
-                Some(l) => {
-                    l.count += 1;
-                    l.last_seen = now;
-                    // A new way of hearing the same word is news too.
-                    if add_heard(l, heard) {
-                        new_terms.push(term.clone());
-                    }
-                }
-                None => {
-                    new_terms.push(term.clone());
-                    m.words.push(Learned {
-                        term,
-                        heard: vec![heard],
-                        count: 1,
-                        last_seen: now,
-                        kind: WordKind::Term,
-                        active: true,
-                    })
-                }
+        for c in &found {
+            log::info!(
+                "Learned a spelling ({} chars, {:?})",
+                c.term.chars().count(),
+                c.kind
+            );
+            if record_word(m, c, now) {
+                new_terms.push(c.term.clone());
             }
         }
         save(app, m);
@@ -458,7 +550,7 @@ fn learn(app: &AppHandle, inserted: &str, fin: &str) -> usize {
         let _ = app.emit("learned-words", &new_terms);
         announce(app, &new_terms);
     }
-    n
+    found
 }
 
 /// F95, as Wispr: the overlay pill says what was learned, over the window the
@@ -690,11 +782,12 @@ pub fn observe(app: &AppHandle, field: &crate::context::Field, inserted: &str) {
             }
             let found = match &last {
                 Some(fin) if fin != &inserted => learn(&app, &inserted, fin),
-                _ => 0,
+                _ => Vec::new(),
             };
             log::debug!(
-                "Learning: observation ended ({ended}); edited: {}, learned: {found}",
-                last.as_ref().is_some_and(|fin| fin != &inserted)
+                "Learning: observation ended ({ended}); edited: {}, learned: {}",
+                last.as_ref().is_some_and(|fin| fin != &inserted),
+                found.len()
             );
         });
 }
@@ -857,6 +950,43 @@ mod tests {
             ),
             vec![("PostgreSQL".into(), "postgéré".into())]
         ); // L03
+    }
+
+    /// The name/term layer as the tests above knew it: misheard common words
+    /// (pending until seen twice) are covered by their own tests below.
+    fn candidates(inserted: &str, fin: &str) -> Vec<(String, String)> {
+        super::candidates(inserted, fin)
+            .into_iter()
+            .filter(|c| c.kind == WordKind::Term)
+            .map(|c| (c.term, c.heard))
+            .collect()
+    }
+
+    #[test]
+    fn misheard_common_word_is_learned_after_two_corrections() {
+        let c = super::candidates("regarde le gag du serveur", "regarde le log du serveur");
+        assert_eq!(
+            c,
+            vec![Candidate {
+                term: "log".into(),
+                heard: "gag".into(),
+                kind: WordKind::Misheard
+            }]
+        );
+        let mut m = Memory::default();
+        assert!(!record_word(&mut m, &c[0], 0));
+        assert!(!m.words[0].active);
+        assert!(record_word(&mut m, &c[0], 1));
+        assert!(m.words[0].active);
+    }
+
+    #[test]
+    fn meaning_changes_are_never_learned() {
+        assert!(super::candidates("la réunion est mardi", "la réunion est jeudi").is_empty());
+        assert!(super::candidates("je dis oui merci", "je dis non merci").is_empty());
+        assert!(super::candidates("on part à deux", "on part à trois").is_empty());
+        assert!(!is_misheard_pair("mardi", "jeudi"));
+        assert!(is_misheard_pair("gag", "log"));
     }
 
     fn word(term: &str, heard: &str, count: u32, last_seen: i64, kind: WordKind, active: bool) -> Learned {
