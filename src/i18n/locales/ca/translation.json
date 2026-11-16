@@ -771,6 +771,12 @@
         "sound": {
           "label": "Sound When a Word Is Learned",
           "description": "Plays the Windows notification sound when the pill shows a learned word."
+        },
+        "pending": "pendent",
+        "rules": {
+          "label": "Regles d'estil",
+          "description": "Preferències de redacció que Handy treu de les teves correccions i aplica als propers dictats.",
+          "empty": "Encara no hi ha cap regla."
         }
       },
       "styles": {

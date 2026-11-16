@@ -771,6 +771,12 @@
         "sound": {
           "label": "Sound When a Word Is Learned",
           "description": "Plays the Windows notification sound when the pill shows a learned word."
+        },
+        "pending": "pendiente",
+        "rules": {
+          "label": "Reglas de estilo",
+          "description": "Preferencias de redacción que Handy extrae de tus correcciones y aplica en tus próximos dictados.",
+          "empty": "Aún no hay reglas."
         }
       },
       "styles": {

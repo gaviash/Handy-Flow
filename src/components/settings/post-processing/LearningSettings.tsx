@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { ask, save } from "@tauri-apps/plugin-dialog";
-import { commands, type Learned } from "@/bindings";
+import { commands, type Learned, type StyleRule } from "@/bindings";
 import { ToggleSwitch } from "../../ui/ToggleSwitch";
 import { SettingContainer } from "../../ui/SettingContainer";
 import { Button } from "../../ui/Button";
@@ -12,7 +12,18 @@ export const LearningSettings: React.FC = () => {
   const { t } = useTranslation();
   const { getSetting, updateSetting, isUpdating } = useSettings();
   const [words, setWords] = useState<Learned[]>([]);
-  const refresh = () => commands.getLearnedWords().then(setWords);
+  const [rules, setRules] = useState<StyleRule[]>([]);
+  const refresh = () =>
+    Promise.all([
+      commands.getLearnedWords().then(setWords),
+      commands.getStyleRules().then(setRules),
+    ]);
+  const pending = (
+    <span className="text-xs text-mid-gray">
+      {" "}
+      ({t("settings.postProcessing.learning.pending")})
+    </span>
+  );
   useEffect(() => {
     refresh();
   }, []);
@@ -61,7 +72,8 @@ export const LearningSettings: React.FC = () => {
                   className="flex items-center justify-between gap-2 text-sm"
                 >
                   <span>
-                    <span className="font-semibold">{w.term}</span>{" "}
+                    <span className="font-semibold">{w.term}</span>
+                    {!w.active && pending}{" "}
                     <span className="text-mid-gray">
                       {t("settings.postProcessing.learning.words.heard", {
                         heard: w.heard.join(", "),
@@ -105,6 +117,39 @@ export const LearningSettings: React.FC = () => {
             </Button>
           </div>
         </div>
+      </SettingContainer>
+      <SettingContainer
+        title={t("settings.postProcessing.learning.rules.label")}
+        description={t("settings.postProcessing.learning.rules.description")}
+        layout="stacked"
+        grouped={true}
+      >
+        {rules.length === 0 ? (
+          <p className="text-sm text-mid-gray">
+            {t("settings.postProcessing.learning.rules.empty")}
+          </p>
+        ) : (
+          <ul className="w-full space-y-1">
+            {rules.map((r) => (
+              <li
+                key={r.rule}
+                className="flex items-center justify-between gap-2 text-sm"
+              >
+                <span>
+                  {r.rule}
+                  {!r.active && pending}
+                </span>
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  onClick={() => commands.deleteStyleRule(r.rule).then(refresh)}
+                >
+                  {t("settings.postProcessing.learning.words.delete")}
+                </Button>
+              </li>
+            ))}
+          </ul>
+        )}
       </SettingContainer>
     </>
   );

@@ -771,6 +771,12 @@
         "sound": {
           "label": "Sound When a Word Is Learned",
           "description": "Plays the Windows notification sound when the pill shows a learned word."
+        },
+        "pending": "tertunda",
+        "rules": {
+          "label": "Aturan gaya",
+          "description": "Preferensi kalimat yang dipelajari Handy dari koreksi Anda dan diterapkan pada dikte berikutnya.",
+          "empty": "Belum ada aturan."
         }
       },
       "styles": {

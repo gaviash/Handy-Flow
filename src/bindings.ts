@@ -189,13 +189,8 @@ async changeContextExcludedDomainsSetting(domains: string[]) : Promise<Result<nu
     else return { status: "error", error: e  as any };
 }
 },
-async changeLearnedSoundEnabledSetting(enabled: boolean) : Promise<Result<null, string>> {
-    try {
-    return { status: "ok", data: await TAURI_INVOKE("change_learned_sound_enabled_setting", { enabled }) };
-} catch (e) {
-    if(e instanceof Error) throw e;
-    else return { status: "error", error: e  as any };
-}
+async getLastContextReport() : Promise<ContextReport> {
+    return await TAURI_INVOKE("get_last_context_report");
 },
 async changeLearningEnabledSetting(enabled: boolean) : Promise<Result<null, string>> {
     try {
@@ -205,18 +200,9 @@ async changeLearningEnabledSetting(enabled: boolean) : Promise<Result<null, stri
     else return { status: "error", error: e  as any };
 }
 },
-async getLearnedWords() : Promise<Learned[]> {
-    return await TAURI_INVOKE("get_learned_words");
-},
-async deleteLearnedWord(term: string) : Promise<void> {
-    await TAURI_INVOKE("delete_learned_word", { term });
-},
-async clearLearnedWords() : Promise<void> {
-    await TAURI_INVOKE("clear_learned_words");
-},
-async exportLearnedWords(path: string) : Promise<Result<null, string>> {
+async changeLearnedSoundEnabledSetting(enabled: boolean) : Promise<Result<null, string>> {
     try {
-    return { status: "ok", data: await TAURI_INVOKE("export_learned_words", { path }) };
+    return { status: "ok", data: await TAURI_INVOKE("change_learned_sound_enabled_setting", { enabled }) };
 } catch (e) {
     if(e instanceof Error) throw e;
     else return { status: "error", error: e  as any };
@@ -238,17 +224,17 @@ async changeSnippetsSetting(snippets: Snippet[]) : Promise<Result<null, string>>
     else return { status: "error", error: e  as any };
 }
 },
-async changePostProcessFallbackProviderSetting(providerId: string) : Promise<Result<null, string>> {
+async changeUserNameSetting(name: string) : Promise<Result<null, string>> {
     try {
-    return { status: "ok", data: await TAURI_INVOKE("change_post_process_fallback_provider_setting", { providerId }) };
+    return { status: "ok", data: await TAURI_INVOKE("change_user_name_setting", { name }) };
 } catch (e) {
     if(e instanceof Error) throw e;
     else return { status: "error", error: e  as any };
 }
 },
-async changeUserNameSetting(name: string) : Promise<Result<null, string>> {
+async changePostProcessFallbackProviderSetting(providerId: string) : Promise<Result<null, string>> {
     try {
-    return { status: "ok", data: await TAURI_INVOKE("change_user_name_setting", { name }) };
+    return { status: "ok", data: await TAURI_INVOKE("change_post_process_fallback_provider_setting", { providerId }) };
 } catch (e) {
     if(e instanceof Error) throw e;
     else return { status: "error", error: e  as any };
@@ -270,8 +256,31 @@ async getDictationStats() : Promise<Result<DictationStats, string>> {
     else return { status: "error", error: e  as any };
 }
 },
-async getLastContextReport() : Promise<ContextReport> {
-    return await TAURI_INVOKE("get_last_context_report");
+async getLearnedWords() : Promise<Learned[]> {
+    return await TAURI_INVOKE("get_learned_words");
+},
+async deleteLearnedWord(term: string) : Promise<void> {
+    await TAURI_INVOKE("delete_learned_word", { term });
+},
+async clearLearnedWords() : Promise<void> {
+    await TAURI_INVOKE("clear_learned_words");
+},
+/**
+ * Readable export to move to another machine (F113).
+ */
+async exportLearnedWords(path: string) : Promise<Result<null, string>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("export_learned_words", { path }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+async getStyleRules() : Promise<StyleRule[]> {
+    return await TAURI_INVOKE("get_style_rules");
+},
+async deleteStyleRule(rule: string) : Promise<void> {
+    await TAURI_INVOKE("delete_style_rule", { rule });
 },
 async changeLanguageDetectionSetting(mode: LanguageDetectionMode) : Promise<Result<null, string>> {
     try {
@@ -1162,10 +1171,8 @@ async updateRecordingRetentionPeriod(period: string) : Promise<Result<null, stri
 }
 },
 /**
- * Checks if the Mac is a laptop by detecting battery presence
- * 
- * This uses pmset to check for battery information.
- * Returns true if a battery is detected (laptop), false otherwise (desktop)
+ * Stub implementation for non-macOS platforms
+ * Always returns false since laptop detection is macOS-specific
  */
 async isLaptop() : Promise<Result<boolean, string>> {
     try {
@@ -1235,7 +1242,8 @@ export type AppSettings = {
  */
 settings_schema_version?: number; 
 /**
- * Handy Adaptive migration marker.
+ * Handy Adaptive's own migration marker, separate from upstream's
+ * `settings_schema_version` so the two never collide on merge.
  */
 adaptive_settings_version?: number; 
 /**
@@ -1257,34 +1265,34 @@ context_send_enabled?: boolean;
  */
 context_excluded_apps?: string[]; context_excluded_domains?: string[]; 
 /**
- * F97: learn corrected names and terms from the user's edits.
+ * F122: saved transformations, one shortcut each (`transform_1`…).
  */
-learning_enabled?: boolean;
+transforms?: Transform[]; 
 /**
- * The system notification sound when a word is learned.
+ * F63: the user's own name, always a spelling to respect.
  */
-learned_sound_enabled?: boolean; 
+user_name?: string; 
+/**
+ * The provider that answers when the main one fails (quota, error,
+ * slowness). Empty: none. Skipped while it has no model or key.
+ */
+post_process_fallback_provider_id?: string; 
+/**
+ * F120: user snippets, inserted when their trigger is said alone.
+ */
+snippets?: Snippet[]; 
 /**
  * F58: tone per style category, effective from the first dictation.
  */
 styles?: Styles; 
 /**
- * F120: user snippets, inserted when their trigger is said alone.
+ * F97: learn corrected names and terms from the user's edits.
  */
-snippets?: Snippet[];
+learning_enabled?: boolean; 
 /**
- * F63: the user's own name, always a spelling to respect.
+ * The system notification sound when a word is learned.
  */
-user_name?: string;
-/**
- * The provider that answers when the main one fails (quota, error,
- * slowness). Empty: none. Skipped while it has no model or key.
- */
-post_process_fallback_provider_id?: string;
-/**
- * F122: saved transformations, one shortcut each.
- */
-transforms?: Transform[]; 
+learned_sound_enabled?: boolean; 
 /**
  * Defaults to empty on partial stores; the load path merges in the
  * default bindings for any missing keys before the settings are used.
@@ -1379,6 +1387,30 @@ export type AutoUnavailableReason =
 export type AvailableAccelerators = { transcribe: string[]; gpu_devices: GpuDeviceOption[] }
 export type BindingResponse = { success: boolean; binding: ShortcutBinding | null; error: string | null }
 /**
+ * One reading of the destination at release.
+ */
+export type Capture = { process: string; title: string; host: string | null; content: Content | null; terminal: boolean; 
+/**
+ * Password or secure field (F32, F79): nothing else is read.
+ */
+sensitive: boolean; 
+/**
+ * Excluded app or domain (F33): no context, no automatic paste.
+ */
+excluded: boolean; field: Field | null; 
+/**
+ * Names next to email addresses on the page: recipients, quoted authors (F27).
+ */
+names: string[]; 
+/**
+ * Other spellings from the field, page and editor title (F40, F28).
+ */
+terms: string[]; 
+/**
+ * Characters of page text read to find `names` (F114); never kept or sent.
+ */
+page_chars: number }
+/**
  * Script applied to Mandarin and Cantonese output. Traditional carries its region
  * (Taiwan vs Hong Kong forms, e.g. 裡/裏) rather than guessing it.
  */
@@ -1396,9 +1428,38 @@ export type ChineseScript =
  */
 "traditional_hk"
 export type ClipboardHandling = "dont_modify" | "copy_to_clipboard"
+/**
+ * What the target is for (F22). Independent of `Style` and the terminal flag.
+ */
+export type Content = "email" | "work_chat" | "personal_chat" | "ai" | "document" | "code" | "other"
+/**
+ * F114: what the last dictation read, kept and sent. Memory only.
+ */
+export type ContextReport = { capture: Capture | null; 
+/**
+ * The exact user message sent to the LLM, if any.
+ */
+sent: string | null }
 export type CustomSounds = { start: boolean; stop: boolean }
+/**
+ * Handy Adaptive (F110): simple statistics over the kept history.
+ */
+export type DictationStats = { dictations: number; words: number; 
+/**
+ * Most used apps, with their dictation count.
+ */
+top_apps: ([string, number])[]; learned_words: number }
+/**
+ * What was read from the focused field (F23).
+ */
+export type Field = { before: string; after: string; selection: string; 
+/**
+ * The caret position is known (TextPattern); otherwise `before` holds the
+ * whole content and is only general context.
+ */
+caret_known: boolean }
 export type GpuDeviceOption = { id: string; name: string; total_vram_mb: number }
-export type HistoryEntry = { app?: string | null; id: number; file_name: string; timestamp: number; saved: boolean; title: string; transcription_text: string; post_processed_text: string | null; post_process_prompt: string | null; post_process_requested: boolean; 
+export type HistoryEntry = { id: number; file_name: string; timestamp: number; saved: boolean; title: string; transcription_text: string; post_processed_text: string | null; post_process_prompt: string | null; post_process_requested: boolean; 
 /**
  * The name of the file this entry was transcribed from; `None` for a
  * dictation.
@@ -1411,7 +1472,11 @@ language: string | null;
 /**
  * How that language was chosen; `None` before it was recorded.
  */
-language_source: LanguageSource | null }
+language_source: LanguageSource | null; 
+/**
+ * Handy Adaptive (F109): the app (and site) the dictation went to.
+ */
+app: string | null }
 export type HistoryUpdatePayload = { action: "added"; entry: HistoryEntry } | { action: "updated"; entry: HistoryEntry } | { action: "deleted"; id: number } | { action: "toggled"; id: number }
 /**
  * Result of changing keyboard implementation
@@ -1491,6 +1556,19 @@ export type LanguageStatus =
  * Auto can't work here; `language` is used instead.
  */
 { kind: "auto_unavailable"; language: string; reason: AutoUnavailableReason }
+/**
+ * A learned spelling: `term` is what the user wrote, `heard` every form that
+ * was inserted for it ("Quen", "Quinn" → "Qwen"), most recent last.
+ */
+export type Learned = { term: string; heard: string[]; count: number; 
+/**
+ * Unix seconds.
+ */
+last_seen: number; kind?: WordKind; 
+/**
+ * A pending word (seen once, needs a second sighting) is not used yet.
+ */
+active?: boolean }
 export type LogLevel = "trace" | "debug" | "info" | "warn" | "error"
 /**
  * A macOS privacy permission Handy asks for during onboarding.
@@ -1531,18 +1609,19 @@ detail: string | null }
 /**
  * The frontend maps each code to its text in `src/lib/notices.ts`.
  */
-export type Content = "email" | "work_chat" | "personal_chat" | "ai" | "document" | "code" | "other"
-export type Style = "work" | "email" | "personal" | "other"
-export type Field = { before: string; after: string; selection: string; caret_known: boolean }
-export type Capture = { process: string; title: string; host: string | null; content: Content | null; terminal: boolean; sensitive: boolean; excluded: boolean; field: Field | null; names: string[]; page_chars: number }
-export type Transform = { name: string; instruction: string }
-export type DictationStats = { dictations: number; words: number; top_apps: [string, number][]; learned_words: number }
-export type Snippet = { trigger: string; text: string }
-export type Tone = "formal" | "casual" | "very_casual" | "excited" | "default"
-export type Styles = { work: Tone; email: Tone; personal: Tone; other: Tone }
-export type Learned = { term: string; heard: string[]; count: number; last_seen: number }
-export type ContextReport = { capture: Capture | null; sent: string | null }
-export type NoticeCode = "TranscriptionFailed" | "PasteFailed" | "PasteBlockedElevated" | "PasteSkippedExcluded" | "SelectionUnavailable" | "WordsLearned" | "NoMicrophone" | "MicrophoneSilent" | "MicPermissionDenied" | "RecordingFailed" | "ModelLoadFailed" | "NoModelSelected" | "PostProcessFailed" | "FileTranscriptionFailed" | "FilePostProcessFailed"
+export type NoticeCode = "TranscriptionFailed" | "PasteFailed" | "PasteBlockedElevated" | 
+/**
+ * Handy Adaptive (F33): the destination is an excluded app or site.
+ */
+"PasteSkippedExcluded" | 
+/**
+ * Handy Adaptive (F121–F123): no editable selection to transform.
+ */
+"SelectionUnavailable" | 
+/**
+ * Handy Flow (F95): words learned from the user's corrections.
+ */
+"WordsLearned" | "NoMicrophone" | "MicrophoneSilent" | "MicPermissionDenied" | "RecordingFailed" | "ModelLoadFailed" | "NoModelSelected" | "PostProcessFailed" | "FileTranscriptionFailed" | "FilePostProcessFailed"
 export type NoticeLevel = 
 /**
  * Nothing came out, or Handy can't do its job.
@@ -1617,7 +1696,11 @@ export type RecordingPhase =
  * The session was cancelled.
  */
 "cancelled"
-export type RecordingRetentionPeriod = "never" | "preserve_limit" | "days_3" | "days30" | "weeks_2" | "months_3"
+export type RecordingRetentionPeriod = "never" | "preserve_limit" | "days_3" | 
+/**
+ * Handy Adaptive (Q4): text 30 days, audio of the 20 newest dictations.
+ */
+"days_30" | "weeks_2" | "months_3"
 export type RecordingStateEvent = { phase: RecordingPhase }
 /**
  * A retired ONNX model found on disk.
@@ -1675,6 +1758,10 @@ export type ShortcutActivation =
  */
 "hold_or_toggle"
 export type ShortcutBinding = { id: string; name: string; description: string; default_binding: string; current_binding: string }
+/**
+ * A user snippet (F120): said on its own, `trigger` inserts `text`.
+ */
+export type Snippet = { trigger: string; text: string }
 export type SoundTheme = "marimba" | "pop" | "custom"
 /**
  * Phase of the streaming overlay card, emitted to drive its UI state.
@@ -1709,10 +1796,30 @@ export type StreamTextEvent = { committed: string; tentative: string }
  */
 export type StreamWorkKind = "transcribing" | "polishing"
 /**
+ * A phrasing preference drawn from the user's corrections by the judge.
+ */
+export type StyleRule = { rule: string; count: number; active: boolean; 
+/**
+ * Unix seconds.
+ */
+last_seen: number; 
+/**
+ * Apps the rule holds in; empty = everywhere.
+ */
+apps?: string[] }
+/**
+ * Tone per style category. Defaults (Q8): email formal, chats casual, the rest default.
+ */
+export type Styles = { work: Tone; email: Tone; personal: Tone; other: Tone }
+/**
  * UI appearance mode. `System` follows the OS `prefers-color-scheme`; `Light`
  * and `Dark` force one of the two palettes Handy already ships.
  */
 export type Theme = "system" | "light" | "dark"
+/**
+ * Writing style chosen per style category (F58).
+ */
+export type Tone = "formal" | "casual" | "very_casual" | "excited" | "default"
 export type TranscribeAcceleratorSetting = "auto" | "cpu" | "gpu"
 /**
  * Emitted when a dictation finishes (not on cancel); onboarding uses it to measure speed.
@@ -1755,9 +1862,17 @@ export type TranscriptionOutcome =
  * Transcribing or pasting failed.
  */
 "failed"
+/**
+ * A saved transformation bound to its own shortcut (F122).
+ */
+export type Transform = { name: string; instruction: string }
 export type TypingTool = "auto" | "wtype" | "kwtype" | "dotool" | "ydotool" | "xdotool"
 export type VadBackend = "silero" | "earshot"
 export type WindowsMicrophonePermissionStatus = { supported: boolean; overall_access: PermissionAccess; device_access: PermissionAccess; app_access: PermissionAccess; desktop_app_access: PermissionAccess }
+/**
+ * A name or technical term, or a common word the recognizer mishears.
+ */
+export type WordKind = "term" | "misheard"
 
 /** tauri-specta globals **/
 

@@ -771,6 +771,12 @@
         "sound": {
           "label": "Sound When a Word Is Learned",
           "description": "Plays the Windows notification sound when the pill shows a learned word."
+        },
+        "pending": "待定",
+        "rules": {
+          "label": "風格規則",
+          "description": "Handy 從你的修改中學到的措辭偏好，會用於之後的聽寫。",
+          "empty": "尚無規則。"
         }
       },
       "styles": {
