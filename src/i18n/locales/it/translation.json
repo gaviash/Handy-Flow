@@ -777,6 +777,19 @@
           "label": "Regole di stile",
           "description": "Preferenze di formulazione che Handy ricava dalle tue correzioni e applica ai prossimi dettati.",
           "empty": "Ancora nessuna regola."
+        },
+        "asr": {
+          "label": "Contesto di trascrizione",
+          "description": "Ciò che il modello di riconoscimento riceve prima di ascoltare: le tue parole ed espressioni frequenti. Lo usano solo i modelli che accettano contesto.",
+          "enabled": "Invia contesto al modello di riconoscimento",
+          "learnedWords": "Parole apprese",
+          "expressions": "Espressioni frequenti",
+          "screen": "App e testo prima del cursore (più lento)",
+          "maxTerms": "Max parole",
+          "captureWait": "Attesa max dello schermo (ms)",
+          "noModel": "Nessun modello caricato.",
+          "supported": "Il modello attuale accetta contesto.",
+          "unsupported": "Il modello attuale non accetta contesto: nulla viene inviato e nulla attende."
         }
       },
       "styles": {

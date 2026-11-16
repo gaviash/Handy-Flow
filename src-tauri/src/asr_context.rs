@@ -53,6 +53,26 @@ impl Default for AsrContextSettings {
     }
 }
 
+impl AsrContextSettings {
+    /// Bounds the settings page can't exceed (trust boundary: the IPC call).
+    pub fn validate(&self) -> Result<(), String> {
+        if !(1..=200).contains(&self.max_terms) {
+            return Err("max_terms must be between 1 and 200".into());
+        }
+        if self.capture_wait_ms > 1000 {
+            return Err("capture_wait_ms must be at most 1000".into());
+        }
+        Ok(())
+    }
+}
+
+/// What the loaded model accepts, for the settings page (`None` = no model).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Type)]
+pub struct AsrSupport {
+    pub vocabulary: bool,
+    pub prompt: bool,
+}
+
 /// Which prompt slot gets the text.
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub enum AsrPrompt {
@@ -241,6 +261,19 @@ mod tests {
         // Nothing to say: no prompt at all.
         let empty = AsrSources::default();
         assert_eq!(build(caps, &empty, &AsrContextSettings::default()), AsrContext::default());
+    }
+
+    #[test]
+    fn settings_out_of_range_are_refused() {
+        assert!(AsrContextSettings::default().validate().is_ok());
+        let bad = |f: fn(&mut AsrContextSettings)| {
+            let mut s = AsrContextSettings::default();
+            f(&mut s);
+            s.validate().is_err()
+        };
+        assert!(bad(|s| s.max_terms = 0));
+        assert!(bad(|s| s.max_terms = 201));
+        assert!(bad(|s| s.capture_wait_ms = 1001));
     }
 
     #[test]

@@ -777,6 +777,19 @@
           "label": "Regles d'estil",
           "description": "Preferències de redacció que Handy treu de les teves correccions i aplica als propers dictats.",
           "empty": "Encara no hi ha cap regla."
+        },
+        "asr": {
+          "label": "Context de transcripció",
+          "description": "El que rep el model de reconeixement abans d'escoltar: les teves paraules i expressions freqüents. Només el fan servir els models que accepten context.",
+          "enabled": "Envia context al model de reconeixement",
+          "learnedWords": "Paraules apreses",
+          "expressions": "Expressions freqüents",
+          "screen": "App i text abans del cursor (més lent)",
+          "maxTerms": "Màx. de paraules",
+          "captureWait": "Espera màx. de la pantalla (ms)",
+          "noModel": "Cap model carregat.",
+          "supported": "El model actual accepta context.",
+          "unsupported": "El model actual no accepta context: no s'envia res i res no espera."
         }
       },
       "styles": {

@@ -734,6 +734,8 @@ pub fn run(cli_args: CliArgs) {
             learning::export_learned_words,
             learning::get_style_rules,
             learning::delete_style_rule,
+            learning::change_asr_context_setting,
+            learning::get_asr_support,
             shortcut::change_language_detection_setting,
             shortcut::change_language_detection_window_setting,
             shortcut::change_paste_delay_ms_setting,

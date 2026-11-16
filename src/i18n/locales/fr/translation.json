@@ -777,6 +777,19 @@
           "label": "Règles de style",
           "description": "Préférences de formulation tirées de vos corrections, appliquées à vos prochaines dictées.",
           "empty": "Aucune règle pour l'instant."
+        },
+        "asr": {
+          "label": "Contexte de transcription",
+          "description": "Ce que le modèle de reconnaissance reçoit avant d'écouter : vos mots et expressions fréquentes. Seuls les modèles qui acceptent du contexte s'en servent.",
+          "enabled": "Envoyer du contexte au modèle de reconnaissance",
+          "learnedWords": "Mots appris",
+          "expressions": "Expressions fréquentes",
+          "screen": "App et texte avant le curseur (plus lent)",
+          "maxTerms": "Nombre max de mots",
+          "captureWait": "Attente max de l'écran (ms)",
+          "noModel": "Aucun modèle chargé.",
+          "supported": "Le modèle actuel accepte du contexte.",
+          "unsupported": "Le modèle actuel n'accepte pas de contexte : rien n'est envoyé et rien n'attend."
         }
       },
       "styles": {

@@ -777,6 +777,19 @@
           "label": "Quy tắc văn phong",
           "description": "Cách diễn đạt Handy học từ các chỉnh sửa của bạn và áp dụng cho lần đọc chính tả tiếp theo.",
           "empty": "Chưa có quy tắc nào."
+        },
+        "asr": {
+          "label": "Ngữ cảnh phiên âm",
+          "description": "Những gì mô hình nhận dạng giọng nói nhận trước khi nghe: từ ngữ và cụm từ bạn hay dùng. Chỉ các mô hình chấp nhận ngữ cảnh mới dùng.",
+          "enabled": "Gửi ngữ cảnh cho mô hình nhận dạng",
+          "learnedWords": "Từ đã học",
+          "expressions": "Cụm từ hay dùng",
+          "screen": "Ứng dụng và văn bản trước con trỏ (chậm hơn)",
+          "maxTerms": "Số từ tối đa",
+          "captureWait": "Chờ màn hình tối đa (ms)",
+          "noModel": "Chưa tải mô hình nào.",
+          "supported": "Mô hình hiện tại chấp nhận ngữ cảnh.",
+          "unsupported": "Mô hình hiện tại không chấp nhận ngữ cảnh: không gửi gì và không chờ gì."
         }
       },
       "styles": {

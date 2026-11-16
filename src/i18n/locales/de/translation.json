@@ -777,6 +777,19 @@
           "label": "Stilregeln",
           "description": "Formulierungsvorlieben, die Handy aus Ihren Korrekturen ableitet und bei den nächsten Diktaten anwendet.",
           "empty": "Noch keine Regel."
+        },
+        "asr": {
+          "label": "Transkriptionskontext",
+          "description": "Was das Spracherkennungsmodell vor dem Zuhören erhält: Ihre Wörter und häufigen Ausdrücke. Nur Modelle, die Kontext akzeptieren, nutzen ihn.",
+          "enabled": "Kontext an das Spracherkennungsmodell senden",
+          "learnedWords": "Gelernte Wörter",
+          "expressions": "Häufige Ausdrücke",
+          "screen": "App und Text vor dem Cursor (langsamer)",
+          "maxTerms": "Max. Wörter",
+          "captureWait": "Max. Wartezeit auf den Bildschirm (ms)",
+          "noModel": "Kein Modell geladen.",
+          "supported": "Das aktuelle Modell akzeptiert Kontext.",
+          "unsupported": "Das aktuelle Modell akzeptiert keinen Kontext: nichts wird gesendet, nichts wartet."
         }
       },
       "styles": {

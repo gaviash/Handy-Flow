@@ -777,6 +777,19 @@
           "label": "Pravidla stylu",
           "description": "Preference formulací, které Handy odvodí z vašich oprav a použije v dalších diktátech.",
           "empty": "Zatím žádné pravidlo."
+        },
+        "asr": {
+          "label": "Kontext přepisu",
+          "description": "Co model rozpoznávání řeči dostane před posloucháním: vaše slova a častá spojení. Používají ho jen modely, které kontext přijímají.",
+          "enabled": "Posílat kontext modelu rozpoznávání",
+          "learnedWords": "Naučená slova",
+          "expressions": "Častá spojení",
+          "screen": "Aplikace a text před kurzorem (pomalejší)",
+          "maxTerms": "Max. slov",
+          "captureWait": "Max. čekání na obrazovku (ms)",
+          "noModel": "Není načten žádný model.",
+          "supported": "Aktuální model přijímá kontext.",
+          "unsupported": "Aktuální model kontext nepřijímá: nic se neposílá a nic nečeká."
         }
       },
       "styles": {

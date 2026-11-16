@@ -777,6 +777,19 @@
           "label": "Reguły stylu",
           "description": "Preferencje sformułowań, które Handy wyciąga z Twoich poprawek i stosuje w kolejnych dyktowaniach.",
           "empty": "Brak reguł."
+        },
+        "asr": {
+          "label": "Kontekst transkrypcji",
+          "description": "Co model rozpoznawania mowy dostaje przed słuchaniem: Twoje słowa i częste wyrażenia. Korzystają z tego tylko modele akceptujące kontekst.",
+          "enabled": "Wysyłaj kontekst do modelu rozpoznawania",
+          "learnedWords": "Nauczone słowa",
+          "expressions": "Częste wyrażenia",
+          "screen": "Aplikacja i tekst przed kursorem (wolniej)",
+          "maxTerms": "Maks. liczba słów",
+          "captureWait": "Maks. czekanie na ekran (ms)",
+          "noModel": "Brak załadowanego modelu.",
+          "supported": "Obecny model akceptuje kontekst.",
+          "unsupported": "Obecny model nie akceptuje kontekstu: nic nie jest wysyłane i nic nie czeka."
         }
       },
       "styles": {

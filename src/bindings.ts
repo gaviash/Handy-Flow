@@ -282,6 +282,20 @@ async getStyleRules() : Promise<StyleRule[]> {
 async deleteStyleRule(rule: string) : Promise<void> {
     await TAURI_INVOKE("delete_style_rule", { rule });
 },
+async changeAsrContextSetting(value: AsrContextSettings) : Promise<Result<null, string>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("change_asr_context_setting", { value }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+/**
+ * What the loaded ASR model accepts; `None` when no model is loaded.
+ */
+async getAsrSupport() : Promise<AsrSupport | null> {
+    return await TAURI_INVOKE("get_asr_support");
+},
 async changeLanguageDetectionSetting(mode: LanguageDetectionMode) : Promise<Result<null, string>> {
     try {
     return { status: "ok", data: await TAURI_INVOKE("change_language_detection_setting", { mode }) };
@@ -1294,6 +1308,10 @@ learning_enabled?: boolean;
  */
 learned_sound_enabled?: boolean; 
 /**
+ * Handy Adaptive (spec §7): what the ASR model is told before it listens.
+ */
+asr_context?: AsrContextSettings; 
+/**
  * Defaults to empty on partial stores; the load path merges in the
  * default bindings for any missing keys before the settings are used.
  */
@@ -1369,6 +1387,18 @@ language_detection_window_secs?: number;
  * `overlay_position` (position `none` → style `None`).
  */
 overlay_style?: OverlayStyle }
+/**
+ * User settings (Settings → Learning → Transcription context).
+ */
+export type AsrContextSettings = { enabled: boolean; learned_words: boolean; expressions: boolean; 
+/**
+ * The app and the text before the cursor; makes the ASR wait for the capture.
+ */
+screen: boolean; max_terms: number; capture_wait_ms: number }
+/**
+ * What the loaded model accepts, for the settings page (`None` = no model).
+ */
+export type AsrSupport = { vocabulary: boolean; prompt: boolean }
 export type AudioDevice = { index: string; name: string; is_default: boolean }
 export type AutoSubmitKey = "enter" | "ctrl_enter" | "cmd_enter"
 export type AutoUnavailableReason = 

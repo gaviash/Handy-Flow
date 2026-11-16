@@ -6,6 +6,7 @@ import { ToggleSwitch } from "../../ui/ToggleSwitch";
 import { SettingContainer } from "../../ui/SettingContainer";
 import { Button } from "../../ui/Button";
 import { useSettings } from "../../../hooks/useSettings";
+import { AsrContextSettings } from "./AsrContextSettings";
 
 /** Handy Adaptive (F96, F97, F113): learned spellings, delete, clear, export. */
 export const LearningSettings: React.FC = () => {
@@ -151,6 +152,7 @@ export const LearningSettings: React.FC = () => {
           </ul>
         )}
       </SettingContainer>
+      <AsrContextSettings />
     </>
   );
 };

@@ -711,6 +711,28 @@ pub fn delete_learned_word(app: AppHandle, term: String) {
 
 #[tauri::command]
 #[specta::specta]
+pub fn change_asr_context_setting(
+    app: AppHandle,
+    value: crate::asr_context::AsrContextSettings,
+) -> Result<(), String> {
+    value.validate()?;
+    let mut settings = crate::settings::get_settings(&app);
+    settings.asr_context = value;
+    crate::settings::write_settings(&app, settings);
+    Ok(())
+}
+
+/// What the loaded ASR model accepts; `None` when no model is loaded.
+#[tauri::command]
+#[specta::specta]
+pub fn get_asr_support(app: AppHandle) -> Option<crate::asr_context::AsrSupport> {
+    use tauri::Manager;
+    app.state::<std::sync::Arc<crate::managers::transcription::TranscriptionManager>>()
+        .asr_support()
+}
+
+#[tauri::command]
+#[specta::specta]
 pub fn get_style_rules(app: AppHandle) -> Vec<StyleRule> {
     with_memory(&app, |m| m.rules.clone())
 }

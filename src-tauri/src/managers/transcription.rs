@@ -1174,6 +1174,17 @@ impl TranscriptionManager {
         self.asr_capable.load(Ordering::Relaxed)
     }
 
+    /// What the loaded model accepts as ASR context, for the settings page.
+    pub fn asr_support(&self) -> Option<crate::asr_context::AsrSupport> {
+        self.engine.loaded().map(|info| {
+            let caps = asr_caps(&info);
+            crate::asr_context::AsrSupport {
+                vocabulary: caps.vocabulary,
+                prompt: caps.context_prompt || caps.initial_prompt,
+            }
+        })
+    }
+
     /// Handy Adaptive (spec §7): the app and the text before the cursor for
     /// the next run's ASR context; taken by that run.
     pub fn set_asr_screen(&self, screen: Option<(String, String)>) {

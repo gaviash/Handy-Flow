@@ -777,6 +777,19 @@
           "label": "Reglas de estilo",
           "description": "Preferencias de redacción que Handy extrae de tus correcciones y aplica en tus próximos dictados.",
           "empty": "Aún no hay reglas."
+        },
+        "asr": {
+          "label": "Contexto de transcripción",
+          "description": "Lo que recibe el modelo de reconocimiento antes de escuchar: tus palabras y expresiones frecuentes. Solo lo usan los modelos que aceptan contexto.",
+          "enabled": "Enviar contexto al modelo de reconocimiento",
+          "learnedWords": "Palabras aprendidas",
+          "expressions": "Expresiones frecuentes",
+          "screen": "App y texto antes del cursor (más lento)",
+          "maxTerms": "Máx. de palabras",
+          "captureWait": "Espera máx. de la pantalla (ms)",
+          "noModel": "Ningún modelo cargado.",
+          "supported": "El modelo actual acepta contexto.",
+          "unsupported": "El modelo actual no acepta contexto: no se envía nada y nada espera."
         }
       },
       "styles": {

@@ -777,6 +777,19 @@
           "label": "Stilregler",
           "description": "Formuleringar Handy lär sig av dina rättelser och använder i kommande dikteringar.",
           "empty": "Inga regler än."
+        },
+        "asr": {
+          "label": "Transkriptionskontext",
+          "description": "Det taligenkänningsmodellen får innan den lyssnar: dina ord och vanliga uttryck. Bara modeller som tar emot kontext använder det.",
+          "enabled": "Skicka kontext till taligenkänningsmodellen",
+          "learnedWords": "Inlärda ord",
+          "expressions": "Vanliga uttryck",
+          "screen": "App och text före markören (långsammare)",
+          "maxTerms": "Max antal ord",
+          "captureWait": "Max väntan på skärmen (ms)",
+          "noModel": "Ingen modell laddad.",
+          "supported": "Den aktuella modellen tar emot kontext.",
+          "unsupported": "Den aktuella modellen tar inte emot kontext: inget skickas och inget väntar."
         }
       },
       "styles": {

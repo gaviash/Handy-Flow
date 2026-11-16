@@ -777,6 +777,19 @@
           "label": "Style Rules",
           "description": "Phrasing preferences Handy drew from your corrections and applies to your next dictations.",
           "empty": "No rule yet."
+        },
+        "asr": {
+          "label": "Transcription Context",
+          "description": "What the speech model is told before it listens: your words and frequent expressions. Only models that accept context use it.",
+          "enabled": "Send Context to the Speech Model",
+          "learnedWords": "Learned Words",
+          "expressions": "Frequent Expressions",
+          "screen": "App and Text Before the Cursor (slower)",
+          "maxTerms": "Max Words",
+          "captureWait": "Max Wait for the Screen (ms)",
+          "noModel": "No model loaded.",
+          "supported": "The current model accepts context.",
+          "unsupported": "The current model doesn't accept context: nothing is sent and nothing waits."
         }
       },
       "styles": {
