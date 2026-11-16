@@ -662,12 +662,55 @@ pub fn change_theme_setting(app: AppHandle, theme: String) -> Result<(), String>
         }
     };
     settings.theme = parsed;
+    let appearance = settings::Appearance::of(&settings);
     settings::write_settings(&app, settings);
     #[cfg(any(target_os = "windows", target_os = "macos"))]
     apply_window_theme(&app, parsed);
     // Notify other webviews (the recording overlay) so they re-apply the palette
     // live — they set `data-theme` on their own document and can't see this one.
     let _ = app.emit("theme-changed", parsed);
+    let _ = app.emit("appearance-changed", appearance);
+    Ok(())
+}
+
+/// Writes one appearance field, then tells every window (the overlay included)
+/// to repaint with the new appearance.
+fn update_appearance(app: &AppHandle, apply: impl FnOnce(&mut settings::AppSettings)) {
+    let mut settings = settings::get_settings(app);
+    apply(&mut settings);
+    let appearance = settings::Appearance::of(&settings);
+    settings::write_settings(app, settings);
+    let _ = app.emit("appearance-changed", appearance);
+}
+
+#[tauri::command]
+#[specta::specta]
+pub fn change_palette_setting(app: AppHandle, palette: String) -> Result<(), String> {
+    let palette = settings::Palette::from_setting(&palette);
+    update_appearance(&app, |s| s.palette = palette);
+    Ok(())
+}
+
+#[tauri::command]
+#[specta::specta]
+pub fn change_heading_style_setting(app: AppHandle, style: String) -> Result<(), String> {
+    let style = settings::HeadingStyle::from_setting(&style);
+    update_appearance(&app, |s| s.heading_style = style);
+    Ok(())
+}
+
+#[tauri::command]
+#[specta::specta]
+pub fn change_ui_density_setting(app: AppHandle, density: String) -> Result<(), String> {
+    let density = settings::UiDensity::from_setting(&density);
+    update_appearance(&app, |s| s.ui_density = density);
+    Ok(())
+}
+
+#[tauri::command]
+#[specta::specta]
+pub fn change_overlay_show_label_setting(app: AppHandle, enabled: bool) -> Result<(), String> {
+    update_appearance(&app, |s| s.overlay_show_label = enabled);
     Ok(())
 }
 

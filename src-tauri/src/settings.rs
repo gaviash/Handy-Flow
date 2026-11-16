@@ -322,6 +322,115 @@ pub enum Theme {
     Dark,
 }
 
+/// Handy Flow color palette (src/styles/palettes.css). Combined with `Theme`,
+/// which only picks light or dark.
+#[derive(Serialize, Deserialize, Debug, Clone, Copy, PartialEq, Eq, Type, Default)]
+#[serde(rename_all = "snake_case")]
+pub enum Palette {
+    #[default]
+    Rose,
+    Sauge,
+    Prune,
+    Encre,
+    Ocean,
+    Ambre,
+    Lime,
+    Contraste,
+}
+
+impl Palette {
+    pub const ALL: [Palette; 8] = [
+        Palette::Rose,
+        Palette::Sauge,
+        Palette::Prune,
+        Palette::Encre,
+        Palette::Ocean,
+        Palette::Ambre,
+        Palette::Lime,
+        Palette::Contraste,
+    ];
+
+    pub fn id(self) -> &'static str {
+        match self {
+            Palette::Rose => "rose",
+            Palette::Sauge => "sauge",
+            Palette::Prune => "prune",
+            Palette::Encre => "encre",
+            Palette::Ocean => "ocean",
+            Palette::Ambre => "ambre",
+            Palette::Lime => "lime",
+            Palette::Contraste => "contraste",
+        }
+    }
+
+    /// Unknown values fall back to the default palette.
+    pub fn from_setting(value: &str) -> Palette {
+        Palette::ALL
+            .into_iter()
+            .find(|p| p.id() == value)
+            .unwrap_or_default()
+    }
+}
+
+/// Everything the windows need to paint themselves; sent with the
+/// `appearance-changed` event so the overlay follows the settings window.
+#[derive(Serialize, Debug, Clone, Copy, Type)]
+pub struct Appearance {
+    pub theme: Theme,
+    pub palette: Palette,
+    pub heading_style: HeadingStyle,
+    pub ui_density: UiDensity,
+    pub overlay_show_label: bool,
+}
+
+impl Appearance {
+    pub fn of(settings: &AppSettings) -> Appearance {
+        Appearance {
+            theme: settings.theme,
+            palette: settings.palette,
+            heading_style: settings.heading_style,
+            ui_density: settings.ui_density,
+            overlay_show_label: settings.overlay_show_label,
+        }
+    }
+}
+
+/// Screen titles: editorial serif or modern sans.
+#[derive(Serialize, Deserialize, Debug, Clone, Copy, PartialEq, Eq, Type, Default)]
+#[serde(rename_all = "snake_case")]
+pub enum HeadingStyle {
+    #[default]
+    Editorial,
+    Modern,
+}
+
+impl HeadingStyle {
+    pub fn from_setting(value: &str) -> HeadingStyle {
+        match value {
+            "modern" => HeadingStyle::Modern,
+            _ => HeadingStyle::Editorial,
+        }
+    }
+}
+
+/// Row spacing in the settings window.
+#[derive(Serialize, Deserialize, Debug, Clone, Copy, PartialEq, Eq, Type, Default)]
+#[serde(rename_all = "snake_case")]
+pub enum UiDensity {
+    #[default]
+    Comfortable,
+    Compact,
+}
+
+impl UiDensity {
+    pub fn from_setting(value: &str) -> UiDensity {
+        match value {
+            "compact" => UiDensity::Compact,
+            _ => UiDensity::Comfortable,
+        }
+    }
+}
+
 #[derive(Serialize, Deserialize, Debug, Clone, Copy, PartialEq, Eq, Type, Default)]
 #[serde(rename_all = "snake_case")]
 pub enum TypingTool {
@@ -558,6 +667,15 @@ pub struct AppSettings {
     pub app_language: String,
     #[serde(default = "default_theme")]
     pub theme: Theme,
+    #[serde(default)]
+    pub palette: Palette,
+    #[serde(default)]
+    pub heading_style: HeadingStyle,
+    #[serde(default)]
+    pub ui_density: UiDensity,
+    /// The dictation pill shows its text label ("Pastille") or only the wave.
+    #[serde(default = "default_true")]
+    pub overlay_show_label: bool,
     #[serde(default)]
     pub experimental_enabled: bool,
     #[serde(default)]
@@ -1266,6 +1384,10 @@ pub fn get_default_settings() -> AppSettings {
         append_trailing_space: false,
         app_language: default_app_language(),
         theme: default_theme(),
+        palette: Palette::default(),
+        heading_style: HeadingStyle::default(),
+        ui_density: UiDensity::default(),
+        overlay_show_label: true,
         experimental_enabled: false,
         lazy_stream_close: false,
         airpods_mode: false,
@@ -1927,6 +2049,11 @@ mod tests {
 
         assert_eq!(settings.selected_model, "whisper-large-v3-turbo");
         assert_eq!(settings.bindings["transcribe"].current_binding, "f13");
+        // Handy Flow appearance keys are absent from older stores: defaults.
+        assert_eq!(settings.palette, Palette::Rose);
+        assert_eq!(settings.heading_style, HeadingStyle::Editorial);
+        assert_eq!(settings.ui_density, UiDensity::Comfortable);
+        assert!(settings.overlay_show_label);
         assert_eq!(settings.log_level, LogLevel::Debug);
         assert_eq!(settings.sound_theme, SoundTheme::Pop);
         assert!(settings.filler_word_removal_enabled);
@@ -1951,6 +2078,56 @@ mod tests {
         // matching legacy mode rather than the new hold-or-toggle default.
         assert_eq!(settings.shortcut_activation, ShortcutActivation::Toggle);
         assert_eq!(settings.transcribe_gpu_device, None);
+    }
+
+    #[test]
+    fn unknown_palette_is_salvaged_to_rose() {
+        let mut stored = default_settings_json();
+        let map = stored.as_object_mut().unwrap();
+        map.insert("palette".into(), serde_json::json!("neon"));
+        map.insert("ui_density".into(), serde_json::json!("compact"));
+        map.insert("onboarding_completed".into(), serde_json::json!(true));
+        let salvaged = salvage_settings(&stored);
+        assert_eq!(salvaged.palette, Palette::Rose);
+        assert_eq!(salvaged.ui_density, UiDensity::Compact);
+        assert!(salvaged.onboarding_completed);
+    }
+
+    #[test]
+    fn palette_from_setting_round_trips() {
+        for p in Palette::ALL {
+            assert_eq!(Palette::from_setting(p.id()), p);
+        }
+        assert_eq!(Palette::from_setting("x"), Palette::Rose);
+        assert_eq!(HeadingStyle::from_setting("modern"), HeadingStyle::Modern);
+        assert_eq!(HeadingStyle::from_setting("x"), HeadingStyle::Editorial);
+        assert_eq!(UiDensity::from_setting("compact"), UiDensity::Compact);
+        assert_eq!(UiDensity::from_setting("x"), UiDensity::Comfortable);
+    }
+
+    #[test]
+    fn palette_ids_match_serde_names() {
+        for p in Palette::ALL {
+            assert_eq!(serde_json::to_value(p).unwrap(), serde_json::json!(p.id()));
+        }
+    }
+
+    #[test]
+    fn every_palette_has_a_css_block_and_an_icon() {
+        let css = include_str!("../../src/styles/palettes.css");
+        let root = std::path::Path::new(env!("CARGO_MANIFEST_DIR"));
+        for p in Palette::ALL {
+            assert!(
+                css.contains(&format!("[data-palette=\"{}\"]", p.id())),
+                "{p:?}"
+            );
+            assert!(
+                root.join(crate::branding::palette_icon_resource(p))
+                    .exists(),
+                "{p:?} icon"
+            );
+        }
+        assert_eq!(css.matches("[data-palette=\"").count(), Palette::ALL.len());
     }
 
     #[test]
