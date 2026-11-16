@@ -748,6 +748,50 @@
         "userName": {
           "label": "Your Name",
           "description": "Always spelled right in your dictations (signature, introductions)."
+        },
+        "reports": {
+          "empty": "none",
+          "kind": {
+            "dictation": "Dictation",
+            "instruction": "Voice instruction",
+            "polish": "Polish",
+            "transform": "Transformation"
+          },
+          "asr": {
+            "title": "Speech model (transcription)",
+            "none": "Nothing recorded for the speech model (live result, or no transcription).",
+            "unsupported": "This model accepts no context: nothing was sent.",
+            "disabled": "Context for the speech model is turned off: nothing was sent.",
+            "model": "Model:",
+            "vocabulary": "Vocabulary:",
+            "expressions": "Expressions:",
+            "app": "App:",
+            "before": "Text before the cursor:",
+            "prompt": "Prompt sent",
+            "screenLate": "The screen came too late: sent without the app and text.",
+            "echo": "The model read its context back instead of speech: the text was dropped."
+          },
+          "llm": {
+            "title": "LLM (rewrite or transformation)"
+          }
+        },
+        "parts": {
+          "rewrite": {
+            "screen": "Rewrite: App, Window and Text Around",
+            "learnedWords": "Rewrite: Learned Words",
+            "styleRules": "Rewrite: Style Rules",
+            "pastDictations": "Rewrite: Past Dictations"
+          },
+          "transform": {
+            "screen": "Polish & Transformations: App, Window and Text Around",
+            "learnedWords": "Polish & Transformations: Learned Words",
+            "styleRules": "Polish & Transformations: Style Rules",
+            "pastDictations": "Polish & Transformations: Past Dictations"
+          },
+          "screenDescription": "The app, window title, site and the text around the cursor or selection (emails and numbers masked).",
+          "learnedWordsDescription": "Words learned from your corrections, with the forms they were misheard as.",
+          "styleRulesDescription": "Your writing preferences learned from your corrections.",
+          "pastDictationsDescription": "Up to 5 of your recent rewritten dictations that look like this one."
         }
       },
       "learning": {
@@ -789,7 +833,12 @@
           "captureWait": "Max. Wartezeit auf den Bildschirm (ms)",
           "noModel": "Kein Modell geladen.",
           "supported": "Das aktuelle Modell akzeptiert Kontext.",
-          "unsupported": "Das aktuelle Modell akzeptiert keinen Kontext: nichts wird gesendet, nichts wartet."
+          "unsupported": "Das aktuelle Modell akzeptiert keinen Kontext: nichts wird gesendet, nichts wartet.",
+          "expressionsList": {
+            "label": "Your Frequent Expressions",
+            "description": "Phrases of 2 to 4 words said in at least 3 dictations over 30 days: what the speech model gets.",
+            "count": "{{count}} expressions"
+          }
         }
       },
       "styles": {

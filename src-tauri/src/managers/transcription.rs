@@ -289,6 +289,8 @@ pub struct TranscriptionManager {
     asr_expressions: ExpressionsCache,
     /// The last run's model took ASR context and the setting allowed it.
     asr_capable: Arc<AtomicBool>,
+    /// F114: what the speech model was given for the last transcription.
+    asr_report: Arc<Mutex<Option<crate::context::AsrReport>>>,
 }
 
 impl TranscriptionManager {
@@ -313,6 +315,7 @@ impl TranscriptionManager {
             asr_screen: Arc::new(Mutex::new(None)),
             asr_expressions: Arc::new(Mutex::new(None)),
             asr_capable: Arc::new(AtomicBool::new(false)),
+            asr_report: Arc::new(Mutex::new(None)),
         };
 
         // Start the idle watcher
@@ -998,6 +1001,8 @@ impl TranscriptionManager {
     /// Transcribe a finished recording: what its live decode produced, or a
     /// batch run of the whole recording when there is no live result.
     pub fn transcribe_recording(&self, samples: Vec<f32>) -> Result<Transcription> {
+        // A live result runs no setup: no report, not an older one.
+        self.take_asr_report();
         let started = Instant::now();
         let live = self.finalize_live(samples.len())?;
         self.complete(started, samples, live)
@@ -1168,7 +1173,29 @@ impl TranscriptionManager {
             self.set_asr_screen(None);
             AsrSources::default()
         };
-        run_setup(info, settings, language, &asr)
+        let setup = run_setup(info, settings, language, &asr);
+        *self.asr_report.lock().unwrap_or_else(|e| e.into_inner()) =
+            Some(crate::context::AsrReport {
+                model: format!("{} {}", info.arch, info.variant),
+                accepts_vocabulary: info.supports_vocabulary,
+                accepts_prompt: info.supports_context_prompt || info.supports_initial_prompt,
+                enabled: settings.asr_context.enabled,
+                vocabulary: setup.run_options.vocabulary.clone(),
+                prompt: given_prompt(&setup.run_options).map(str::to_string),
+                expressions: asr.expressions.clone(),
+                app: asr.app.clone(),
+                before: asr.before.clone(),
+                ..Default::default()
+            });
+        setup
+    }
+
+    /// What the speech model was given for the last transcription (F114).
+    pub fn take_asr_report(&self) -> Option<crate::context::AsrReport> {
+        self.asr_report
+            .lock()
+            .unwrap_or_else(|e| e.into_inner())
+            .take()
     }
 
     /// Whether the loaded model takes ASR context and the user allows it (as
@@ -1321,6 +1348,14 @@ impl TranscriptionManager {
                 {
                     info!("The model returned the custom words, not speech; dropping them");
                     transcript.text.clear();
+                    if let Some(r) = self
+                        .asr_report
+                        .lock()
+                        .unwrap_or_else(|e| e.into_inner())
+                        .as_mut()
+                    {
+                        r.echo_dropped = true;
+                    }
                 }
                 transcript
             })

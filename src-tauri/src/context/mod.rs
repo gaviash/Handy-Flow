@@ -681,32 +681,208 @@ pub fn extract_terms(texts: &[String], title: &str, code: bool, names: &[String]
     found.into_iter().map(|(t, _)| t).take(20).collect()
 }
 
-/// F114: what the last dictation read, kept and sent. Memory only.
+/// What started a report: a dictation, a spoken instruction, Polish or a
+/// saved transformation of the selection.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Type)]
+#[serde(rename_all = "snake_case")]
+pub enum ReportKind {
+    #[default]
+    Dictation,
+    Instruction,
+    Polish,
+    Transform,
+}
+
+/// What the speech model was given for one transcription (spec §7).
+#[derive(Debug, Clone, Default, Serialize, Type)]
+pub struct AsrReport {
+    /// The loaded model, as `arch variant`.
+    pub model: String,
+    pub accepts_vocabulary: bool,
+    pub accepts_prompt: bool,
+    /// The "context for the speech model" setting.
+    pub enabled: bool,
+    /// Exactly what went in the vocabulary slot.
+    pub vocabulary: Vec<String>,
+    /// Exactly what went in the prompt slot (context or Whisper initial prompt).
+    pub prompt: Option<String>,
+    pub expressions: Vec<String>,
+    pub app: Option<String>,
+    pub before: Option<String>,
+    /// `None`: the screen wasn't waited for; `Some(false)`: it came too late.
+    pub screen_waited: Option<bool>,
+    /// The model read its context back instead of speech; nothing was kept.
+    pub echo_dropped: bool,
+}
+
+/// F114: what one dictation or transformation read and sent. Memory only.
 #[derive(Debug, Clone, Default, Serialize, Type)]
 pub struct ContextReport {
+    pub kind: ReportKind,
+    /// Unix seconds.
+    pub at: i64,
     pub capture: Option<Capture>,
+    pub asr: Option<AsrReport>,
     /// The exact user message sent to the LLM, if any.
     pub sent: Option<String>,
 }
 
-static LAST_REPORT: Lazy<Mutex<ContextReport>> = Lazy::new(Default::default);
+/// Reports kept, newest last.
+const REPORTS_MAX: usize = 10;
 
-pub fn set_report(report: ContextReport) {
-    *LAST_REPORT.lock().unwrap_or_else(|e| e.into_inner()) = report;
+static REPORTS: Lazy<Mutex<std::collections::VecDeque<ContextReport>>> =
+    Lazy::new(Default::default);
+
+pub fn set_report(mut report: ContextReport) {
+    report.at = chrono::Utc::now().timestamp();
+    let mut reports = REPORTS.lock().unwrap_or_else(|e| e.into_inner());
+    reports.push_back(report);
+    while reports.len() > REPORTS_MAX {
+        reports.pop_front();
+    }
 }
 
 /// Records the exact user message sent for the current dictation (F114).
+// shortcut: goes to the newest report; a dictation whose rewrite ends after
+// the next one started would land on that one. Pass an id if that happens.
 pub fn record_sent(message: &str) {
-    LAST_REPORT.lock().unwrap_or_else(|e| e.into_inner()).sent = Some(message.to_string());
+    if let Some(r) = REPORTS.lock().unwrap_or_else(|e| e.into_inner()).back_mut() {
+        r.sent = Some(message.to_string());
+    }
+}
+
+/// The last dictations and transformations, newest first.
+#[tauri::command]
+#[specta::specta]
+pub fn get_context_reports() -> Vec<ContextReport> {
+    REPORTS
+        .lock()
+        .unwrap_or_else(|e| e.into_inner())
+        .iter()
+        .rev()
+        .cloned()
+        .collect()
+}
+
+/// Which parts of the context the LLM gets, for the rewrite or for Polish
+/// and transformations (Settings → Context).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Type)]
+#[serde(default)]
+pub struct LlmContextParts {
+    /// The app, window, site and the text around the cursor or selection.
+    pub screen: bool,
+    pub learned_words: bool,
+    pub style_rules: bool,
+    pub past_dictations: bool,
+}
+
+impl Default for LlmContextParts {
+    fn default() -> Self {
+        Self {
+            screen: true,
+            learned_words: true,
+            style_rules: true,
+            past_dictations: true,
+        }
+    }
 }
 
 #[tauri::command]
 #[specta::specta]
-pub fn get_last_context_report() -> ContextReport {
-    LAST_REPORT
-        .lock()
-        .unwrap_or_else(|e| e.into_inner())
-        .clone()
+pub fn change_rewrite_context_setting(app: tauri::AppHandle, value: LlmContextParts) {
+    let mut settings = crate::settings::get_settings(&app);
+    settings.rewrite_context = value;
+    crate::settings::write_settings(&app, settings);
+}
+
+#[tauri::command]
+#[specta::specta]
+pub fn change_transform_context_setting(app: tauri::AppHandle, value: LlmContextParts) {
+    let mut settings = crate::settings::get_settings(&app);
+    settings.transform_context = value;
+    crate::settings::write_settings(&app, settings);
+}
+
+/// Where the text goes, as History shows it: `process · host`.
+pub fn app_label(capture: &Capture) -> String {
+    [Some(capture.process.clone()), capture.host.clone()]
+        .into_iter()
+        .flatten()
+        .filter(|s| !s.is_empty())
+        .collect::<Vec<_>>()
+        .join(" · ")
+}
+
+/// Keeps only what `parts` allows of `c`. The category, tone and the user's
+/// own name and custom words always stay.
+pub fn keep_parts(c: &mut LlmContext, parts: &LlmContextParts) {
+    if !parts.screen {
+        c.before.clear();
+        c.after.clear();
+        c.selection.clear();
+        c.app.clear();
+        c.window.clear();
+        c.site = None;
+        c.names.clear();
+        c.terms.clear();
+    }
+    if !parts.past_dictations {
+        c.past.clear();
+    }
+    if !parts.style_rules {
+        c.rules.clear();
+    }
+}
+
+/// The LLM context for `text` (a dictation or a selection): what the capture
+/// may show, the user's name and words, learned spellings, past dictations
+/// and style rules, as `parts` allows. `None` when context sending is off.
+pub fn enriched_context(
+    app: &tauri::AppHandle,
+    settings: &crate::settings::AppSettings,
+    capture: &Capture,
+    text: &str,
+    parts: &LlmContextParts,
+) -> Option<LlmContext> {
+    if !settings.context_send_enabled {
+        return None;
+    }
+    let mut c = llm_context(capture)?;
+    c.tone = settings.styles.tone(c.style);
+    keep_parts(&mut c, parts);
+    // F63: the user's own name.
+    let me = settings.user_name.trim();
+    if !me.is_empty() && !c.names.iter().any(|n| n == me) {
+        c.names.push(me.to_string());
+    }
+    let learned = if parts.learned_words {
+        crate::learning::terms_for(app, text)
+    } else {
+        Vec::new()
+    };
+    for word in settings.custom_words.iter().cloned().chain(learned) {
+        if !c.terms.contains(&word) {
+            c.terms.push(word);
+        }
+    }
+    if settings.learning_enabled {
+        let label = app_label(capture);
+        if parts.past_dictations {
+            use tauri::Manager;
+            let now = chrono::Utc::now().timestamp();
+            match app
+                .state::<std::sync::Arc<crate::managers::history::HistoryManager>>()
+                .past_dictations(now - 30 * 86_400)
+            {
+                Ok(past) => c.past = crate::recall::similar_dictations(&past, text, &label, now),
+                Err(e) => log::warn!("Couldn't read past dictations: {e}"),
+            }
+        }
+        if parts.style_rules {
+            c.rules = crate::learning::active_rules(app, &label);
+        }
+    }
+    Some(c)
 }
 
 /// Reads the destination now (the focused field at release). Bounded in time
@@ -753,6 +929,59 @@ pub fn capture(_read_context: bool, _apps: &[String], _domains: &[String]) -> Ca
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn parts_turned_off_are_left_out() {
+        let mut c = LlmContext {
+            content: Content::Email,
+            style: Content::Email.style(),
+            tone: Tone::Default,
+            terminal: false,
+            before: "avant".into(),
+            after: "après".into(),
+            selection: "sel".into(),
+            names: vec!["Adryen".into()],
+            terms: vec!["Quorvantis".into()],
+            app: "OUTLOOK.EXE".into(),
+            window: "devis".into(),
+            site: Some("outlook.office.com".into()),
+            past: vec!["hier".into()],
+            rules: vec!["règle".into()],
+        };
+        let all = c.clone();
+        keep_parts(&mut c, &LlmContextParts::default());
+        assert_eq!(format!("{c:?}"), format!("{all:?}"));
+        keep_parts(
+            &mut c,
+            &LlmContextParts {
+                screen: false,
+                learned_words: true,
+                style_rules: false,
+                past_dictations: false,
+            },
+        );
+        assert!(c.before.is_empty() && c.after.is_empty() && c.selection.is_empty());
+        assert!(c.app.is_empty() && c.window.is_empty() && c.site.is_none());
+        assert!(c.names.is_empty() && c.terms.is_empty());
+        assert!(c.past.is_empty() && c.rules.is_empty());
+        assert_eq!(c.content, Content::Email);
+    }
+
+    #[test]
+    fn the_last_ten_reports_are_kept_newest_first() {
+        for i in 0..12 {
+            set_report(ContextReport {
+                sent: Some(format!("m{i}")),
+                ..Default::default()
+            });
+        }
+        // Other tests may record a send on the newest report meanwhile.
+        let reports = get_context_reports();
+        assert_eq!(reports.len(), REPORTS_MAX);
+        assert_eq!(reports[1].sent.as_deref(), Some("m10"));
+        assert_eq!(reports[9].sent.as_deref(), Some("m2"));
+        assert!(reports[0].at > 0);
+    }
 
     #[test]
     fn classifies_by_site_then_process() {

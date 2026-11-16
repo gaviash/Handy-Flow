@@ -189,8 +189,17 @@ async changeContextExcludedDomainsSetting(domains: string[]) : Promise<Result<nu
     else return { status: "error", error: e  as any };
 }
 },
-async getLastContextReport() : Promise<ContextReport> {
-    return await TAURI_INVOKE("get_last_context_report");
+/**
+ * The last dictations and transformations, newest first.
+ */
+async getContextReports() : Promise<ContextReport[]> {
+    return await TAURI_INVOKE("get_context_reports");
+},
+async changeRewriteContextSetting(value: LlmContextParts) : Promise<void> {
+    await TAURI_INVOKE("change_rewrite_context_setting", { value });
+},
+async changeTransformContextSetting(value: LlmContextParts) : Promise<void> {
+    await TAURI_INVOKE("change_transform_context_setting", { value });
 },
 async changeLearningEnabledSetting(enabled: boolean) : Promise<Result<null, string>> {
     try {
@@ -295,6 +304,13 @@ async changeAsrContextSetting(value: AsrContextSettings) : Promise<Result<null, 
  */
 async getAsrSupport() : Promise<AsrSupport | null> {
     return await TAURI_INVOKE("get_asr_support");
+},
+/**
+ * The phrases the user says often (30 days, ≥ 3 dictations), as the speech
+ * model gets them.
+ */
+async getFrequentExpressions() : Promise<string[]> {
+    return await TAURI_INVOKE("get_frequent_expressions");
 },
 async changeLanguageDetectionSetting(mode: LanguageDetectionMode) : Promise<Result<null, string>> {
     try {
@@ -1312,6 +1328,14 @@ learned_sound_enabled?: boolean;
  */
 asr_context?: AsrContextSettings; 
 /**
+ * Which parts of the context the rewrite gets (Settings → Context).
+ */
+rewrite_context?: LlmContextParts; 
+/**
+ * Which parts Polish, spoken instructions and saved transformations get.
+ */
+transform_context?: LlmContextParts; 
+/**
  * Defaults to empty on partial stores; the load path merges in the
  * default bindings for any missing keys before the settings are used.
  */
@@ -1396,6 +1420,34 @@ export type AsrContextSettings = { enabled: boolean; learned_words: boolean; exp
  */
 screen: boolean; max_terms: number; capture_wait_ms: number }
 /**
+ * What the speech model was given for one transcription (spec §7).
+ */
+export type AsrReport = { 
+/**
+ * The loaded model, as `arch variant`.
+ */
+model: string; accepts_vocabulary: boolean; accepts_prompt: boolean; 
+/**
+ * The "context for the speech model" setting.
+ */
+enabled: boolean; 
+/**
+ * Exactly what went in the vocabulary slot.
+ */
+vocabulary: string[]; 
+/**
+ * Exactly what went in the prompt slot (context or Whisper initial prompt).
+ */
+prompt: string | null; expressions: string[]; app: string | null; before: string | null; 
+/**
+ * `None`: the screen wasn't waited for; `Some(false)`: it came too late.
+ */
+screen_waited: boolean | null; 
+/**
+ * The model read its context back instead of speech; nothing was kept.
+ */
+echo_dropped: boolean }
+/**
  * What the loaded model accepts, for the settings page (`None` = no model).
  */
 export type AsrSupport = { vocabulary: boolean; prompt: boolean }
@@ -1463,9 +1515,13 @@ export type ClipboardHandling = "dont_modify" | "copy_to_clipboard"
  */
 export type Content = "email" | "work_chat" | "personal_chat" | "ai" | "document" | "code" | "other"
 /**
- * F114: what the last dictation read, kept and sent. Memory only.
+ * F114: what one dictation or transformation read and sent. Memory only.
  */
-export type ContextReport = { capture: Capture | null; 
+export type ContextReport = { kind: ReportKind; 
+/**
+ * Unix seconds.
+ */
+at: number; capture: Capture | null; asr: AsrReport | null; 
 /**
  * The exact user message sent to the LLM, if any.
  */
@@ -1599,6 +1655,15 @@ last_seen: number; kind?: WordKind;
  * A pending word (seen once, needs a second sighting) is not used yet.
  */
 active?: boolean }
+/**
+ * Which parts of the context the LLM gets, for the rewrite or for Polish
+ * and transformations (Settings → Context).
+ */
+export type LlmContextParts = { 
+/**
+ * The app, window, site and the text around the cursor or selection.
+ */
+screen: boolean; learned_words: boolean; style_rules: boolean; past_dictations: boolean }
 export type LogLevel = "trace" | "debug" | "info" | "warn" | "error"
 /**
  * A macOS privacy permission Handy asks for during onboarding.
@@ -1732,6 +1797,11 @@ export type RecordingRetentionPeriod = "never" | "preserve_limit" | "days_3" |
  */
 "days_30" | "weeks_2" | "months_3"
 export type RecordingStateEvent = { phase: RecordingPhase }
+/**
+ * What started a report: a dictation, a spoken instruction, Polish or a
+ * saved transformation of the selection.
+ */
+export type ReportKind = "dictation" | "instruction" | "polish" | "transform"
 /**
  * A retired ONNX model found on disk.
  */

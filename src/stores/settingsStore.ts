@@ -14,6 +14,7 @@ import type {
   VadBackend,
   LanguageDetectionMode,
   AsrContextSettings,
+  LlmContextParts,
 } from "@/bindings";
 import { commands } from "@/bindings";
 import { notify } from "@/stores/noticeStore";
@@ -237,6 +238,10 @@ const settingUpdaters: {
     commands.changeLearnedSoundEnabledSetting(value as boolean),
   asr_context: (value) =>
     commands.changeAsrContextSetting(value as AsrContextSettings),
+  rewrite_context: (value) =>
+    commands.changeRewriteContextSetting(value as LlmContextParts),
+  transform_context: (value) =>
+    commands.changeTransformContextSetting(value as LlmContextParts),
   context_excluded_domains: (value) =>
     commands.changeContextExcludedDomainsSetting(value as string[]),
   language_detection: (value) =>
