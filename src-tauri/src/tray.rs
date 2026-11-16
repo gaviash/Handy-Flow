@@ -616,9 +616,17 @@ pub fn tray_tooltip() -> String {
 
 fn version_label() -> String {
     if cfg!(debug_assertions) {
-        format!("Handy v{} (Dev)", env!("CARGO_PKG_VERSION"))
+        format!(
+            "{} v{} (Dev)",
+            crate::branding::APP_NAME,
+            env!("CARGO_PKG_VERSION")
+        )
     } else {
-        format!("Handy v{}", env!("CARGO_PKG_VERSION"))
+        format!(
+            "{} v{}",
+            crate::branding::APP_NAME,
+            env!("CARGO_PKG_VERSION")
+        )
     }
 }
 

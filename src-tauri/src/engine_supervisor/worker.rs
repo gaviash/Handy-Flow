@@ -474,7 +474,21 @@ fn ignore_app_signals() {
 fn set_process_name() {
     // SAFETY: PR_SET_NAME copies a NUL-terminated name of up to 16 bytes.
     unsafe {
-        libc::prctl(libc::PR_SET_NAME, c"Handy-worker".as_ptr());
+        libc::prctl(libc::PR_SET_NAME, WORKER_PROCESS_NAME.as_ptr());
+    }
+}
+
+/// Handy Flow's worker process name; prctl keeps at most 15 bytes of it.
+#[cfg_attr(not(target_os = "linux"), allow(dead_code))]
+const WORKER_PROCESS_NAME: &std::ffi::CStr = c"HFlow-worker";
+
+#[cfg(test)]
+mod process_name_tests {
+    #[test]
+    fn worker_name_is_handy_flow_and_fits_prctl() {
+        let name = super::WORKER_PROCESS_NAME;
+        assert_eq!(name.to_str().unwrap(), "HFlow-worker");
+        assert!(name.to_bytes().len() <= 15);
     }
 }
 

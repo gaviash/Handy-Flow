@@ -1723,8 +1723,13 @@ fn self_update_possible() -> bool {
 pub fn update_checks_forced_disabled() -> bool {
     use std::sync::OnceLock;
     static IS_UPDATER_DISABLED: OnceLock<bool> = OnceLock::new();
-    *IS_UPDATER_DISABLED
-        .get_or_init(|| utils::env_flag_enabled("HANDY_DISABLE_UPDATER") || !self_update_possible())
+    // Handy Flow (fork) has no release channel; never fetch cjpais/Handy over it.
+    const FORK_HAS_NO_UPDATES: bool = true;
+    *IS_UPDATER_DISABLED.get_or_init(|| {
+        FORK_HAS_NO_UPDATES
+            || utils::env_flag_enabled("HANDY_DISABLE_UPDATER")
+            || !self_update_possible()
+    })
 }
 
 /// Effective updater state: the user's stored preference, overridden to `false`
