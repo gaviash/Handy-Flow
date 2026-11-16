@@ -760,7 +760,7 @@
           "label": "Learned Words",
           "description": "Spellings Handy uses in your next dictations.",
           "empty": "Nothing learned yet.",
-          "heard": "heard as {{heard}}",
+          "heard": "heard as: {{heard}}",
           "delete": "Delete",
           "clear": "Clear All",
           "export": "Export",

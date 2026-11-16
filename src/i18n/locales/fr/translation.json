@@ -760,7 +760,7 @@
           "label": "Mots appris",
           "description": "Orthographes que Handy utilise dans vos prochaines dictées.",
           "empty": "Rien d'appris pour l'instant.",
-          "heard": "entendu « {{heard}} »",
+          "heard": "entendu : {{heard}}",
           "delete": "Supprimer",
           "clear": "Tout effacer",
           "export": "Exporter",

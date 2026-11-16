@@ -55,7 +55,7 @@ export const LearningSettings: React.FC = () => {
                     <span className="font-semibold">{w.term}</span>{" "}
                     <span className="text-mid-gray">
                       {t("settings.postProcessing.learning.words.heard", {
-                        heard: w.heard,
+                        heard: w.heard.join(", "),
                       })}
                     </span>
                   </span>
