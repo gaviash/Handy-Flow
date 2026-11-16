@@ -685,8 +685,9 @@ pub(crate) fn apply_verdicts(
     news
 }
 
-/// `same_as` from an index in `rules_sent` to the same rule's index now, or
-/// `None` once that rule is gone.
+/// `same_as` from an index in `rules_sent` to the same rule's index now. A
+/// verdict about a rule deleted during the call is dropped, so it can't come
+/// back; an index the judge made up is a new rule.
 fn remap_same_as(
     verdicts: &[crate::judge::Verdict],
     rules_sent: &[String],
@@ -694,12 +695,15 @@ fn remap_same_as(
 ) -> Vec<crate::judge::Verdict> {
     verdicts
         .iter()
-        .map(|v| crate::judge::Verdict {
-            same_as: v
-                .same_as
-                .and_then(|i| rules_sent.get(i))
-                .and_then(|t| rules_now.iter().position(|r| &r.rule == t)),
-            ..v.clone()
+        .filter_map(|v| {
+            let same_as = match v.same_as.and_then(|i| rules_sent.get(i)) {
+                Some(t) => Some(rules_now.iter().position(|r| &r.rule == t)?),
+                None => None,
+            };
+            Some(crate::judge::Verdict {
+                same_as,
+                ..v.clone()
+            })
         })
         .collect()
 }
@@ -1282,20 +1286,33 @@ mod tests {
             last_seen: 0,
             apps: Vec::new(),
         };
-        let v = |same_as| Verdict {
+        let v = |same_as, text: Option<&str>| Verdict {
             kind: VerdictKind::StyleRule,
             heard: None,
             term: None,
-            rule: None,
+            rule: text.map(Into::into),
             same_as,
-            consistent_with_history: false,
+            consistent_with_history: true,
         };
         let sent = vec!["A".to_string(), "B".to_string()];
-        // "A" was deleted during the call: the judge's 1 ("B") is now 0.
-        let now = vec![rule("B")];
-        let out = remap_same_as(&[v(Some(1)), v(Some(0)), v(Some(9))], &sent, &now);
+        // "A" was deleted during the call: the judge's 1 ("B") is now 0, its 0
+        // is dropped, and an index it made up stays a new rule.
+        let mut m = Memory {
+            rules: vec![rule("B")],
+            ..Default::default()
+        };
+        let verdicts = [
+            v(Some(1), None),
+            v(Some(0), Some("A")),
+            v(Some(9), Some("C")),
+        ];
+        let out = remap_same_as(&verdicts, &sent, &m.rules);
         let got: Vec<_> = out.iter().map(|v| v.same_as).collect();
-        assert_eq!(got, vec![Some(0), None, None]);
+        assert_eq!(got, vec![Some(0), None]);
+        apply_verdicts(&mut m, &out, "Code", 1);
+        let rules: Vec<_> = m.rules.iter().map(|r| r.rule.as_str()).collect();
+        assert_eq!(rules, vec!["B", "C"], "the deleted rule never comes back");
+        assert_eq!(m.rules[0].count, 2);
     }
 
     #[test]

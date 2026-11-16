@@ -2208,6 +2208,8 @@ mod tests {
         // Common words also found in the text before the cursor are speech.
         let p = "Texte : je pense que tu es d'accord, je suis là. Vocabulaire : log.";
         assert!(!echoes_prompt("Je suis d'accord.", Some(p)));
+        // Known limit: saying again, word for word, a run of the text before
+        // the cursor reads as an echo and is dropped.
         assert!(echoes_prompt("je pense que tu es d'accord", Some(p)));
         assert!(!echoes_prompt("Vocabulaire log Claude", None));
     }
