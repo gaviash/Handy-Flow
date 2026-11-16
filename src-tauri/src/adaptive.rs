@@ -27,7 +27,15 @@ mangles well-known technical terms and product names: restore the usual spelling
 (\"PostGer\" → \"Postgres\", \"un triade\" said about processes → \"un thread\"). Never change other names.
 2. Remove hesitations, stutters, repeated words and false starts. The recognizer writes hesitations as words that \
 make no sense where they stand: \"euh\", \"heu\", \"eux\", \"e\", \"hum\", \"ben\", \"um\", \"uh\", \"like\" used \
-as filler. Example: \"je voulais dire que eux la réunion\" → \"je voulais dire que la réunion\".
+as filler. Example: \"je voulais dire que eux la réunion\" → \"je voulais dire que la réunion\". \
+Speaking out loud, the user repeats themself while thinking: a word or a group of words said twice or more in a row, \
+or restarted a few words later, is spoken repetition, not emphasis. Keep it ONCE, even when the copies are separated \
+by a comma, a filler or a few words, and even when they differ slightly: \"je pense que je pense que c'est bon\" → \
+\"je pense que c'est bon\"; \"il faut, il faut qu'on, il faut qu'on valide\" → \"il faut qu'on valide\"; \
+\"on va, euh, on va faire le point\" → \"on va faire le point\"; \"c'est le, c'est le fichier, le fichier de config\" → \
+\"c'est le fichier de config\"; \"we need to, we need to ship it\" → \"we need to ship it\". The same idea said twice \
+in a row in other words keeps only its clearest, most complete version. Keep a repetition only when it is clearly \
+deliberate and changes the meaning (\"très, très important\", \"non, non et non\").
 3. Apply spoken self-corrections: when the speaker corrects themself, delete the corrected part and the correction \
 words, keep only the final version: \"mardi, non pardon, mercredi\" → \"mercredi\"; \"Tuesday, I mean Wednesday\" \
 → \"Wednesday\". A phrase that only adds a precision (\"enfin je veux dire\") is kept with what it adds.
