@@ -1,0 +1,161 @@
+/* Handy Flow palettes. A palette is 13 colors, each light-dark(light, dark);
+ * the mode setting only flips `color-scheme` (see theme.css), so there is no
+ * separate dark block. Every other surface, grey and line is derived below.
+ * Values: docs/superpowers/specs/2026-11-16-handy-flow-brand-design.md §2.
+ * scripts/check-themes.ts checks completeness and contrast. */
+
+[data-palette="rose"] {
+  --bg: light-dark(#faf7ef, #18141a);
+  --ink: light-dark(#1c1915, #f6f1ea);
+  --accent: light-dark(#f28cbb, #f6a5c8);
+  --on-accent: light-dark(#3b1d2c, #2a1320);
+  --accent-text: light-dark(#b13c72, #f6a5c8);
+  --side: light-dark(#f3eee2, #141016);
+  --side-ink: var(--ink);
+  --pill: light-dark(#1c1915, #2c2530);
+  --pill-ink: #faf7ef;
+  --pill-accent: light-dark(#f28cbb, #f6a5c8);
+  --icon-bg: light-dark(#f28cbb, #2a2330);
+  --icon-fg: light-dark(#3b1d2c, #f6a5c8);
+  --icon-dot: light-dark(#1c1915, #c9b6f2);
+}
+
+[data-palette="sauge"] {
+  --bg: light-dark(#f5f3e8, #0f1916);
+  --ink: light-dark(#171a16, #eef0e6);
+  --accent: light-dark(#12443d, #8fd3bd);
+  --on-accent: light-dark(#f5f3e8, #0c2420);
+  --accent-text: light-dark(#12443d, #8fd3bd);
+  --side: light-dark(#12443d, #0b2420);
+  --side-ink: #f2f1e6;
+  --pill: light-dark(#12443d, #173a33);
+  --pill-ink: #f5f3e8;
+  --pill-accent: #f39ac2;
+  --icon-bg: #12443d;
+  --icon-fg: #f5f3e8;
+  --icon-dot: #f39ac2;
+  --wordmark-side: #f39ac2;
+}
+
+[data-palette="prune"] {
+  --bg: light-dark(#f7f3fa, #141117);
+  --ink: light-dark(#1d1622, #f4eef6);
+  --accent: light-dark(#6b3fa0, #c9b6f2);
+  --on-accent: light-dark(#ffffff, #1d1426);
+  --accent-text: light-dark(#6b3fa0, #d4c4f6);
+  --side: light-dark(#eee7f4, #1a151f);
+  --side-ink: var(--ink);
+  --pill: light-dark(#2a1f33, #2b2333);
+  --pill-ink: #f7f3fa;
+  --pill-accent: #f6a5c8;
+  --icon-bg: light-dark(#2a1f33, #2b2333);
+  --icon-fg: #f6a5c8;
+  --icon-dot: #c9b6f2;
+}
+
+[data-palette="encre"] {
+  --bg: light-dark(#fafaf8, #111111);
+  --ink: light-dark(#111111, #f2f2ef);
+  --accent: light-dark(#111111, #f2f2ef);
+  --on-accent: light-dark(#fafaf8, #111111);
+  --accent-text: var(--ink);
+  --side: light-dark(#f1f1ee, #161616);
+  --side-ink: var(--ink);
+  --pill: light-dark(#111111, #222222);
+  --pill-ink: #fafaf8;
+  --pill-accent: #ffffff;
+  --icon-bg: light-dark(#111111, #f2f2ef);
+  --icon-fg: light-dark(#fafaf8, #111111);
+  --icon-dot: #f28cbb;
+}
+
+[data-palette="ocean"] {
+  --bg: light-dark(#f4f7fb, #0c1420);
+  --ink: light-dark(#0f1b2a, #e9f0f8);
+  --accent: light-dark(#2459c7, #7aa7ff);
+  --on-accent: light-dark(#ffffff, #0b1a33);
+  --accent-text: light-dark(#2459c7, #9cbcff);
+  --side: light-dark(#0f2a4a, #0a192b);
+  --side-ink: #eaf1fb;
+  --pill: light-dark(#0f2a4a, #14283f);
+  --pill-ink: #eaf1fb;
+  --pill-accent: #6ee7d8;
+  --icon-bg: #0f2a4a;
+  --icon-fg: #eaf1fb;
+  --icon-dot: #6ee7d8;
+  --wordmark-side: #6ee7d8;
+}
+
+[data-palette="ambre"] {
+  --bg: light-dark(#fbf6ee, #1a140f);
+  --ink: light-dark(#22180f, #f7eee3);
+  --accent: light-dark(#c2532a, #f0956a);
+  --on-accent: light-dark(#ffffff, #2a130a);
+  --accent-text: light-dark(#a8461f, #f4a985);
+  --side: light-dark(#f4eadb, #201812);
+  --side-ink: var(--ink);
+  --pill: light-dark(#2a1d14, #2e231a);
+  --pill-ink: #fbf6ee;
+  --pill-accent: #f0956a;
+  --icon-bg: light-dark(#c8582c, #2e231a);
+  --icon-fg: light-dark(#fff7ee, #f0956a);
+  --icon-dot: light-dark(#22180f, #f7d38a);
+}
+
+[data-palette="lime"] {
+  --bg: light-dark(#f6f7f0, #0b0c0a);
+  --ink: light-dark(#141611, #eef2e4);
+  --accent: #c6ff3d;
+  --on-accent: #141611;
+  --accent-text: light-dark(#4a7300, #c6ff3d);
+  --side: light-dark(#141611, #0b0c0a);
+  --side-ink: #eef2e4;
+  --pill: #141611;
+  --pill-ink: #eef2e4;
+  --pill-accent: #c6ff3d;
+  --icon-bg: #141611;
+  --icon-fg: #c6ff3d;
+  --icon-dot: #ffffff;
+  --wordmark-side: #c6ff3d;
+}
+
+[data-palette="contraste"] {
+  --bg: light-dark(#ffffff, #000000);
+  --ink: light-dark(#000000, #ffffff);
+  --accent: light-dark(#0040d6, #ffd84a);
+  --on-accent: light-dark(#ffffff, #000000);
+  --accent-text: light-dark(#0040d6, #ffd84a);
+  --side: var(--bg);
+  --side-ink: var(--ink);
+  --pill: #000000;
+  --pill-ink: #ffffff;
+  --pill-accent: #ffd84a;
+  --icon-bg: light-dark(#000000, #ffd84a);
+  --icon-fg: light-dark(#ffd84a, #000000);
+  --icon-dot: light-dark(#ffffff, #000000);
+  --line-k: 40%;
+  --line-strong-k: 70%;
+  --ink-2-k: 88%;
+}
+
+/* Derived tokens: recomputed on every element that carries a palette, so a
+ * palette preview card renders in its own colors. */
+[data-palette] {
+  --surface: color-mix(in oklab, var(--ink) 5%, var(--bg));
+  --raised: light-dark(
+    color-mix(in oklab, #fff 70%, var(--bg)),
+    color-mix(in oklab, var(--ink) 6%, var(--bg))
+  );
+  --ink-2: color-mix(in oklab, var(--ink) var(--ink-2-k, 72%), var(--bg));
+  --ink-3: color-mix(in oklab, var(--ink) 60%, var(--bg));
+  --line: color-mix(in oklab, var(--ink) var(--line-k, 11%), transparent);
+  --line-strong: color-mix(
+    in oklab,
+    var(--ink) var(--line-strong-k, 26%),
+    transparent
+  );
+  --accent-wash: color-mix(in oklab, var(--accent) 18%, var(--bg));
+  --side-ink-2: color-mix(in oklab, var(--side-ink) 70%, var(--side));
+  --side-active: color-mix(in oklab, var(--side-ink) 9%, var(--side));
+  --shadow-c: light-dark(rgba(40, 30, 20, 0.22), rgba(0, 0, 0, 0.6));
+}

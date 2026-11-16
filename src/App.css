@@ -10,6 +10,7 @@
   --color-background: var(--color-background);
   --color-background-ui: var(--color-background-ui);
   --color-logo-primary: var(--color-logo-primary);
+  --color-on-accent: var(--color-on-accent);
   --color-warning: var(--color-warning);
   --color-error: var(--color-error);
   --color-moss: var(--color-moss);
@@ -195,23 +196,16 @@
 
   /* Log console surface — a subtle shade off the app background so the live log
      viewer reads as a distinct console. In light mode this is a faint gray code
-     block (matching other surfaces); the dark theme overrides it below. */
-  --color-log-surface: color-mix(in srgb, var(--color-background), black 6%);
+     block (matching other surfaces); a bit darker still in dark mode. */
+  --color-log-surface: light-dark(
+    color-mix(in srgb, var(--color-background), black 6%),
+    color-mix(in srgb, var(--color-background), black 15%)
+  );
 
-  /* Apply colors */
+  /* Apply colors (color-scheme, which drives every light/dark pair, is set in
+     theme.css so the overlay shares it). */
   color: var(--color-text);
   background-color: var(--color-background);
-
-  /* Without this, Windows draws a <select> popup white under light text. */
-  color-scheme: light dark;
-}
-
-:root[data-theme="light"] {
-  color-scheme: light;
-}
-
-:root[data-theme="dark"] {
-  color-scheme: dark;
 }
 
 .container {
@@ -221,13 +215,6 @@
   flex-direction: column;
   justify-content: center;
   text-align: center;
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    /* Just a bit darker than the (already dark) background, keeping its warm tint */
-    --color-log-surface: color-mix(in srgb, var(--color-background), black 15%);
-  }
 }
 
 /* macOS's own CJK fonts already share their weights. */
