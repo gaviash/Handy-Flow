@@ -21,7 +21,7 @@ Banc : `src-tauri/tests/asr_context_bench.rs`, cas construits par `adaptive/benc
 - L'échantillon est petit (20 dictations, 7 termes). À refaire avec plus de dictations une fois `kept_text` rempli par l'usage.
 - Whisper (prompt initial) n'a pas été mesuré : aucun modèle Whisper n'est téléchargé.
 
-## Qwen3-ASR 1.7B, modèle de test retenu par l'utilisateur (2026-11-16, câblage final)
+## Qwen3-ASR 1.7B, modèle de test retenu par l'utilisateur (2026-11-16)
 
 67 cas : 18 dictées réelles de `Handy Flow` (texte gardé ou réécrit) + 49 phrases synthétiques (voix SAPI, 41 du corpus + 8 riches en termes techniques). 48 occurrences de termes. GPU Vulkan, langue non forcée. Les WAV et les cas restent hors du dépôt.
 
@@ -30,6 +30,7 @@ Banc : `src-tauri/tests/asr_context_bench.rs`, cas construits par `adaptive/benc
 | parakeet-ultra Q8_0 | aucune | 0.115 | 0.115 | 28/48 | 28/48 | 26922 | 25623 |
 | Qwen3-ASR 1.7B Q8_0 | vocabulary, context prompt | 0.117 | **0.099** | 33/48 | **43/48** | 162433 | 162948 |
 
-- Avec contexte, le 1.7B écrit 10 termes justes de plus (43/48 contre 33/48) et passe sous parakeet en WER (0,099 contre 0,115). Le contexte ne coûte rien en latence.
+- Avec contexte, le 1.7B écrit 10 termes justes de plus (43/48 contre 33/48) et passe sous parakeet en WER (0,099 contre 0,115). Aucun surcoût notable de latence observé (+0,3 %, une seule passe, sans mesure de dispersion).
 - Il reste environ 6 fois plus lent que parakeet : ≈ 2,4 s par dictée contre ≈ 0,4 s sur ces cas.
-- Les mêmes gains que la mesure préalable (0.6B), en plus nets : la règle du spec est respectée.
+- Les mêmes gains que la mesure préalable (0.6B), en plus nets.
+- **Limite** : comme la mesure préalable, le banc donne au modèle les termes attendus de chaque cas et appelle le modèle directement. Il mesure un contexte favorable, pas le contexte que l'application construit (termes appris, expressions, texte avant le curseur) ni le filtre anti-écho. Le gain dans l'usage réel reste à confirmer.
