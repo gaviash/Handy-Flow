@@ -1195,6 +1195,25 @@ impl ShortcutAction for TranscribeAction {
                                 .filter(|s| !s.is_empty())
                                 .collect::<Vec<_>>()
                                 .join(" · ");
+                            // Handy Adaptive: what the user wrote before and their rules.
+                            if let Some(c) = llm_context
+                                .as_mut()
+                                .filter(|_| crate::settings::get_settings(&ah).learning_enabled)
+                            {
+                                let now = chrono::Utc::now().timestamp();
+                                match hm.past_dictations(now - 30 * 86_400) {
+                                    Ok(past) => {
+                                        c.past = crate::recall::similar_dictations(
+                                            &past,
+                                            &transcription,
+                                            &app_label,
+                                            now,
+                                        )
+                                    }
+                                    Err(e) => warn!("Couldn't read past dictations: {e}"),
+                                }
+                                c.rules = crate::learning::active_rules(&ah, &app_label);
+                            }
                             crate::context::set_report(crate::context::ContextReport {
                                 capture: Some(capture),
                                 sent: None,

@@ -407,13 +407,22 @@ pub struct LlmContext {
     pub names: Vec<String>,
     /// Spellings to respect: page terms (F40) and the user's custom words.
     pub terms: Vec<String>,
+    /// Handy Adaptive: the app, its window title (redacted) and web host.
+    pub app: String,
+    pub window: String,
+    pub site: Option<String>,
+    /// Past dictations like this one, as the user kept them (filled by actions).
+    pub past: Vec<String>,
+    /// The user's learned style rules (filled by actions).
+    pub rules: Vec<String>,
 }
 
 /// Longest selection Polish and voice instructions transform (F121).
 pub const SELECTION_MAX: usize = 8_000;
 
-const BEFORE_CHARS: usize = 300;
-const AFTER_CHARS: usize = 150;
+const BEFORE_CHARS: usize = 1500;
+const AFTER_CHARS: usize = 500;
+const WINDOW_CHARS: usize = 200;
 const SELECTION_CHARS: usize = 300;
 
 pub fn llm_context(capture: &Capture) -> Option<LlmContext> {
@@ -439,6 +448,11 @@ pub fn llm_context(capture: &Capture) -> Option<LlmContext> {
         selection,
         names: capture.names.clone(),
         terms: capture.terms.clone(),
+        app: capture.process.clone(),
+        window: redact(&head(&capture.title, WINDOW_CHARS)),
+        site: capture.host.clone(),
+        past: Vec::new(),
+        rules: Vec::new(),
     })
 }
 
@@ -968,5 +982,14 @@ mod tests {
         c.excluded = false;
         c.field.as_mut().unwrap().caret_known = false;
         assert_eq!(llm_context(&c).unwrap().before, "");
+        // The app and window go along, the window title redacted like the field.
+        c.process = "OUTLOOK.EXE".into();
+        c.title = "Re: devis - jean@exemple.fr - Outlook".into();
+        c.host = Some("outlook.office.com".into());
+        let ctx = llm_context(&c).unwrap();
+        assert_eq!(ctx.app, "OUTLOOK.EXE");
+        assert!(!ctx.window.contains("jean@exemple.fr"), "{}", ctx.window);
+        assert!(ctx.window.contains("devis"));
+        assert_eq!(ctx.site.as_deref(), Some("outlook.office.com"));
     }
 }
