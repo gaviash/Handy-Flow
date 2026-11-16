@@ -1,0 +1,388 @@
+<!doctype html>
+<html lang="fr" data-dir="creme">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Handy Flow — Pilote</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700;800&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet">
+<style>
+/* ---------- Directions : chaque palette est un jeu de tokens ---------- */
+:root, [data-dir="creme"] {
+  --bg: #faf7ef; --surface: #f1ecdf; --raised: #fffdf8;
+  --ink: #1c1915; --ink-2: #5d574d; --ink-3: #8a8377;
+  --line: rgba(28,25,21,.12); --line-strong: rgba(28,25,21,.28);
+  --accent: #f28cbb; --accent-ink: #3b1d2c; --accent-wash: #fbe3ee;
+  --icon-bg: #f28cbb; --icon-fg: #3b1d2c; --icon-dot: #1c1915;
+  --pill: #1c1915; --pill-ink: #faf7ef; --pill-accent: #f28cbb;
+  --side: #f4efe3; --side-active: #fffdf8;
+  --ok: #2f7d5b;
+  --shadow: 0 1px 2px rgba(40,30,20,.06), 0 18px 40px -18px rgba(40,30,20,.28);
+  color-scheme: light;
+}
+[data-dir="minuit"] {
+  --bg: #141117; --surface: #1d1921; --raised: #241f29;
+  --ink: #f6f1ea; --ink-2: #bdb3bd; --ink-3: #8c8290;
+  --line: rgba(246,241,234,.10); --line-strong: rgba(246,241,234,.24);
+  --accent: #f6a5c8; --accent-ink: #2a1320; --accent-wash: rgba(246,165,200,.14);
+  --icon-bg: #221c27; --icon-fg: #f6a5c8; --icon-dot: #c9b6f2;
+  --pill: #241f29; --pill-ink: #f6f1ea; --pill-accent: #f6a5c8;
+  --side: #18141b; --side-active: #2a2430;
+  --ok: #86c9a4;
+  --shadow: 0 1px 2px rgba(0,0,0,.4), 0 24px 60px -20px rgba(0,0,0,.7);
+  color-scheme: dark;
+}
+[data-dir="sauge"] {
+  --bg: #f5f3e8; --surface: #eae7d6; --raised: #fffef7;
+  --ink: #171a16; --ink-2: #545a50; --ink-3: #7f8578;
+  --line: rgba(23,26,22,.12); --line-strong: rgba(23,26,22,.28);
+  --accent: #12443d; --accent-ink: #f5f3e8; --accent-wash: #dbe8e1;
+  --icon-bg: #12443d; --icon-fg: #f5f3e8; --icon-dot: #f39ac2;
+  --pill: #12443d; --pill-ink: #f5f3e8; --pill-accent: #f39ac2;
+  --side: #12443d; --side-active: rgba(245,243,232,.12);
+  --ok: #2f7d5b;
+  --shadow: 0 1px 2px rgba(20,40,30,.06), 0 18px 40px -18px rgba(20,40,30,.3);
+  color-scheme: light;
+}
+
+* { box-sizing: border-box; margin: 0; }
+html { -webkit-text-size-adjust: 100%; }
+body {
+  background: var(--bg); color: var(--ink);
+  font: 400 16px/1.55 Figtree, system-ui, "Segoe UI", sans-serif;
+  transition: background-color .5s cubic-bezier(.22,1,.36,1), color .5s;
+  font-variant-numeric: tabular-nums;
+}
+::selection { background: var(--accent); color: var(--accent-ink); }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; border-radius: 6px; }
+::-webkit-scrollbar { width: 10px; height: 10px; }
+::-webkit-scrollbar-thumb { background: var(--line-strong); border-radius: 10px; border: 3px solid var(--bg); }
+
+.serif { font-family: "Instrument Serif", Georgia, serif; font-weight: 400; }
+.wrap { max-width: 1120px; margin: 0 auto; padding: 0 24px; }
+@media (max-width: 600px) { .wrap { padding: 0 16px; } }
+
+/* ---------- En-tête ---------- */
+header.top { padding-block: 56px 32px; display: grid; gap: 28px; justify-items: start; }
+header.top h1 { font-size: clamp(44px, 7vw, 84px); line-height: 1; letter-spacing: -0.02em; text-wrap: balance; }
+header.top p { color: var(--ink-2); max-width: 62ch; font-size: 18px; }
+
+.switch { display: inline-flex; padding: 4px; gap: 4px; border-radius: 999px; background: var(--surface); border: 1px solid var(--line); flex-wrap: wrap; }
+.switch button {
+  appearance: none; border: 0; cursor: pointer; font: 600 14px/1 Figtree, sans-serif;
+  padding: 11px 18px; border-radius: 999px; background: transparent; color: var(--ink-2);
+  display: inline-flex; align-items: center; gap: 8px; transition: background .2s, color .2s;
+}
+.switch button:hover { color: var(--ink); }
+.switch button[aria-pressed="true"] { background: var(--raised); color: var(--ink); box-shadow: 0 1px 3px rgba(0,0,0,.12); }
+.swatch-dot { width: 12px; height: 12px; border-radius: 50%; box-shadow: inset 0 0 0 1px rgba(0,0,0,.15); }
+
+.dir-note { color: var(--ink-2); max-width: 70ch; min-height: 3.2em; }
+.dir-note strong { color: var(--ink); font-weight: 600; }
+
+section { padding: 56px 0; border-top: 1px solid var(--line); }
+section > .wrap > h2 { font-size: clamp(32px, 4vw, 44px); line-height: 1.1; letter-spacing: -0.01em; margin-bottom: 8px; }
+section > .wrap > .lede { color: var(--ink-2); max-width: 64ch; margin-bottom: 32px; }
+
+/* ---------- Wordmark ---------- */
+.wm { display: inline-flex; align-items: baseline; gap: .12em; color: var(--ink); white-space: nowrap; }
+.wm b { font: 800 1em/1 Figtree, sans-serif; letter-spacing: -0.035em; }
+.wm i { font: italic 400 1.18em/1 "Instrument Serif", serif; letter-spacing: -0.01em; color: var(--wm-flow, var(--ink)); }
+[data-dir="creme"] { --wm-flow: #c2477f; }
+[data-dir="minuit"] { --wm-flow: #f6a5c8; }
+[data-dir="sauge"] { --wm-flow: #12443d; }
+
+.brand-row { display: grid; grid-template-columns: 1.4fr 1fr; gap: 24px; }
+@media (max-width: 820px) { .brand-row { grid-template-columns: 1fr; } }
+.stage {
+  background: var(--raised); border: 1px solid var(--line); border-radius: 16px;
+  padding: 40px; display: grid; place-items: center; min-height: 280px; position: relative;
+}
+.stage .cap { position: absolute; left: 20px; bottom: 16px; font-size: 13px; color: var(--ink-3); font-weight: 500; }
+.stage .wm { font-size: clamp(48px, 8vw, 96px); }
+
+.icons { display: grid; grid-template-columns: repeat(3, auto); gap: 22px; align-items: end; justify-content: center; }
+.app-icon {
+  border-radius: 23%; background: var(--icon-bg); color: var(--icon-fg);
+  display: grid; place-items: center; position: relative;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.18), 0 10px 24px -12px rgba(0,0,0,.45);
+}
+.app-icon svg { width: 62%; height: 62%; transform: rotate(-8deg) translateY(2%); }
+.app-icon .dot { position: absolute; width: 16%; height: 16%; right: 15%; top: 15%; border-radius: 50%; background: var(--icon-dot); }
+.i128 { width: 128px; height: 128px; } .i64 { width: 64px; height: 64px; } .i32 { width: 32px; height: 32px; border-radius: 8px; }
+.i32 .dot { display: none; }
+.icons figcaption { font-size: 12px; color: var(--ink-3); text-align: center; margin-top: 8px; }
+
+/* ---------- Fenêtre principale ---------- */
+.window {
+  max-width: 980px; margin: 0 auto; border-radius: 14px; overflow: hidden;
+  background: var(--bg); border: 1px solid var(--line-strong); box-shadow: var(--shadow);
+}
+.titlebar { height: 38px; display: flex; align-items: center; gap: 10px; padding-left: 14px; background: var(--side); color: var(--ink-2); font-size: 12.5px; font-weight: 500; border-bottom: 1px solid var(--line); }
+[data-dir="sauge"] .titlebar { color: rgba(245,243,232,.8); border-color: rgba(245,243,232,.08); }
+.titlebar .app-icon { box-shadow: none; width: 18px; height: 18px; border-radius: 5px; }
+.titlebar .ctrls { margin-left: auto; display: flex; height: 100%; }
+.titlebar .ctrls span { width: 46px; display: grid; place-items: center; }
+.titlebar .ctrls svg { width: 10px; height: 10px; stroke: currentColor; fill: none; stroke-width: 1; }
+
+.app { display: grid; grid-template-columns: 200px 1fr; min-height: 520px; }
+@media (max-width: 720px) { .app { grid-template-columns: 1fr; } .side nav { flex-direction: row; overflow-x: auto; } .side .wm, .side .side-foot { display: none; } }
+.app > * { min-width: 0; }
+.switch { max-width: 100%; }
+[data-dir="minuit"] .app-icon { box-shadow: inset 0 0 0 1px rgba(246,165,200,.28), 0 10px 24px -12px rgba(0,0,0,.6); }
+.side { background: var(--side); border-right: 1px solid var(--line); padding: 20px 12px; display: flex; flex-direction: column; gap: 20px; }
+[data-dir="sauge"] .side { color: #f5f3e8; border-color: transparent; --ink: #f5f3e8; --ink-2: rgba(245,243,232,.72); --wm-flow: #f39ac2; }
+.side .wm { font-size: 26px; padding: 0 8px; }
+.side nav { display: flex; flex-direction: column; gap: 2px; }
+.side a {
+  display: flex; align-items: center; gap: 10px; padding: 9px 10px; border-radius: 10px;
+  color: var(--ink-2); text-decoration: none; font-size: 14px; font-weight: 500; white-space: nowrap;
+  transition: background .15s, color .15s;
+}
+.side a:hover { color: var(--ink); background: var(--side-active); }
+.side a[aria-current] { background: var(--side-active); color: var(--ink); box-shadow: 0 1px 2px rgba(0,0,0,.06); }
+[data-dir="sauge"] .side a[aria-current] { box-shadow: none; }
+.side svg.ico { width: 18px; height: 18px; flex: none; fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
+.side-foot { margin-top: auto; font-size: 12px; color: var(--ink-2); padding: 0 10px; display: flex; align-items: center; gap: 8px; }
+.live { width: 7px; height: 7px; border-radius: 50%; background: var(--ok); box-shadow: 0 0 0 3px color-mix(in srgb, var(--ok) 25%, transparent); }
+
+.main { padding: 32px 36px 36px; display: grid; grid-template-columns: minmax(0, 1fr); gap: 26px; align-content: start; }
+@media (max-width: 600px) { .main { padding: 24px 18px; } }
+.main h3 { font-size: 40px; line-height: 1; letter-spacing: -0.01em; }
+.main .sub { color: var(--ink-2); font-size: 14.5px; margin-top: 6px; }
+
+.hero-shortcut { background: var(--raised); border: 1px solid var(--line); border-radius: 16px; padding: 22px 24px; display: flex; align-items: center; gap: 20px; flex-wrap: wrap; }
+.hero-shortcut .txt { flex: 1 1 220px; }
+.hero-shortcut .txt b { display: block; font-size: 16px; font-weight: 600; }
+.hero-shortcut .txt span { color: var(--ink-2); font-size: 14px; }
+.keys { display: flex; align-items: center; gap: 6px; color: var(--ink-3); font-size: 13px; }
+kbd {
+  font: 600 13px/1 Figtree, sans-serif; color: var(--ink); background: var(--bg);
+  border: 1px solid var(--line-strong); border-bottom-width: 2px; border-radius: 8px; padding: 8px 11px; min-width: 34px; text-align: center;
+}
+
+.group h4 { font-size: 12px; text-transform: uppercase; letter-spacing: .06em; color: var(--ink-3); font-weight: 600; margin: 0 0 8px 4px; }
+.rows { background: var(--raised); border: 1px solid var(--line); border-radius: 14px; }
+.row { display: flex; align-items: center; gap: 16px; padding: 14px 18px; }
+.row + .row { border-top: 1px solid var(--line); }
+.row .t { flex: 1; min-width: 0; }
+.row .t b { display: block; font-size: 14.5px; font-weight: 600; }
+.row .t span { display: block; font-size: 13px; color: var(--ink-2); }
+.toggle { appearance: none; width: 40px; height: 24px; border-radius: 999px; background: var(--line-strong); position: relative; cursor: pointer; flex: none; transition: background .2s; border: 0; }
+.toggle::after { content: ""; position: absolute; top: 3px; left: 3px; width: 18px; height: 18px; border-radius: 50%; background: #fff; box-shadow: 0 1px 2px rgba(0,0,0,.25); transition: transform .25s cubic-bezier(.22,1,.36,1); }
+.toggle:checked { background: var(--accent); }
+.toggle:checked::after { transform: translateX(16px); }
+[data-dir="minuit"] .toggle:checked::after { background: var(--accent-ink); }
+.chip { font-size: 12.5px; font-weight: 600; padding: 5px 10px; border-radius: 999px; background: var(--accent-wash); color: var(--ink); white-space: nowrap; display: inline-flex; gap: 6px; align-items: center; }
+.select { font: 500 13.5px Figtree, sans-serif; color: var(--ink); background: var(--bg); border: 1px solid var(--line-strong); border-radius: 10px; padding: 8px 12px; display: inline-flex; gap: 8px; align-items: center; white-space: nowrap; }
+
+.history .row .t b { font-weight: 500; font-size: 14.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.history time { font-size: 12.5px; color: var(--ink-3); flex: none; }
+
+/* ---------- Overlay d'enregistrement ---------- */
+.desk {
+  border-radius: 16px; min-height: 300px; position: relative; overflow: hidden;
+  background: var(--surface); border: 1px solid var(--line);
+  display: grid; place-items: end center; padding: 32px 16px;
+}
+.desk .doc { position: absolute; inset: 28px 12% 110px; background: var(--raised); border-radius: 12px; border: 1px solid var(--line); padding: 22px 26px; font-size: 15px; color: var(--ink-2); }
+.desk .doc .caret { display: inline-block; width: 2px; height: 1.1em; background: var(--accent); vertical-align: -3px; animation: blink 1.1s steps(1) infinite; }
+[data-dir="sauge"] .desk .doc .caret { background: #12443d; }
+.pills { display: flex; gap: 14px; flex-wrap: wrap; justify-content: center; position: relative; }
+.pill {
+  height: 40px; border-radius: 999px; background: var(--pill); color: var(--pill-ink);
+  display: inline-flex; align-items: center; gap: 10px; padding: 0 16px 0 12px; font-size: 13.5px; font-weight: 600;
+  box-shadow: 0 0 0 1px rgba(255,255,255,.06) inset, 0 12px 28px -10px rgba(0,0,0,.45);
+}
+.pill .rec { width: 18px; height: 18px; border-radius: 50%; background: var(--pill-accent); display: grid; place-items: center; }
+.pill .rec::after { content: ""; width: 6px; height: 6px; border-radius: 50%; background: var(--pill); }
+.wave { display: flex; align-items: center; gap: 3px; height: 18px; }
+.wave i { width: 3px; border-radius: 3px; background: var(--pill-accent); height: 30%; animation: wv 1.1s cubic-bezier(.45,0,.55,1) infinite; }
+.wave i:nth-child(2) { animation-delay: -.9s } .wave i:nth-child(3) { animation-delay: -.7s } .wave i:nth-child(4) { animation-delay: -.45s }
+.wave i:nth-child(5) { animation-delay: -.25s } .wave i:nth-child(6) { animation-delay: -.6s } .wave i:nth-child(7) { animation-delay: -.15s }
+@keyframes wv { 0%,100% { height: 25% } 50% { height: 100% } }
+@keyframes blink { 50% { opacity: 0 } }
+.shimmer { background: linear-gradient(90deg, var(--pill-ink) 0%, color-mix(in srgb, var(--pill-ink) 40%, transparent) 50%, var(--pill-ink) 100%); background-size: 200% 100%; -webkit-background-clip: text; background-clip: text; color: transparent; animation: sh 1.6s linear infinite; }
+@keyframes sh { to { background-position: -200% 0 } }
+.spin { width: 14px; height: 14px; border-radius: 50%; border: 2px solid color-mix(in srgb, var(--pill-ink) 25%, transparent); border-top-color: var(--pill-accent); animation: rot .8s linear infinite; }
+@keyframes rot { to { transform: rotate(360deg) } }
+.pill svg.check { width: 16px; height: 16px; stroke: var(--pill-accent); fill: none; stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round; }
+.pill-cap { display: block; text-align: center; font-size: 12px; color: var(--ink-3); margin-top: 8px; font-weight: 500; }
+@media (prefers-reduced-motion: reduce) { *, *::after { animation: none !important; transition: none !important; } }
+
+/* ---------- Système ---------- */
+.sys { display: grid; grid-template-columns: repeat(2, 1fr); gap: 24px; }
+@media (max-width: 820px) { .sys { grid-template-columns: 1fr; } }
+.panel { background: var(--raised); border: 1px solid var(--line); border-radius: 16px; padding: 26px; }
+.panel h3 { font-size: 26px; margin-bottom: 16px; font-weight: 400; }
+.pal { display: grid; grid-template-columns: repeat(auto-fill, minmax(96px, 1fr)); gap: 12px; }
+.pal div { font-size: 12px; color: var(--ink-2); }
+.pal div span { display: block; height: 56px; border-radius: 10px; border: 1px solid var(--line); margin-bottom: 6px; }
+.pal code { font: 500 11.5px ui-monospace, Consolas, monospace; color: var(--ink-3); display: block; }
+.spec .big { font-size: 56px; line-height: 1; letter-spacing: -0.01em; }
+.spec .mid { font: 700 22px/1.2 Figtree; letter-spacing: -0.02em; margin-top: 14px; }
+.spec p { color: var(--ink-2); margin-top: 8px; font-size: 15px; }
+.spec small { display: block; color: var(--ink-3); font-size: 12px; margin-top: 16px; }
+table { width: 100%; border-collapse: collapse; font-size: 14px; }
+td, th { text-align: left; padding: 10px 0; border-top: 1px solid var(--line); vertical-align: top; }
+th { color: var(--ink-3); font-weight: 500; width: 42%; padding-right: 12px; }
+td code { font: 500 13px ui-monospace, Consolas, monospace; background: var(--surface); padding: 2px 6px; border-radius: 5px; }
+td s { color: var(--ink-3); }
+.warn { margin-top: 14px; font-size: 13px; color: var(--ink-2); }
+footer { padding: 40px 0 64px; color: var(--ink-3); font-size: 13px; border-top: 1px solid var(--line); }
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="hand" viewBox="0 0 126 135"><path fill-rule="evenodd" clip-rule="evenodd" fill="currentColor" stroke="currentColor" stroke-width="4" d="M59.037 128.521c-1.917-.168-4.593-.512-5.947-.766a83 83 0 0 1-5.164-1.192c-1.486-.402-3.495-1.032-4.465-1.4-.97-.369-2.695-1.149-3.833-1.734s-2.7-1.562-3.472-2.171-1.995-1.859-2.72-2.779c-.723-.92-1.547-2.199-1.831-2.842s-.621-1.904-.75-2.802c-.189-1.316-.173-1.972.083-3.384.214-1.18.57-2.28 1.093-3.37.54-1.129.74-1.756.66-2.07-.063-.248-.714-1.021-1.447-1.718s-2.017-2.176-2.853-3.286c-1.112-1.477-2.206-3.376-4.082-7.088-1.41-2.789-3.192-6.138-3.96-7.444a108 108 0 0 0-3.107-4.883c-.94-1.38-2.437-3.498-3.327-4.707A98 98 0 0 1 10.78 70.3c-1.033-1.626-1.784-3.122-2.36-4.696-.464-1.27-.914-2.818-1-3.44a27 27 0 0 1-.194-2.486c-.022-.84.093-1.859.301-2.676.185-.726.601-1.911.925-2.635.323-.723 1.077-1.904 1.675-2.623s1.627-1.727 2.286-2.24c.659-.51 1.698-1.185 2.308-1.497s1.694-.766 2.408-1.008c.714-.243 1.997-.524 2.85-.625.852-.101 2.266-.102 3.14-.001s2.157.365 2.85.588c.692.223 2.103.948 3.136 1.612s2.41 1.76 3.06 2.435c.651.676 1.578 1.803 2.06 2.505a70 70 0 0 1 2.028 3.22c.904 1.528 1.255 1.955 1.641 2 .449.05.497-.016.546-.743.029-.439-.417-2.99-.992-5.668-.574-2.678-1.587-6.822-2.252-9.21s-1.764-6.297-2.442-8.687c-.68-2.39-1.555-5.8-1.946-7.578s-.814-4.186-.94-5.35c-.177-1.641-.16-2.707.073-4.74.215-1.869.448-3.002.81-3.94.279-.723.778-1.736 1.11-2.251s1.044-1.4 1.582-1.964c.54-.566 1.466-1.33 2.06-1.7.593-.368 1.56-.854 2.148-1.08a20 20 0 0 1 2.245-.676c.646-.147 1.833-.293 2.636-.325.817-.033 2.418.1 3.632.299 1.505.247 2.536.533 3.357.933.652.317 1.68.983 2.284 1.48.603.496 1.43 1.33 1.836 1.853.406.524 1.085 1.641 1.51 2.485.424.843 1.012 2.359 1.307 3.368.294 1.01.712 2.988.928 4.396s.524 4.118.684 6.024.441 5.016.624 6.911c.182 1.895.51 4.689.727 6.207.218 1.519.582 3.48.809 4.358.227.879.636 1.899.908 2.267.371.502.672.69 1.195.75.567.066.841-.051 1.453-.62.415-.385.955-1.115 1.2-1.622s.707-1.616 1.025-2.466c.32-.849 1-3.215 1.513-5.257a451 451 0 0 0 1.766-7.339c.458-1.994 1.134-4.677 1.501-5.963.368-1.285.941-3.075 1.274-3.977s.953-2.307 1.378-3.122c.424-.816 1.281-2.083 1.904-2.817.624-.734 1.582-1.662 2.13-2.062s1.589-1.02 2.313-1.378 1.914-.763 2.645-.9c.73-.137 2.174-.255 3.21-.264 1.412-.01 2.274.088 3.456.396.867.226 2.18.702 2.917 1.057.737.356 1.802 1 2.366 1.432s1.47 1.336 2.015 2.008c.545.673 1.22 1.812 1.503 2.533s.59 1.75.683 2.289c.093.538.175 1.7.182 2.583.008 1.007-.148 2.412-.42 3.774a57 57 0 0 1-1.1 4.381c-.367 1.217-1.3 3.871-2.072 5.898s-2.074 5.416-2.892 7.531c-.818 2.116-1.9 5.152-2.403 6.748-.576 1.825-.988 3.539-1.113 4.623-.17 1.485-.148 1.78.167 2.139.355.404.383.407 1.104.12.406-.162 1.18-.76 1.718-1.327s1.466-1.688 2.063-2.49 1.867-2.547 2.823-3.875c.955-1.329 2.203-2.939 2.773-3.578s1.49-1.568 2.045-2.065a24 24 0 0 1 2.124-1.656c.614-.414 1.871-1.024 2.794-1.356.933-.336 2.385-.665 3.269-.74 1.304-.111 1.852-.066 3.042.253.798.214 1.939.627 2.536.917s1.501.882 2.008 1.315a15.6 15.6 0 0 1 1.696 1.755 14 14 0 0 1 1.341 2.119c.314.634.694 1.673.846 2.31.179.75.229 1.846.142 3.122-.096 1.398-.269 2.326-.601 3.219-.257.69-.964 2.026-1.571 2.968s-1.851 2.502-2.765 3.463a201 201 0 0 1-4.115 4.154c-1.35 1.323-2.931 2.968-3.513 3.656s-1.35 1.855-1.706 2.594-.89 2.367-1.186 3.62-.825 4.327-1.174 6.832-.823 5.392-1.053 6.416a81 81 0 0 1-.95 3.713c-.292 1.018-.959 2.882-1.483 4.144-.525 1.26-1.473 3.213-2.108 4.338s-1.701 2.749-2.37 3.608c-.667.86-1.928 2.257-2.8 3.106s-1.8 1.83-2.06 2.18c-.476.636-.476.636-.04 1.771.24.623.515 1.575.612 2.114.097.542.083 1.789-.032 2.792-.115.997-.405 2.33-.646 2.962-.24.631-.84 1.781-1.334 2.554-.689 1.078-1.34 1.753-2.795 2.897-1.16.912-2.566 1.791-3.616 2.26a37 37 0 0 1-3.67 1.356c-1.072.324-3.068.761-4.436.972a59 59 0 0 1-4.993.508c-1.378.069-3.817.107-5.419.086s-4.48-.176-6.397-.343Zm.715-2.726c2.899.29 6.13.53 7.18.533 1.051.003 3.193-.123 4.76-.279s3.803-.48 4.97-.719 2.904-.697 3.862-1.019 2.308-.882 3-1.246 1.872-1.17 2.621-1.792c.749-.621 1.65-1.568 2.004-2.103.353-.535.834-1.469 1.069-2.076.234-.606.478-1.553.54-2.104.063-.55.06-1.343-.006-1.762s-.323-1.068-.57-1.441c-.385-.581-.556-.679-1.172-.673-.398.004-1.905.453-3.35.998-1.447.545-3.695 1.205-4.997 1.467a82 82 0 0 1-4.309.733 61 61 0 0 1-3.864.363c-1.057.058-3.362.088-5.12.065-2.526-.031-4.264-.19-8.262-.754-2.785-.393-5.723-.882-6.529-1.088s-2.544-.728-3.861-1.159-3.313-1.187-4.434-1.678-3.19-1.496-4.6-2.233c-1.66-.869-2.728-1.319-3.036-1.278-.31.04-.641.347-.958.885-.265.453-.597 1.339-.736 1.97-.139.63-.215 1.694-.17 2.363.046.669.285 1.785.532 2.48.25.702.902 1.84 1.466 2.558.56.712 1.497 1.707 2.083 2.212a20 20 0 0 0 2.227 1.629c.639.391 1.923 1.027 2.854 1.415.93.387 2.538.976 3.57 1.309 1.034.333 2.761.805 3.84 1.049s2.447.534 3.043.645 3.455.44 6.353.73Zm-.352-14.434c1.472.183 4.027.396 5.676.473s3.883.109 4.963.071c1.08-.037 3.05-.17 4.377-.294 1.328-.125 3.288-.41 4.355-.633a65 65 0 0 0 4.128-1.05c1.202-.355 2.582-.841 3.067-1.08.484-.24 1.849-1.14 3.031-1.999s2.732-2.144 3.443-2.853c.71-.708 1.832-2.028 2.491-2.932.66-.903 1.63-2.447 2.156-3.43.526-.982 1.384-2.92 1.907-4.306.522-1.386 1.205-3.442 1.517-4.568.375-1.353.882-4.277 1.496-8.63.676-4.787 1.071-7.02 1.448-8.18a23 23 0 0 1 1.272-3.019c.414-.784 1.3-2.056 1.969-2.826.668-.771 2.641-2.786 4.384-4.477s3.78-3.837 4.527-4.767c.843-1.051 1.623-2.294 2.06-3.282.602-1.36.723-1.862.836-3.456.114-1.604.064-2.058-.36-3.243a7.9 7.9 0 0 0-1.465-2.498c-.589-.676-1.405-1.342-2.065-1.682-.6-.31-1.639-.726-2.308-.924-.913-.27-1.576-.34-2.664-.28-.824.046-1.979.29-2.682.566-.734.29-1.847 1-2.75 1.755-.835.698-2.205 2.089-3.046 3.091-.842 1.002-2.306 2.91-3.256 4.239s-2.209 3.028-2.799 3.775-1.685 1.88-2.434 2.517-1.737 1.28-2.197 1.43c-.46.148-1.174.233-1.587.188s-1.03-.237-1.368-.427c-.34-.19-.812-.64-1.05-1a6 6 0 0 1-.64-1.357c-.143-.489-.117-1.404.083-2.985.23-1.813.514-2.94 1.39-5.508.607-1.776 1.933-5.29 2.947-7.808a471 471 0 0 0 2.974-7.568c.62-1.644 1.431-4.026 1.801-5.295.426-1.459.774-3.192.948-4.719.157-1.376.21-2.852.124-3.435a11.6 11.6 0 0 0-.502-1.96c-.193-.515-.811-1.516-1.374-2.225-.634-.8-1.473-1.567-2.207-2.02a17 17 0 0 0-2.462-1.204c-.935-.348-1.882-.523-3.545-.652-2.026-.159-2.444-.126-3.917.309-1.27.375-2.014.76-3.237 1.681-1.182.89-1.808 1.542-2.45 2.552-.475.747-1.123 1.965-1.44 2.71-.316.743-.866 2.354-1.221 3.58a126 126 0 0 0-1.256 4.774c-.335 1.4-.995 4.311-1.466 6.47s-1.167 5.004-1.545 6.323c-.379 1.319-.945 3.064-1.26 3.878-.314.814-.91 2.042-1.325 2.73-.415.686-1.058 1.54-1.428 1.897s-1.11.842-1.645 1.078c-.697.307-1.233.395-1.893.309-.513-.067-1.248-.34-1.658-.614-.405-.271-1.027-.874-1.384-1.34-.356-.465-.887-1.573-1.18-2.462s-.714-2.794-.937-4.232-.557-4.442-.742-6.676-.499-5.839-.697-8.011-.547-5.064-.774-6.426c-.228-1.361-.749-3.451-1.159-4.643-.618-1.801-.96-2.437-2.022-3.766-1.078-1.35-1.5-1.713-2.702-2.327-1.063-.542-1.908-.809-3.325-1.048-1.368-.23-2.328-.275-3.43-.16-.843.089-2.272.42-3.178.738-.905.318-2.163.946-2.794 1.396a7.2 7.2 0 0 0-1.88 1.987c-.402.642-.911 1.799-1.131 2.57-.255.892-.439 2.17-.506 3.516-.064 1.274.024 3.046.22 4.463.18 1.293.773 4.092 1.32 6.222.545 2.13 1.474 5.557 2.064 7.616.59 2.06 1.51 5.424 2.046 7.477s1.408 5.802 1.938 8.331 1.138 5.84 1.35 7.357c.277 1.995.335 3.185.207 4.295-.097.845-.373 2.046-.614 2.668s-.779 1.625-1.194 2.228c-.416.602-1.156 1.456-1.645 1.897s-1.192.98-1.563 1.197c-.37.216-.878.43-1.126.475-.316.058-.563-.058-.821-.383-.26-.328-.315-.59-.183-.886.102-.231.668-.865 1.257-1.407s1.309-1.3 1.6-1.685c.372-.493.52-.894.498-1.36-.017-.362-.603-1.806-1.303-3.208s-1.8-3.51-2.448-4.683-1.806-2.949-2.577-3.944-1.89-2.205-2.488-2.688-1.566-1.118-2.151-1.41c-.686-.343-1.745-.643-2.978-.843-1.357-.22-2.363-.263-3.46-.148-.851.09-2.306.439-3.233.777a13.4 13.4 0 0 0-3.12 1.677c-.788.584-1.73 1.403-2.093 1.819s-.907 1.283-1.21 1.927c-.372.791-.607 1.673-.725 2.717-.096.85-.112 2.05-.036 2.667s.296 1.645.489 2.284.63 1.795.973 2.57 1.131 2.186 1.752 3.137c.62.95 2.34 3.394 3.821 5.43 1.48 2.036 3.31 4.642 4.066 5.793a75 75 0 0 1 2.588 4.314c.668 1.223 2.177 4.141 3.352 6.485 1.733 3.456 2.488 4.716 3.995 6.666 1.022 1.322 2.501 3.017 3.288 3.766s2.283 1.899 3.327 2.556a62 62 0 0 0 3.605 2.083c.94.489 2.614 1.274 3.722 1.746 1.108.471 2.624 1.058 3.37 1.305s2.238.66 3.314.917 2.665.615 3.53.795 2.776.478 4.249.662Z"/></symbol>
+</svg>
+
+<header class="top wrap">
+  <span class="wm" style="font-size:30px"><b>Handy</b><i>Flow</i></span>
+  <h1 class="serif">Trois directions pour <em>Handy&nbsp;Flow</em></h1>
+  <p>Le geste de Handy (la main, le rose, la rondeur) et la retenue éditoriale de Wispr Flow (serif chaleureux, sans-serif net, fonds crème). Changez de direction : toute la page, la fenêtre et l’overlay suivent.</p>
+  <div class="switch" role="group" aria-label="Direction">
+    <button data-set="creme" aria-pressed="true"><span class="swatch-dot" style="background:#f28cbb"></span>A · Crème &amp; Rose</button>
+    <button data-set="minuit" aria-pressed="false"><span class="swatch-dot" style="background:#241f29"></span>B · Minuit</button>
+    <button data-set="sauge" aria-pressed="false"><span class="swatch-dot" style="background:#12443d"></span>C · Sauge</button>
+  </div>
+  <p class="dir-note" id="note"></p>
+</header>
+
+<section>
+  <div class="wrap">
+    <h2 class="serif">Le nom et l’icône</h2>
+    <p class="lede">« Handy » garde un sans-serif gras et compact (Figtree 800) ; « Flow » passe en italique serif (Instrument Serif), comme une voix qui coule. La main reste le symbole, recolorée par direction ; le point marque l’écoute.</p>
+    <div class="brand-row">
+      <div class="stage"><span class="wm"><b>Handy</b><i>Flow</i></span><span class="cap">Wordmark · Figtree 800 + Instrument Serif italique</span></div>
+      <div class="stage">
+        <div class="icons">
+          <figure><div class="app-icon i128"><span class="dot"></span><svg><use href="#hand"/></svg></div><figcaption>128 · dock</figcaption></figure>
+          <figure><div class="app-icon i64"><span class="dot"></span><svg><use href="#hand"/></svg></div><figcaption>64</figcaption></figure>
+          <figure><div class="app-icon i32"><svg><use href="#hand"/></svg></div><figcaption>32 · tray</figcaption></figure>
+        </div>
+        <span class="cap">Icône d’app · .ico / .icns / tray</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <h2 class="serif">La fenêtre principale</h2>
+    <p class="lede">Même structure que l’app actuelle (barre latérale, sections Général → À propos), mais titres en serif, rangées groupées, raccourci mis en avant. Les interrupteurs sont cliquables.</p>
+    <div class="window">
+      <div class="titlebar"><div class="app-icon"><svg><use href="#hand"/></svg></div>Handy Flow
+        <div class="ctrls"><span><svg viewBox="0 0 10 10"><path d="M0 5h10"/></svg></span><span><svg viewBox="0 0 10 10"><rect x=".5" y=".5" width="9" height="9"/></svg></span><span><svg viewBox="0 0 10 10"><path d="M0 0l10 10M10 0L0 10"/></svg></span></div>
+      </div>
+      <div class="app">
+        <aside class="side">
+          <span class="wm"><b>Handy</b><i>Flow</i></span>
+          <nav>
+            <a href="#" aria-current="page"><svg class="ico" viewBox="0 0 24 24"><path d="M3 11l9-7 9 7v9a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z"/></svg>Général</a>
+            <a href="#"><svg class="ico" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>Historique</a>
+            <a href="#"><svg class="ico" viewBox="0 0 24 24"><rect x="6" y="6" width="12" height="12" rx="2"/><path d="M9 2v4M15 2v4M9 18v4M15 18v4M2 9h4M2 15h4M18 9h4M18 15h4"/></svg>Modèles</a>
+            <a href="#"><svg class="ico" viewBox="0 0 24 24"><path d="M12 3l1.8 4.7L18.5 9.5l-4.7 1.8L12 16l-1.8-4.7L5.5 9.5l4.7-1.8z"/><path d="M19 15l.8 2.2L22 18l-2.2.8L19 21l-.8-2.2L16 18l2.2-.8z"/></svg>Post-traitement</a>
+            <a href="#"><svg class="ico" viewBox="0 0 24 24"><path d="M4 7h10M18 7h2M4 17h4M12 17h8"/><circle cx="16" cy="7" r="2"/><circle cx="10" cy="17" r="2"/></svg>Avancé</a>
+            <a href="#"><svg class="ico" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 8h.01"/></svg>À propos</a>
+          </nav>
+          <div class="side-foot"><span class="live"></span>Modèle chargé</div>
+        </aside>
+        <div class="main">
+          <div><h3 class="serif">Général</h3><p class="sub">Parlez n’importe où. Le texte arrive là où se trouve votre curseur.</p></div>
+          <div class="hero-shortcut">
+            <div class="txt"><b>Raccourci de dictée</b><span>Maintenez pour parler, relâchez pour coller.</span></div>
+            <div class="keys"><kbd>Ctrl</kbd>+<kbd>Win</kbd></div>
+          </div>
+          <div class="group"><h4>Dictée</h4>
+            <div class="rows">
+              <div class="row"><div class="t"><b>Modèle</b><span>Local, rien ne quitte votre ordinateur</span></div><span class="chip"><span class="live"></span>Qwen3-ASR 1.7B</span></div>
+              <div class="row"><div class="t"><b>Langue</b><span>Détection automatique entre vos langues</span></div><span class="select">Français, English ▾</span></div>
+              <div class="row"><div class="t"><b>Retirer les hésitations</b><span>« euh », « bah », répétitions</span></div><input class="toggle" type="checkbox" checked aria-label="Retirer les hésitations"></div>
+              <div class="row"><div class="t"><b>Son de démarrage</b><span>Un petit signal quand l’écoute commence</span></div><input class="toggle" type="checkbox" aria-label="Son de démarrage"></div>
+            </div>
+          </div>
+          <div class="group history"><h4>Récent</h4>
+            <div class="rows">
+              <div class="row"><div class="t"><b>Ok, envoie-moi le devis d’ici jeudi et on cale l’appel vendredi matin.</b></div><time>il y a 2 min</time></div>
+              <div class="row"><div class="t"><b>Refactor the overlay so the pill width comes from one token.</b></div><time>11:42</time></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <h2 class="serif">L’overlay d’enregistrement</h2>
+    <p class="lede">La pastille garde les dimensions actuelles (40&nbsp;px de haut, 172 à 216&nbsp;px de large) pour ne pas toucher à <code>overlay.rs</code>. Trois états : écoute, transcription, collé.</p>
+    <div class="desk">
+      <div class="doc">Bonjour Camille, suite à notre échange de ce matin<span class="caret"></span></div>
+      <div class="pills">
+        <div><div class="pill"><span class="rec"></span><span class="wave"><i></i><i></i><i></i><i></i><i></i><i></i><i></i></span>À l’écoute</div><span class="pill-cap">Écoute</span></div>
+        <div><div class="pill"><span class="spin"></span><span class="shimmer">Transcription…</span></div><span class="pill-cap">Traitement</span></div>
+        <div><div class="pill"><svg class="check" viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>Collé</div><span class="pill-cap">Terminé</span></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <h2 class="serif">Le système</h2>
+    <p class="lede">Ce qui changerait concrètement dans le code si cette direction est retenue.</p>
+    <div class="sys">
+      <div class="panel"><h3 class="serif">Palette</h3><div class="pal" id="pal"></div></div>
+      <div class="panel spec"><h3 class="serif">Typographie</h3>
+        <div class="big serif">Parlez, <em>c’est écrit.</em></div>
+        <div class="mid">Figtree pour l’interface, nette à 13&nbsp;px.</div>
+        <p>Instrument Serif pour les titres d’écran et « Flow ». Les deux sont libres (OFL) et seraient embarquées en woff2 dans l’app, sans dépendance réseau.</p>
+        <small>Titres 40/26 · Rangées 14,5 · Libellés 12 · Pastille 13,5</small>
+      </div>
+      <div class="panel" style="grid-column:1/-1"><h3 class="serif">Nom de processus et fenêtres</h3>
+        <table>
+          <tr><th>Nom produit (<code>tauri.conf.json</code>)</th><td><s>Handy</s> → <code>Handy Flow</code></td></tr>
+          <tr><th>Exécutable / processus</th><td><s>handy.exe</s> → <code>handy-flow.exe</code> (<code>mainBinaryName</code>)</td></tr>
+          <tr><th>Titre fenêtre principale (<code>lib.rs</code>)</th><td><s>Handy</s> → <code>Handy Flow</code></td></tr>
+          <tr><th>Titre overlay (<code>overlay.rs</code>)</th><td><s>Recording</s> → <code>Handy Flow · Dictée</code></td></tr>
+          <tr><th>Icônes (<code>src-tauri/icons</code>)</th><td>Régénérées depuis un SVG maître via <code>tauri icon</code></td></tr>
+        </table>
+        <p class="warn">À ne pas toucher sans migration : l’<code>identifier</code> <code>com.pais.handy</code>. Le changer déplace le dossier de données (réglages, historique, modèles).</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<footer><div class="wrap">Pilote statique · couleurs et polices proposées, rien n’est encore appliqué au code.</div></footer>
+
+<script>
+const DIRS = {
+  creme: { note: "<strong>Crème &amp; Rose.</strong> La plus fidèle à Handy : le rose devient l’accent, posé sur un fond crème chaud façon Wispr. Lumineuse, amicale, lisible en plein jour.",
+    pal: [["Fond","#faf7ef"],["Surface","#f1ecdf"],["Encre","#1c1915"],["Rose","#f28cbb"],["Rose texte","#c2477f"],["Succès","#2f7d5b"]] },
+  minuit: { note: "<strong>Minuit.</strong> Une app qu’on garde ouverte le soir : prune très sombre, rose lumineux, une touche lavande. L’overlay se fond dans les thèmes sombres.",
+    pal: [["Fond","#141117"],["Surface","#1d1921"],["Encre","#f6f1ea"],["Rose","#f6a5c8"],["Lavande","#c9b6f2"],["Succès","#86c9a4"]] },
+  sauge: { note: "<strong>Sauge.</strong> La plus proche de l’esprit Wispr : vert profond pour la barre latérale et l’overlay, papier crème, le rose Handy réservé au point d’écoute.",
+    pal: [["Fond","#f5f3e8"],["Surface","#eae7d6"],["Encre","#171a16"],["Vert","#12443d"],["Rose","#f39ac2"],["Succès","#2f7d5b"]] },
+};
+const root = document.documentElement;
+function setDir(d) {
+  root.dataset.dir = d;
+  document.querySelectorAll(".switch button").forEach(b => b.setAttribute("aria-pressed", b.dataset.set === d));
+  document.getElementById("note").innerHTML = DIRS[d].note;
+  document.getElementById("pal").innerHTML = DIRS[d].pal.map(([n, h]) => `<div><span style="background:${h}"></span>${n}<code>${h}</code></div>`).join("");
+  try { localStorage.setItem("hf-dir", d); } catch {}
+}
+document.querySelectorAll(".switch button").forEach(b => b.addEventListener("click", () => setDir(b.dataset.set)));
+document.querySelectorAll(".side a").forEach(a => a.addEventListener("click", e => {
+  e.preventDefault();
+  document.querySelectorAll(".side a").forEach(x => x.removeAttribute("aria-current"));
+  a.setAttribute("aria-current", "page");
+}));
+let saved; try { saved = localStorage.getItem("hf-dir"); } catch {}
+setDir(DIRS[saved] ? saved : "creme");
+</script>
+</body>
+</html>

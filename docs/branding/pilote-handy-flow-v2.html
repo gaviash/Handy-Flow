@@ -1,0 +1,656 @@
+<!doctype html>
+<html lang="fr" data-palette="rose" data-mode="system" data-type="serif" data-density="comfy" data-overlay="pill">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Handy Flow — Thèmes</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700;800&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet">
+<style>
+/* =====================================================================
+   SYSTÈME DE THÈMES — exactement ce qui irait dans src/styles/theme.css
+   Une palette = 13 couleurs, chacune en light-dark(clair, sombre).
+   Le mode (Système / Clair / Sombre) ne fait que changer color-scheme.
+   Tout le reste (surfaces, gris, traits, voiles) est dérivé.
+   ===================================================================== */
+html { color-scheme: light dark; }
+html[data-mode="light"] { color-scheme: light; }
+html[data-mode="dark"] { color-scheme: dark; }
+
+[data-palette="rose"] {
+  --bg: light-dark(#faf7ef, #18141a);        --ink: light-dark(#1c1915, #f6f1ea);
+  --accent: light-dark(#f28cbb, #f6a5c8);    --on-accent: light-dark(#3b1d2c, #2a1320);
+  --accent-text: light-dark(#b13c72, #f6a5c8);
+  --side: light-dark(#f3eee2, #141016);      --side-ink: var(--ink);
+  --pill: light-dark(#1c1915, #2c2530);      --pill-ink: #faf7ef;  --pill-accent: light-dark(#f28cbb, #f6a5c8);
+  --icon-bg: light-dark(#f28cbb, #2a2330);   --icon-fg: light-dark(#3b1d2c, #f6a5c8); --icon-dot: light-dark(#1c1915, #c9b6f2);
+}
+[data-palette="sauge"] {
+  --bg: light-dark(#f5f3e8, #0f1916);        --ink: light-dark(#171a16, #eef0e6);
+  --accent: light-dark(#12443d, #8fd3bd);    --on-accent: light-dark(#f5f3e8, #0c2420);
+  --accent-text: light-dark(#12443d, #8fd3bd);
+  --side: light-dark(#12443d, #0b2420);      --side-ink: #f2f1e6;
+  --pill: light-dark(#12443d, #173a33);      --pill-ink: #f5f3e8;  --pill-accent: #f39ac2;
+  --icon-bg: #12443d;                        --icon-fg: #f5f3e8;   --icon-dot: #f39ac2;
+}
+[data-palette="prune"] {
+  --bg: light-dark(#f7f3fa, #141117);        --ink: light-dark(#1d1622, #f4eef6);
+  --accent: light-dark(#6b3fa0, #c9b6f2);    --on-accent: light-dark(#ffffff, #1d1426);
+  --accent-text: light-dark(#6b3fa0, #d4c4f6);
+  --side: light-dark(#eee7f4, #1a151f);      --side-ink: var(--ink);
+  --pill: light-dark(#2a1f33, #2b2333);      --pill-ink: #f7f3fa;  --pill-accent: #f6a5c8;
+  --icon-bg: light-dark(#2a1f33, #2b2333);   --icon-fg: #f6a5c8;   --icon-dot: #c9b6f2;
+}
+[data-palette="encre"] {
+  --bg: light-dark(#fafaf8, #111111);        --ink: light-dark(#111111, #f2f2ef);
+  --accent: light-dark(#111111, #f2f2ef);    --on-accent: light-dark(#fafaf8, #111111);
+  --accent-text: var(--ink);
+  --side: light-dark(#f1f1ee, #161616);      --side-ink: var(--ink);
+  --pill: light-dark(#111111, #222222);      --pill-ink: #fafaf8;  --pill-accent: #ffffff;
+  --icon-bg: light-dark(#111111, #f2f2ef);   --icon-fg: light-dark(#fafaf8, #111111); --icon-dot: #f28cbb;
+}
+[data-palette="ocean"] {
+  --bg: light-dark(#f4f7fb, #0c1420);        --ink: light-dark(#0f1b2a, #e9f0f8);
+  --accent: light-dark(#2459c7, #7aa7ff);    --on-accent: light-dark(#ffffff, #0b1a33);
+  --accent-text: light-dark(#2459c7, #9cbcff);
+  --side: light-dark(#0f2a4a, #0a192b);      --side-ink: #eaf1fb;
+  --pill: light-dark(#0f2a4a, #14283f);      --pill-ink: #eaf1fb;  --pill-accent: #6ee7d8;
+  --icon-bg: #0f2a4a;                        --icon-fg: #eaf1fb;   --icon-dot: #6ee7d8;
+}
+[data-palette="ambre"] {
+  --bg: light-dark(#fbf6ee, #1a140f);        --ink: light-dark(#22180f, #f7eee3);
+  --accent: light-dark(#c8582c, #f0956a);    --on-accent: light-dark(#ffffff, #2a130a);
+  --accent-text: light-dark(#a8461f, #f4a985);
+  --side: light-dark(#f4eadb, #201812);      --side-ink: var(--ink);
+  --pill: light-dark(#2a1d14, #2e231a);      --pill-ink: #fbf6ee;  --pill-accent: #f0956a;
+  --icon-bg: light-dark(#c8582c, #2e231a);   --icon-fg: light-dark(#fff7ee, #f0956a); --icon-dot: light-dark(#22180f, #f7d38a);
+}
+[data-palette="lime"] {
+  --bg: light-dark(#f6f7f0, #0b0c0a);        --ink: light-dark(#141611, #eef2e4);
+  --accent: #c6ff3d;                         --on-accent: #141611;
+  --accent-text: light-dark(#4a7300, #c6ff3d);
+  --side: light-dark(#141611, #0b0c0a);      --side-ink: #eef2e4;
+  --pill: #141611;                           --pill-ink: #eef2e4;  --pill-accent: #c6ff3d;
+  --icon-bg: #141611;                        --icon-fg: #c6ff3d;   --icon-dot: #ffffff;
+}
+[data-palette="contraste"] {
+  --bg: light-dark(#ffffff, #000000);        --ink: light-dark(#000000, #ffffff);
+  --accent: light-dark(#0040d6, #ffd84a);    --on-accent: light-dark(#ffffff, #000000);
+  --accent-text: light-dark(#0040d6, #ffd84a);
+  --side: var(--bg);                         --side-ink: var(--ink);
+  --pill: #000000;                           --pill-ink: #ffffff;  --pill-accent: #ffd84a;
+  --icon-bg: light-dark(#000000, #ffd84a);   --icon-fg: light-dark(#ffd84a, #000000); --icon-dot: light-dark(#ffffff, #000000);
+  --line-k: 40%; --line-strong-k: 70%; --ink-2-k: 88%;
+}
+
+/* Dérivés : recalculés sur chaque élément qui porte une palette. */
+[data-palette] {
+  --surface: color-mix(in oklab, var(--ink) 5%, var(--bg));
+  --raised: light-dark(color-mix(in oklab, #fff 70%, var(--bg)), color-mix(in oklab, var(--ink) 6%, var(--bg)));
+  --ink-2: color-mix(in oklab, var(--ink) var(--ink-2-k, 72%), var(--bg));
+  --ink-3: color-mix(in oklab, var(--ink) 60%, var(--bg));
+  --line: color-mix(in oklab, var(--ink) var(--line-k, 11%), transparent);
+  --line-strong: color-mix(in oklab, var(--ink) var(--line-strong-k, 26%), transparent);
+  --accent-wash: color-mix(in oklab, var(--accent) 18%, var(--bg));
+  --side-ink-2: color-mix(in oklab, var(--side-ink) 70%, var(--side));
+  --side-active: color-mix(in oklab, var(--side-ink) 9%, var(--side));
+  --ok: light-dark(#2f7d5b, #86c9a4);
+  --shadow-c: light-dark(rgba(40,30,20,.22), rgba(0,0,0,.6));
+  --display: "Instrument Serif", Georgia, serif;
+  --display-w: 400; --display-track: -0.01em;
+  --row-y: 14px;
+  background: var(--bg); color: var(--ink);
+}
+html[data-type="sans"] [data-palette], html[data-type="sans"][data-palette] { --display: Figtree, system-ui, sans-serif; --display-w: 700; --display-track: -0.03em; }
+html[data-density="compact"] [data-palette], html[data-density="compact"][data-palette] { --row-y: 9px; }
+
+/* ======================= Page ======================= */
+* { box-sizing: border-box; margin: 0; }
+body { font: 400 16px/1.55 Figtree, system-ui, "Segoe UI", sans-serif; font-variant-numeric: tabular-nums; background: var(--bg); padding-bottom: 120px; }
+::selection { background: var(--accent); color: var(--on-accent); }
+:focus-visible { outline: 2px solid var(--accent-text); outline-offset: 3px; border-radius: 6px; }
+::-webkit-scrollbar { width: 10px; height: 10px; }
+::-webkit-scrollbar-thumb { background: var(--line-strong); border-radius: 10px; border: 3px solid var(--bg); }
+button { font: inherit; color: inherit; }
+.disp { font-family: var(--display); font-weight: var(--display-w); letter-spacing: var(--display-track); }
+.wrap { max-width: 1160px; margin: 0 auto; padding: 0 24px; }
+@media (max-width: 600px) { .wrap { padding: 0 16px; } }
+code { font: 500 .86em ui-monospace, "Cascadia Code", Consolas, monospace; background: var(--surface); padding: 2px 6px; border-radius: 5px; }
+
+.wm { display: inline-flex; align-items: baseline; gap: .1em; white-space: nowrap; color: inherit; }
+.wm b { font: 800 1em/1 Figtree, sans-serif; letter-spacing: -0.035em; }
+.wm i { font: italic 400 1.18em/1 "Instrument Serif", serif; color: var(--accent-text); }
+.side .wm i { color: var(--wm-side, var(--accent-text)); }
+[data-palette="sauge"] { --wm-side: #f39ac2; } [data-palette="ocean"] { --wm-side: #6ee7d8; } [data-palette="lime"] { --wm-side: #c6ff3d; }
+
+.app-icon { border-radius: 23%; background: var(--icon-bg); color: var(--icon-fg); display: grid; place-items: center; position: relative; flex: none;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.18), inset 0 0 0 1px color-mix(in oklab, var(--icon-fg) 14%, transparent), 0 10px 24px -12px var(--shadow-c); }
+.app-icon svg { width: 62%; height: 62%; transform: rotate(-8deg) translateY(2%); }
+.app-icon .dot { position: absolute; width: 16%; height: 16%; right: 15%; top: 15%; border-radius: 50%; background: var(--icon-dot); }
+
+header.hero { padding-block: 64px 48px; display: grid; grid-template-columns: 1fr auto; gap: 32px; align-items: end; }
+header.hero h1 { font-size: clamp(48px, 8vw, 104px); line-height: .95; text-wrap: balance; }
+header.hero p { color: var(--ink-2); max-width: 58ch; font-size: 18px; margin-top: 20px; }
+header.hero .app-icon { width: 168px; height: 168px; }
+@media (max-width: 760px) { header.hero { grid-template-columns: 1fr; } header.hero .app-icon { width: 96px; height: 96px; grid-row: 1; } }
+
+section { padding: 72px 0; border-top: 1px solid var(--line); }
+.sec-head { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.1fr); gap: 32px; margin-bottom: 36px; align-items: end; }
+.sec-head h2 { font-size: clamp(34px, 4.4vw, 52px); line-height: 1.02; }
+.sec-head p { color: var(--ink-2); max-width: 60ch; }
+@media (max-width: 760px) { .sec-head { grid-template-columns: 1fr; gap: 12px; } }
+
+/* ======================= Fenêtre ======================= */
+.window { border-radius: 14px; overflow: hidden; background: var(--bg); border: 1px solid var(--line-strong); box-shadow: 0 1px 2px var(--shadow-c), 0 30px 70px -30px var(--shadow-c); }
+.titlebar { height: 38px; display: flex; align-items: center; gap: 10px; padding-left: 14px; background: var(--side); color: var(--side-ink-2); font-size: 12.5px; font-weight: 500; border-bottom: 1px solid color-mix(in oklab, var(--side-ink) 8%, transparent); }
+.titlebar .app-icon { width: 18px; height: 18px; border-radius: 5px; box-shadow: none; }
+.titlebar .ctrls { margin-left: auto; display: flex; height: 100%; }
+.titlebar .ctrls span { width: 46px; display: grid; place-items: center; }
+.titlebar .ctrls svg { width: 10px; height: 10px; stroke: currentColor; fill: none; stroke-width: 1; }
+
+.app { display: grid; grid-template-columns: 212px minmax(0, 1fr); height: 640px; }
+.side { background: var(--side); color: var(--side-ink); padding: 18px 12px 14px; display: flex; flex-direction: column; gap: 18px; border-right: 1px solid color-mix(in oklab, var(--side-ink) 8%, transparent); min-width: 0; }
+.side .wm { font-size: 26px; padding: 2px 10px 0; }
+.side nav { display: flex; flex-direction: column; gap: 2px; }
+.side .navsep { height: 1px; background: color-mix(in oklab, var(--side-ink) 10%, transparent); margin: 8px 10px; }
+.side button.nav { all: unset; display: flex; align-items: center; gap: 10px; padding: 8px 10px; border-radius: 10px; color: var(--side-ink-2); font-size: 14px; font-weight: 500; cursor: pointer; white-space: nowrap; transition: background .15s, color .15s; }
+.side button.nav:hover { color: var(--side-ink); background: var(--side-active); }
+.side button.nav[aria-current="page"] { background: var(--side-active); color: var(--side-ink); font-weight: 600; }
+.side button.nav:focus-visible { outline: 2px solid var(--accent-text); }
+.ico { width: 18px; height: 18px; flex: none; fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
+.side-status { margin-top: auto; border-radius: 12px; padding: 10px 12px; background: var(--side-active); font-size: 12.5px; display: grid; gap: 2px; }
+.side-status b { font-weight: 600; display: flex; align-items: center; gap: 7px; }
+.side-status span { color: var(--side-ink-2); }
+.live { width: 7px; height: 7px; border-radius: 50%; background: var(--ok); box-shadow: 0 0 0 3px color-mix(in oklab, var(--ok) 25%, transparent); flex: none; }
+
+.main { overflow-y: auto; padding: 30px 36px 40px; }
+.pane { display: none; gap: 26px; align-content: start; grid-template-columns: minmax(0, 1fr); }
+.pane.on { display: grid; animation: rise .35s cubic-bezier(.22,1,.36,1); }
+@keyframes rise { from { opacity: 0; transform: translateY(6px); } }
+.pane-head h3 { font-size: 40px; line-height: 1.02; }
+.pane-head p { color: var(--ink-2); font-size: 14.5px; margin-top: 6px; }
+
+.group h4 { font-size: 12px; text-transform: uppercase; letter-spacing: .06em; color: var(--ink-3); font-weight: 600; margin: 0 0 8px 4px; }
+.rows { background: var(--raised); border: 1px solid var(--line); border-radius: 14px; }
+.row { display: flex; align-items: center; gap: 16px; padding: var(--row-y) 18px; min-width: 0; }
+.row + .row { border-top: 1px solid var(--line); }
+.row .t { flex: 1; min-width: 0; }
+.row .t b { display: block; font-size: 14.5px; font-weight: 600; }
+.row .t span { display: block; font-size: 13px; color: var(--ink-2); }
+.toggle { appearance: none; width: 40px; height: 24px; border-radius: 999px; background: var(--line-strong); position: relative; cursor: pointer; flex: none; transition: background .2s; margin: 0; }
+.toggle::after { content: ""; position: absolute; top: 3px; left: 3px; width: 18px; height: 18px; border-radius: 50%; background: #fff; box-shadow: 0 1px 2px rgba(0,0,0,.25); transition: transform .25s cubic-bezier(.22,1,.36,1); }
+.toggle:checked { background: var(--accent); }
+.toggle:checked::after { transform: translateX(16px); background: var(--on-accent); }
+.chip { font-size: 12.5px; font-weight: 600; padding: 5px 10px; border-radius: 999px; background: var(--accent-wash); white-space: nowrap; display: inline-flex; gap: 6px; align-items: center; }
+.select { font: 500 13.5px Figtree, sans-serif; background: var(--bg); border: 1px solid var(--line-strong); border-radius: 10px; padding: 7px 12px; display: inline-flex; gap: 8px; align-items: center; white-space: nowrap; }
+.select::after { content: ""; width: 6px; height: 6px; border-right: 1.5px solid currentColor; border-bottom: 1.5px solid currentColor; transform: rotate(45deg) translateY(-2px); opacity: .6; }
+kbd { font: 600 13px/1 Figtree, sans-serif; background: var(--bg); border: 1px solid var(--line-strong); border-bottom-width: 2px; border-radius: 8px; padding: 8px 11px; min-width: 34px; text-align: center; }
+.seg { display: inline-flex; padding: 3px; gap: 2px; background: var(--surface); border: 1px solid var(--line); border-radius: 11px; flex-wrap: wrap; }
+.seg button { all: unset; cursor: pointer; padding: 7px 12px; border-radius: 8px; font-size: 13px; font-weight: 600; color: var(--ink-2); white-space: nowrap; }
+.seg button:hover { color: var(--ink); }
+.seg button[aria-pressed="true"] { background: var(--raised); color: var(--ink); box-shadow: 0 1px 2px var(--shadow-c); }
+.seg button:focus-visible { outline: 2px solid var(--accent-text); }
+
+.shortcut { background: var(--raised); border: 1px solid var(--line); border-radius: 16px; padding: 20px 22px; display: flex; align-items: center; gap: 18px; flex-wrap: wrap; }
+.shortcut .t { flex: 1 1 220px; } .shortcut .t b { display: block; font-weight: 600; } .shortcut .t span { color: var(--ink-2); font-size: 14px; }
+.keys { display: flex; align-items: center; gap: 6px; color: var(--ink-3); font-size: 13px; }
+
+/* Historique */
+.search { display: flex; align-items: center; gap: 10px; background: var(--raised); border: 1px solid var(--line); border-radius: 12px; padding: 10px 14px; color: var(--ink-3); font-size: 14px; }
+.hist .row { align-items: flex-start; }
+.hist time { font-size: 12.5px; color: var(--ink-3); width: 44px; flex: none; padding-top: 2px; }
+.hist .t p { font-size: 14.5px; line-height: 1.5; }
+.hist .t small { font-size: 12px; color: var(--ink-3); display: block; margin-top: 3px; }
+.hist .acts { display: flex; gap: 4px; opacity: 0; transition: opacity .15s; }
+.hist .row:hover .acts, .hist .row:focus-within .acts { opacity: 1; }
+.iconbtn { all: unset; cursor: pointer; width: 30px; height: 30px; border-radius: 8px; display: grid; place-items: center; color: var(--ink-2); }
+.iconbtn:hover { background: var(--surface); color: var(--ink); }
+.iconbtn:focus-visible { outline: 2px solid var(--accent-text); }
+.iconbtn .ico { width: 16px; height: 16px; }
+
+/* Modèles */
+.model { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 4px 16px; align-items: center; padding: 16px 18px; }
+.model + .model { border-top: 1px solid var(--line); }
+.model b { font-weight: 600; font-size: 15px; display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.model .meta { font-size: 13px; color: var(--ink-2); grid-column: 1; }
+.tag { font-size: 11px; font-weight: 600; padding: 2px 8px; border-radius: 6px; background: var(--surface); color: var(--ink-2); }
+.tag.on { background: var(--accent); color: var(--on-accent); }
+.btn { all: unset; cursor: pointer; font-size: 13px; font-weight: 600; padding: 8px 14px; border-radius: 10px; border: 1px solid var(--line-strong); white-space: nowrap; grid-row: 1 / span 2; grid-column: 2; }
+.btn:hover { background: var(--surface); }
+.btn.primary { background: var(--accent); color: var(--on-accent); border-color: transparent; }
+.btn:focus-visible { outline: 2px solid var(--accent-text); outline-offset: 2px; }
+
+/* Post-traitement : styles d'écriture */
+.styles { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
+@media (max-width: 760px) { .styles { grid-template-columns: 1fr; } }
+.stylecard { all: unset; cursor: pointer; background: var(--raised); border: 1px solid var(--line); border-radius: 14px; padding: 14px 16px; display: grid; gap: 6px; }
+.stylecard b { font-weight: 600; font-size: 14px; }
+.stylecard p { font-size: 13px; color: var(--ink-2); line-height: 1.45; }
+.stylecard[aria-pressed="true"] { border-color: var(--accent-text); box-shadow: inset 0 0 0 1px var(--accent-text); }
+.stylecard:focus-visible { outline: 2px solid var(--accent-text); outline-offset: 2px; }
+
+/* Apparence */
+.palettes { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; }
+@media (max-width: 900px) { .palettes { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+.pal-pick { all: unset; cursor: pointer; border-radius: 14px; border: 1px solid var(--line); background: var(--raised); padding: 8px; display: grid; gap: 8px; }
+.pal-pick:hover { border-color: var(--line-strong); }
+.pal-pick[aria-pressed="true"] { border-color: var(--accent-text); box-shadow: inset 0 0 0 1px var(--accent-text); }
+.pal-pick:focus-visible { outline: 2px solid var(--accent-text); outline-offset: 2px; }
+.pal-pick .name { font-size: 13px; font-weight: 600; padding: 0 4px 2px; display: flex; justify-content: space-between; align-items: center; }
+.pal-pick .name svg { width: 16px; height: 16px; stroke: var(--accent-text); fill: none; stroke-width: 2.4; opacity: 0; }
+.pal-pick[aria-pressed="true"] .name svg { opacity: 1; }
+
+/* Mini aperçu (sélecteur + galerie) */
+.mini { display: grid; grid-template-columns: 26% 1fr; height: 72px; border-radius: 9px; overflow: hidden; border: 1px solid var(--line); background: var(--bg); }
+.mini .ms { background: var(--side); padding: 8px 6px; display: grid; gap: 4px; align-content: start; }
+.mini .ms i { height: 5px; border-radius: 3px; background: color-mix(in oklab, var(--side-ink) 22%, transparent); }
+.mini .ms i:first-child { background: var(--wm-side, var(--accent-text)); width: 70%; }
+.mini .mm { padding: 9px 10px; display: grid; gap: 6px; align-content: start; position: relative; }
+.mini .mm .h { height: 8px; width: 55%; border-radius: 3px; background: var(--ink); }
+.mini .mm .r { height: 16px; border-radius: 5px; background: var(--raised); border: 1px solid var(--line); display: flex; align-items: center; justify-content: flex-end; padding: 0 4px; }
+.mini .mm .r::after { content: ""; width: 14px; height: 8px; border-radius: 6px; background: var(--accent); }
+.mini .mm .p { position: absolute; bottom: 6px; left: 50%; translate: -50% 0; width: 44px; height: 10px; border-radius: 6px; background: var(--pill); display: flex; align-items: center; padding-left: 3px; }
+.mini .mm .p::before { content: ""; width: 5px; height: 5px; border-radius: 50%; background: var(--pill-accent); }
+
+/* ======================= Galerie ======================= */
+.gallery { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 16px; }
+@media (max-width: 1000px) { .gallery { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 520px) { .gallery { grid-template-columns: 1fr; } }
+.gcard { all: unset; cursor: pointer; border-radius: 16px; overflow: hidden; border: 1px solid var(--line); display: grid; transition: transform .25s cubic-bezier(.22,1,.36,1), box-shadow .25s; background: var(--raised); }
+.gcard:hover { transform: translateY(-3px); box-shadow: 0 18px 40px -22px var(--shadow-c); }
+.gcard:focus-visible { outline: 2px solid var(--accent-text); outline-offset: 3px; }
+.gcard[aria-pressed="true"] { outline: 2px solid var(--accent-text); outline-offset: 3px; }
+.gcard .duo { display: grid; grid-template-columns: 1fr 1fr; }
+.gcard .half { padding: 12px; display: grid; gap: 10px; background: var(--bg); color: var(--ink); min-width: 0; overflow: hidden; }
+.gcard .half .mini { grid-template-columns: 30% 1fr; height: 84px; }
+.gcard .half .ic { display: flex; align-items: center; gap: 8px; }
+.gcard .half .app-icon { width: 34px; height: 34px; border-radius: 9px; }
+.gcard .half .wm { font-size: 13px; }
+.gcard .info { padding: 14px 16px 16px; display: grid; gap: 2px; border-top: 1px solid var(--line); }
+.gcard .info b { font-family: var(--display); font-weight: var(--display-w); letter-spacing: var(--display-track); font-size: 24px; line-height: 1.1; }
+.gcard .info span { font-size: 13.5px; color: var(--ink-2); }
+
+/* ======================= Overlay ======================= */
+.desk { border-radius: 18px; position: relative; overflow: hidden; background: var(--surface); border: 1px solid var(--line); padding: 28px 16px 36px; display: grid; gap: 28px; justify-items: center; }
+.desk .doc { width: min(640px, 100%); background: var(--raised); border-radius: 12px; border: 1px solid var(--line); padding: 20px 24px; font-size: 15px; color: var(--ink-2); min-height: 92px; }
+.caret { display: inline-block; width: 2px; height: 1.1em; background: var(--accent-text); vertical-align: -3px; animation: blink 1.1s steps(1) infinite; }
+@keyframes blink { 50% { opacity: 0 } }
+.ov-row { display: flex; flex-wrap: wrap; gap: 18px 22px; justify-content: center; align-items: flex-end; }
+.ov-row figure { display: grid; justify-items: center; gap: 8px; }
+.ov-row figcaption { font-size: 12px; color: var(--ink-3); font-weight: 500; }
+.pill { height: 40px; border-radius: 999px; background: var(--pill); color: var(--pill-ink); display: inline-flex; align-items: center; gap: 10px; padding: 0 16px 0 12px; font-size: 13.5px; font-weight: 600; white-space: nowrap;
+  box-shadow: inset 0 0 0 1px rgba(255,255,255,.07), 0 12px 28px -10px rgba(0,0,0,.45); }
+[data-palette="contraste"] .pill { box-shadow: 0 0 0 2px var(--pill-accent); }
+.rec { width: 18px; height: 18px; border-radius: 50%; background: var(--pill-accent); display: grid; place-items: center; flex: none; animation: pulse 1.6s ease-in-out infinite; }
+.rec::after { content: ""; width: 6px; height: 6px; border-radius: 50%; background: var(--pill); }
+@keyframes pulse { 50% { box-shadow: 0 0 0 5px color-mix(in oklab, var(--pill-accent) 22%, transparent); } }
+.wave { display: flex; align-items: center; gap: 3px; height: 18px; }
+.wave i { width: 3px; border-radius: 3px; background: var(--pill-accent); height: 30%; animation: wv 1.1s cubic-bezier(.45,0,.55,1) infinite; }
+.wave i:nth-child(2n) { animation-delay: -.55s } .wave i:nth-child(3n) { animation-delay: -.3s } .wave i:nth-child(5n) { animation-delay: -.8s }
+@keyframes wv { 0%,100% { height: 25% } 50% { height: 100% } }
+.spin { width: 14px; height: 14px; border-radius: 50%; border: 2px solid color-mix(in oklab, var(--pill-ink) 25%, transparent); border-top-color: var(--pill-accent); animation: rot .8s linear infinite; flex: none; }
+@keyframes rot { to { transform: rotate(360deg) } }
+.shimmer { animation: breathe 1.4s ease-in-out infinite; }
+@keyframes breathe { 50% { opacity: .55 } }
+.pill .check { width: 16px; height: 16px; stroke: var(--pill-accent); fill: none; stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round; }
+.pill.wave-only { padding: 0 14px; gap: 8px; }
+.pill.wave-only .wave { height: 20px; }
+.livep { width: min(392px, 100%); border-radius: 20px; background: var(--pill); color: var(--pill-ink); box-shadow: inset 0 0 0 1px rgba(255,255,255,.07), 0 16px 34px -12px rgba(0,0,0,.5); overflow: hidden; }
+.livep .txt { padding: 12px 18px 4px; font-size: 14px; line-height: 1.5; height: 64px; overflow: hidden; display: flex; flex-direction: column; justify-content: flex-end;
+  mask-image: linear-gradient(to bottom, transparent, #000 45%); color: color-mix(in oklab, var(--pill-ink) 92%, transparent); }
+.livep .bar { height: 40px; display: flex; align-items: center; gap: 10px; padding: 0 14px 0 12px; font-size: 13px; font-weight: 600; }
+.livep .bar .sp { margin-left: auto; font-weight: 500; color: color-mix(in oklab, var(--pill-ink) 60%, transparent); font-size: 12px; }
+.ov-only { display: none; }
+html[data-overlay="pill"] .ov-only.pill-s, html[data-overlay="wave"] .ov-only.wave-s, html[data-overlay="live"] .ov-only.live-s { display: flex; }
+
+/* ======================= Icônes / barre des tâches ======================= */
+.iconrow { display: grid; grid-template-columns: repeat(8, minmax(0, 1fr)); gap: 16px; }
+@media (max-width: 900px) { .iconrow { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
+.iconrow button { all: unset; cursor: pointer; display: grid; justify-items: center; gap: 10px; font-size: 13px; font-weight: 600; color: var(--ink-2); }
+.iconrow button .app-icon { width: 100%; max-width: 104px; aspect-ratio: 1; height: auto; transition: transform .3s cubic-bezier(.22,1,.36,1); }
+.iconrow button:hover .app-icon { transform: translateY(-4px) rotate(-3deg); }
+.iconrow button[aria-pressed="true"] { color: var(--ink); }
+.iconrow button:focus-visible { outline: 2px solid var(--accent-text); outline-offset: 4px; border-radius: 12px; }
+.taskbars { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 36px; }
+@media (max-width: 700px) { .taskbars { grid-template-columns: 1fr; } }
+.taskbar { height: 48px; border-radius: 12px; display: flex; align-items: center; justify-content: flex-end; gap: 14px; padding: 0 16px; font-size: 12px; }
+.taskbar.l { background: #eef0f3; color: #1b1b1b; color-scheme: light; }
+.taskbar.d { background: #1f1f22; color: #f2f2f2; color-scheme: dark; }
+.taskbar .app-icon { width: 20px; height: 20px; border-radius: 5px; box-shadow: none; }
+.taskbar .ghost { width: 16px; height: 16px; border-radius: 4px; background: currentColor; opacity: .25; }
+
+/* ======================= Sous le capot ======================= */
+.cap { display: grid; grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr); gap: 24px; }
+@media (max-width: 900px) { .cap { grid-template-columns: 1fr; } }
+.panel { background: var(--raised); border: 1px solid var(--line); border-radius: 16px; padding: 26px; min-width: 0; }
+.panel h3 { font-size: 28px; line-height: 1.1; margin-bottom: 14px; }
+.panel p, .panel li { color: var(--ink-2); font-size: 14.5px; }
+.panel ol { padding-left: 20px; display: grid; gap: 8px; }
+.panel li b { color: var(--ink); font-weight: 600; }
+pre { font: 12.5px/1.6 ui-monospace, "Cascadia Code", Consolas, monospace; background: var(--surface); border-radius: 12px; padding: 16px 18px; overflow-x: auto; margin-top: 14px; color: var(--ink); }
+pre .c { color: var(--ink-3); } pre .k { color: var(--accent-text); }
+table { width: 100%; border-collapse: collapse; font-size: 14px; }
+td, th { text-align: left; padding: 10px 0; border-top: 1px solid var(--line); vertical-align: top; }
+th { color: var(--ink-3); font-weight: 500; width: 44%; padding-right: 12px; }
+td s { color: var(--ink-3); }
+
+/* ======================= Dock d'apparence (pilote) ======================= */
+.dock { position: fixed; left: 50%; bottom: 18px; translate: -50% 0; z-index: 10; display: flex; align-items: center; gap: 10px; padding: 8px 8px 8px 14px; max-width: calc(100vw - 24px);
+  background: color-mix(in oklab, var(--raised) 88%, transparent); backdrop-filter: blur(14px) saturate(1.4); border: 1px solid var(--line-strong); border-radius: 999px;
+  box-shadow: 0 14px 40px -16px var(--shadow-c); }
+.dock .dots { display: flex; gap: 6px; }
+.dock .dots button { all: unset; cursor: pointer; width: 22px; height: 22px; border-radius: 50%; background: var(--accent); box-shadow: inset 0 0 0 1px rgba(0,0,0,.15); transition: transform .2s; }
+.dock .dots button:hover { transform: scale(1.15); }
+.dock .dots button[aria-pressed="true"] { box-shadow: 0 0 0 2px var(--bg), 0 0 0 4px var(--ink); }
+.dock .dots button:focus-visible { outline: 2px solid var(--ink); outline-offset: 3px; }
+.dock .seg { border-radius: 999px; } .dock .seg button { border-radius: 999px; padding: 6px 11px; }
+@media (max-width: 640px) { .dock { flex-direction: column; border-radius: 20px; padding: 10px; } }
+
+footer { padding: 40px 0; color: var(--ink-3); font-size: 13px; border-top: 1px solid var(--line); }
+
+::view-transition-old(root), ::view-transition-new(root) { animation-duration: .45s; animation-timing-function: cubic-bezier(.22,1,.36,1); }
+@media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation: none !important; transition: none !important; } }
+@media (max-width: 760px) {
+  .app { grid-template-columns: minmax(0, 1fr); height: auto; }
+  .side { border-right: 0; } .side nav { flex-direction: row; overflow-x: auto; } .side .navsep, .side-status, .side .wm { display: none; }
+  .main { padding: 22px 16px 28px; max-height: 640px; }
+}
+</style>
+</head>
+<body data-palette>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="hand" viewBox="0 0 126 135"><path fill-rule="evenodd" clip-rule="evenodd" fill="currentColor" stroke="currentColor" stroke-width="4" d="M59.037 128.521c-1.917-.168-4.593-.512-5.947-.766a83 83 0 0 1-5.164-1.192c-1.486-.402-3.495-1.032-4.465-1.4-.97-.369-2.695-1.149-3.833-1.734s-2.7-1.562-3.472-2.171-1.995-1.859-2.72-2.779c-.723-.92-1.547-2.199-1.831-2.842s-.621-1.904-.75-2.802c-.189-1.316-.173-1.972.083-3.384.214-1.18.57-2.28 1.093-3.37.54-1.129.74-1.756.66-2.07-.063-.248-.714-1.021-1.447-1.718s-2.017-2.176-2.853-3.286c-1.112-1.477-2.206-3.376-4.082-7.088-1.41-2.789-3.192-6.138-3.96-7.444a108 108 0 0 0-3.107-4.883c-.94-1.38-2.437-3.498-3.327-4.707A98 98 0 0 1 10.78 70.3c-1.033-1.626-1.784-3.122-2.36-4.696-.464-1.27-.914-2.818-1-3.44a27 27 0 0 1-.194-2.486c-.022-.84.093-1.859.301-2.676.185-.726.601-1.911.925-2.635.323-.723 1.077-1.904 1.675-2.623s1.627-1.727 2.286-2.24c.659-.51 1.698-1.185 2.308-1.497s1.694-.766 2.408-1.008c.714-.243 1.997-.524 2.85-.625.852-.101 2.266-.102 3.14-.001s2.157.365 2.85.588c.692.223 2.103.948 3.136 1.612s2.41 1.76 3.06 2.435c.651.676 1.578 1.803 2.06 2.505a70 70 0 0 1 2.028 3.22c.904 1.528 1.255 1.955 1.641 2 .449.05.497-.016.546-.743.029-.439-.417-2.99-.992-5.668-.574-2.678-1.587-6.822-2.252-9.21s-1.764-6.297-2.442-8.687c-.68-2.39-1.555-5.8-1.946-7.578s-.814-4.186-.94-5.35c-.177-1.641-.16-2.707.073-4.74.215-1.869.448-3.002.81-3.94.279-.723.778-1.736 1.11-2.251s1.044-1.4 1.582-1.964c.54-.566 1.466-1.33 2.06-1.7.593-.368 1.56-.854 2.148-1.08a20 20 0 0 1 2.245-.676c.646-.147 1.833-.293 2.636-.325.817-.033 2.418.1 3.632.299 1.505.247 2.536.533 3.357.933.652.317 1.68.983 2.284 1.48.603.496 1.43 1.33 1.836 1.853.406.524 1.085 1.641 1.51 2.485.424.843 1.012 2.359 1.307 3.368.294 1.01.712 2.988.928 4.396s.524 4.118.684 6.024.441 5.016.624 6.911c.182 1.895.51 4.689.727 6.207.218 1.519.582 3.48.809 4.358.227.879.636 1.899.908 2.267.371.502.672.69 1.195.75.567.066.841-.051 1.453-.62.415-.385.955-1.115 1.2-1.622s.707-1.616 1.025-2.466c.32-.849 1-3.215 1.513-5.257a451 451 0 0 0 1.766-7.339c.458-1.994 1.134-4.677 1.501-5.963.368-1.285.941-3.075 1.274-3.977s.953-2.307 1.378-3.122c.424-.816 1.281-2.083 1.904-2.817.624-.734 1.582-1.662 2.13-2.062s1.589-1.02 2.313-1.378 1.914-.763 2.645-.9c.73-.137 2.174-.255 3.21-.264 1.412-.01 2.274.088 3.456.396.867.226 2.18.702 2.917 1.057.737.356 1.802 1 2.366 1.432s1.47 1.336 2.015 2.008c.545.673 1.22 1.812 1.503 2.533s.59 1.75.683 2.289c.093.538.175 1.7.182 2.583.008 1.007-.148 2.412-.42 3.774a57 57 0 0 1-1.1 4.381c-.367 1.217-1.3 3.871-2.072 5.898s-2.074 5.416-2.892 7.531c-.818 2.116-1.9 5.152-2.403 6.748-.576 1.825-.988 3.539-1.113 4.623-.17 1.485-.148 1.78.167 2.139.355.404.383.407 1.104.12.406-.162 1.18-.76 1.718-1.327s1.466-1.688 2.063-2.49 1.867-2.547 2.823-3.875c.955-1.329 2.203-2.939 2.773-3.578s1.49-1.568 2.045-2.065a24 24 0 0 1 2.124-1.656c.614-.414 1.871-1.024 2.794-1.356.933-.336 2.385-.665 3.269-.74 1.304-.111 1.852-.066 3.042.253.798.214 1.939.627 2.536.917s1.501.882 2.008 1.315a15.6 15.6 0 0 1 1.696 1.755 14 14 0 0 1 1.341 2.119c.314.634.694 1.673.846 2.31.179.75.229 1.846.142 3.122-.096 1.398-.269 2.326-.601 3.219-.257.69-.964 2.026-1.571 2.968s-1.851 2.502-2.765 3.463a201 201 0 0 1-4.115 4.154c-1.35 1.323-2.931 2.968-3.513 3.656s-1.35 1.855-1.706 2.594-.89 2.367-1.186 3.62-.825 4.327-1.174 6.832-.823 5.392-1.053 6.416a81 81 0 0 1-.95 3.713c-.292 1.018-.959 2.882-1.483 4.144-.525 1.26-1.473 3.213-2.108 4.338s-1.701 2.749-2.37 3.608c-.667.86-1.928 2.257-2.8 3.106s-1.8 1.83-2.06 2.18c-.476.636-.476.636-.04 1.771.24.623.515 1.575.612 2.114.097.542.083 1.789-.032 2.792-.115.997-.405 2.33-.646 2.962-.24.631-.84 1.781-1.334 2.554-.689 1.078-1.34 1.753-2.795 2.897-1.16.912-2.566 1.791-3.616 2.26a37 37 0 0 1-3.67 1.356c-1.072.324-3.068.761-4.436.972a59 59 0 0 1-4.993.508c-1.378.069-3.817.107-5.419.086s-4.48-.176-6.397-.343Zm.715-2.726c2.899.29 6.13.53 7.18.533 1.051.003 3.193-.123 4.76-.279s3.803-.48 4.97-.719 2.904-.697 3.862-1.019 2.308-.882 3-1.246 1.872-1.17 2.621-1.792c.749-.621 1.65-1.568 2.004-2.103.353-.535.834-1.469 1.069-2.076.234-.606.478-1.553.54-2.104.063-.55.06-1.343-.006-1.762s-.323-1.068-.57-1.441c-.385-.581-.556-.679-1.172-.673-.398.004-1.905.453-3.35.998-1.447.545-3.695 1.205-4.997 1.467a82 82 0 0 1-4.309.733 61 61 0 0 1-3.864.363c-1.057.058-3.362.088-5.12.065-2.526-.031-4.264-.19-8.262-.754-2.785-.393-5.723-.882-6.529-1.088s-2.544-.728-3.861-1.159-3.313-1.187-4.434-1.678-3.19-1.496-4.6-2.233c-1.66-.869-2.728-1.319-3.036-1.278-.31.04-.641.347-.958.885-.265.453-.597 1.339-.736 1.97-.139.63-.215 1.694-.17 2.363.046.669.285 1.785.532 2.48.25.702.902 1.84 1.466 2.558.56.712 1.497 1.707 2.083 2.212a20 20 0 0 0 2.227 1.629c.639.391 1.923 1.027 2.854 1.415.93.387 2.538.976 3.57 1.309 1.034.333 2.761.805 3.84 1.049s2.447.534 3.043.645 3.455.44 6.353.73Zm-.352-14.434c1.472.183 4.027.396 5.676.473s3.883.109 4.963.071c1.08-.037 3.05-.17 4.377-.294 1.328-.125 3.288-.41 4.355-.633a65 65 0 0 0 4.128-1.05c1.202-.355 2.582-.841 3.067-1.08.484-.24 1.849-1.14 3.031-1.999s2.732-2.144 3.443-2.853c.71-.708 1.832-2.028 2.491-2.932.66-.903 1.63-2.447 2.156-3.43.526-.982 1.384-2.92 1.907-4.306.522-1.386 1.205-3.442 1.517-4.568.375-1.353.882-4.277 1.496-8.63.676-4.787 1.071-7.02 1.448-8.18a23 23 0 0 1 1.272-3.019c.414-.784 1.3-2.056 1.969-2.826.668-.771 2.641-2.786 4.384-4.477s3.78-3.837 4.527-4.767c.843-1.051 1.623-2.294 2.06-3.282.602-1.36.723-1.862.836-3.456.114-1.604.064-2.058-.36-3.243a7.9 7.9 0 0 0-1.465-2.498c-.589-.676-1.405-1.342-2.065-1.682-.6-.31-1.639-.726-2.308-.924-.913-.27-1.576-.34-2.664-.28-.824.046-1.979.29-2.682.566-.734.29-1.847 1-2.75 1.755-.835.698-2.205 2.089-3.046 3.091-.842 1.002-2.306 2.91-3.256 4.239s-2.209 3.028-2.799 3.775-1.685 1.88-2.434 2.517-1.737 1.28-2.197 1.43c-.46.148-1.174.233-1.587.188s-1.03-.237-1.368-.427c-.34-.19-.812-.64-1.05-1a6 6 0 0 1-.64-1.357c-.143-.489-.117-1.404.083-2.985.23-1.813.514-2.94 1.39-5.508.607-1.776 1.933-5.29 2.947-7.808a471 471 0 0 0 2.974-7.568c.62-1.644 1.431-4.026 1.801-5.295.426-1.459.774-3.192.948-4.719.157-1.376.21-2.852.124-3.435a11.6 11.6 0 0 0-.502-1.96c-.193-.515-.811-1.516-1.374-2.225-.634-.8-1.473-1.567-2.207-2.02a17 17 0 0 0-2.462-1.204c-.935-.348-1.882-.523-3.545-.652-2.026-.159-2.444-.126-3.917.309-1.27.375-2.014.76-3.237 1.681-1.182.89-1.808 1.542-2.45 2.552-.475.747-1.123 1.965-1.44 2.71-.316.743-.866 2.354-1.221 3.58a126 126 0 0 0-1.256 4.774c-.335 1.4-.995 4.311-1.466 6.47s-1.167 5.004-1.545 6.323c-.379 1.319-.945 3.064-1.26 3.878-.314.814-.91 2.042-1.325 2.73-.415.686-1.058 1.54-1.428 1.897s-1.11.842-1.645 1.078c-.697.307-1.233.395-1.893.309-.513-.067-1.248-.34-1.658-.614-.405-.271-1.027-.874-1.384-1.34-.356-.465-.887-1.573-1.18-2.462s-.714-2.794-.937-4.232-.557-4.442-.742-6.676-.499-5.839-.697-8.011-.547-5.064-.774-6.426c-.228-1.361-.749-3.451-1.159-4.643-.618-1.801-.96-2.437-2.022-3.766-1.078-1.35-1.5-1.713-2.702-2.327-1.063-.542-1.908-.809-3.325-1.048-1.368-.23-2.328-.275-3.43-.16-.843.089-2.272.42-3.178.738-.905.318-2.163.946-2.794 1.396a7.2 7.2 0 0 0-1.88 1.987c-.402.642-.911 1.799-1.131 2.57-.255.892-.439 2.17-.506 3.516-.064 1.274.024 3.046.22 4.463.18 1.293.773 4.092 1.32 6.222.545 2.13 1.474 5.557 2.064 7.616.59 2.06 1.51 5.424 2.046 7.477s1.408 5.802 1.938 8.331 1.138 5.84 1.35 7.357c.277 1.995.335 3.185.207 4.295-.097.845-.373 2.046-.614 2.668s-.779 1.625-1.194 2.228c-.416.602-1.156 1.456-1.645 1.897s-1.192.98-1.563 1.197c-.37.216-.878.43-1.126.475-.316.058-.563-.058-.821-.383-.26-.328-.315-.59-.183-.886.102-.231.668-.865 1.257-1.407s1.309-1.3 1.6-1.685c.372-.493.52-.894.498-1.36-.017-.362-.603-1.806-1.303-3.208s-1.8-3.51-2.448-4.683-1.806-2.949-2.577-3.944-1.89-2.205-2.488-2.688-1.566-1.118-2.151-1.41c-.686-.343-1.745-.643-2.978-.843-1.357-.22-2.363-.263-3.46-.148-.851.09-2.306.439-3.233.777a13.4 13.4 0 0 0-3.12 1.677c-.788.584-1.73 1.403-2.093 1.819s-.907 1.283-1.21 1.927c-.372.791-.607 1.673-.725 2.717-.096.85-.112 2.05-.036 2.667s.296 1.645.489 2.284.63 1.795.973 2.57 1.131 2.186 1.752 3.137c.62.95 2.34 3.394 3.821 5.43 1.48 2.036 3.31 4.642 4.066 5.793a75 75 0 0 1 2.588 4.314c.668 1.223 2.177 4.141 3.352 6.485 1.733 3.456 2.488 4.716 3.995 6.666 1.022 1.322 2.501 3.017 3.288 3.766s2.283 1.899 3.327 2.556a62 62 0 0 0 3.605 2.083c.94.489 2.614 1.274 3.722 1.746 1.108.471 2.624 1.058 3.37 1.305s2.238.66 3.314.917 2.665.615 3.53.795 2.776.478 4.249.662Z"/></symbol>
+  <symbol id="i-home" viewBox="0 0 24 24"><path d="M3 11l9-7 9 7v9a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z"/></symbol>
+  <symbol id="i-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></symbol>
+  <symbol id="i-chip" viewBox="0 0 24 24"><rect x="6" y="6" width="12" height="12" rx="2"/><path d="M9 2v4M15 2v4M9 18v4M15 18v4M2 9h4M2 15h4M18 9h4M18 15h4"/></symbol>
+  <symbol id="i-spark" viewBox="0 0 24 24"><path d="M12 3l1.8 4.7L18.5 9.5l-4.7 1.8L12 16l-1.8-4.7L5.5 9.5l4.7-1.8z"/><path d="M19 15l.8 2.2L22 18l-2.2.8L19 21l-.8-2.2L16 18l2.2-.8z"/></symbol>
+  <symbol id="i-brush" viewBox="0 0 24 24"><path d="M14.5 4.5l5 5L11 18H6v-5z"/><path d="M12.5 6.5l5 5"/><path d="M3 21h6"/></symbol>
+  <symbol id="i-sliders" viewBox="0 0 24 24"><path d="M4 7h10M18 7h2M4 17h4M12 17h8"/><circle cx="16" cy="7" r="2"/><circle cx="10" cy="17" r="2"/></symbol>
+  <symbol id="i-info" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 8h.01"/></symbol>
+  <symbol id="i-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M20 20l-4-4"/></symbol>
+  <symbol id="i-copy" viewBox="0 0 24 24"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V5a1 1 0 0 1 1-1h10"/></symbol>
+  <symbol id="i-play" viewBox="0 0 24 24"><path d="M7 5l12 7-12 7z"/></symbol>
+  <symbol id="i-star" viewBox="0 0 24 24"><path d="M12 4l2.4 5 5.4.6-4 3.7 1.1 5.3L12 16l-4.9 2.6 1.1-5.3-4-3.7 5.4-.6z"/></symbol>
+  <symbol id="i-check" viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5"/></symbol>
+</svg>
+
+<header class="hero wrap">
+  <div>
+    <span class="wm" style="font-size:28px"><b>Handy</b><i>Flow</i></span>
+    <h1 class="disp" style="margin-top:28px">Huit thèmes, une seule voix.</h1>
+    <p>Chaque thème existe en clair et en sombre, se choisit dans l’app et recolore tout : fenêtre, pastille de dictée, icône. Utilisez le dock en bas pour essayer, ou cliquez directement dans la fenêtre.</p>
+  </div>
+  <div class="app-icon"><span class="dot"></span><svg><use href="#hand"/></svg></div>
+</header>
+
+<section>
+  <div class="wrap">
+    <div class="sec-head"><h2 class="disp">L’application</h2><p>Les sept sections d’origine, plus un écran <strong>Apparence</strong>. Le raccourci passe en tête, l’état du modèle reste visible dans la barre latérale, chaque réglage tient sur une ligne. Tout est cliquable.</p></div>
+    <div class="window">
+      <div class="titlebar"><div class="app-icon"><svg><use href="#hand"/></svg></div>Handy Flow
+        <div class="ctrls"><span><svg viewBox="0 0 10 10"><path d="M0 5h10"/></svg></span><span><svg viewBox="0 0 10 10"><rect x=".5" y=".5" width="9" height="9"/></svg></span><span><svg viewBox="0 0 10 10"><path d="M0 0l10 10M10 0L0 10"/></svg></span></div>
+      </div>
+      <div class="app">
+        <aside class="side">
+          <span class="wm"><b>Handy</b><i>Flow</i></span>
+          <nav aria-label="Sections">
+            <button class="nav" data-pane="general" aria-current="page"><svg class="ico"><use href="#i-home"/></svg>Général</button>
+            <button class="nav" data-pane="history"><svg class="ico"><use href="#i-clock"/></svg>Historique</button>
+            <button class="nav" data-pane="models"><svg class="ico"><use href="#i-chip"/></svg>Modèles</button>
+            <button class="nav" data-pane="post"><svg class="ico"><use href="#i-spark"/></svg>Post-traitement</button>
+            <div class="navsep"></div>
+            <button class="nav" data-pane="look"><svg class="ico"><use href="#i-brush"/></svg>Apparence</button>
+            <button class="nav" data-pane="advanced"><svg class="ico"><use href="#i-sliders"/></svg>Avancé</button>
+            <button class="nav" data-pane="about"><svg class="ico"><use href="#i-info"/></svg>À propos</button>
+          </nav>
+          <div class="side-status"><b><span class="live"></span>Prêt à dicter</b><span>Qwen3-ASR 1.7B · local</span></div>
+        </aside>
+        <div class="main">
+          <div class="pane on" id="general">
+            <div class="pane-head"><h3 class="disp">Général</h3><p>Parlez n’importe où. Le texte arrive là où se trouve votre curseur.</p></div>
+            <div class="shortcut"><div class="t"><b>Raccourci de dictée</b><span>Maintenez pour parler, relâchez pour coller.</span></div><div class="keys"><kbd>Ctrl</kbd>+<kbd>Win</kbd></div></div>
+            <div class="group"><h4>Dictée</h4><div class="rows">
+              <div class="row"><div class="t"><b>Mode d’activation</b><span>Maintenir, ou appuyer une fois pour démarrer et arrêter</span></div><div class="seg" role="group" aria-label="Mode d’activation"><button aria-pressed="true">Maintenir</button><button aria-pressed="false">Basculer</button></div></div>
+              <div class="row"><div class="t"><b>Microphone</b><span>Utilisé pendant la dictée</span></div><span class="select">Par défaut du système</span></div>
+              <div class="row"><div class="t"><b>Couper le son pendant l’écoute</b><span>Met en pause la musique et les vidéos</span></div><input class="toggle" type="checkbox" checked aria-label="Couper le son pendant l’écoute"></div>
+            </div></div>
+            <div class="group"><h4>Langues</h4><div class="rows">
+              <div class="row"><div class="t"><b>Langues parlées</b><span>Détection automatique entre celles-ci</span></div><span class="select">Français, English</span></div>
+              <div class="row"><div class="t"><b>Traduire en anglais</b><span>Dictez dans votre langue, collez en anglais</span></div><input class="toggle" type="checkbox" aria-label="Traduire en anglais"></div>
+            </div></div>
+            <div class="group"><h4>Son</h4><div class="rows">
+              <div class="row"><div class="t"><b>Signal de démarrage</b><span>Un petit son quand l’écoute commence</span></div><input class="toggle" type="checkbox" checked aria-label="Signal de démarrage"></div>
+            </div></div>
+          </div>
+
+          <div class="pane" id="history">
+            <div class="pane-head"><h3 class="disp">Historique</h3><p>Tout reste sur cet ordinateur. Survolez une dictée pour la copier ou la réécouter.</p></div>
+            <div class="search"><svg class="ico"><use href="#i-search"/></svg>Rechercher dans vos dictées</div>
+            <div class="group hist"><h4>Aujourd’hui</h4><div class="rows">
+              <div class="row"><time>14:32</time><div class="t"><p>Ok, envoie-moi le devis d’ici jeudi et on cale l’appel vendredi matin.</p><small>6 s · 14 mots · Slack</small></div><div class="acts"><button class="iconbtn" aria-label="Copier"><svg class="ico"><use href="#i-copy"/></svg></button><button class="iconbtn" aria-label="Réécouter"><svg class="ico"><use href="#i-play"/></svg></button><button class="iconbtn" aria-label="Garder"><svg class="ico"><use href="#i-star"/></svg></button></div></div>
+              <div class="row"><time>11:42</time><div class="t"><p>Refactor the overlay so the pill width comes from one token.</p><small>4 s · 11 mots · VS Code</small></div><div class="acts"><button class="iconbtn" aria-label="Copier"><svg class="ico"><use href="#i-copy"/></svg></button><button class="iconbtn" aria-label="Réécouter"><svg class="ico"><use href="#i-play"/></svg></button><button class="iconbtn" aria-label="Garder"><svg class="ico"><use href="#i-star"/></svg></button></div></div>
+            </div></div>
+            <div class="group hist"><h4>Hier</h4><div class="rows">
+              <div class="row"><time>18:05</time><div class="t"><p>Bonjour Camille, suite à notre échange de ce matin, je vous confirme notre venue le 24 à 10 h.</p><small>9 s · 20 mots · Outlook</small></div><div class="acts"><button class="iconbtn" aria-label="Copier"><svg class="ico"><use href="#i-copy"/></svg></button><button class="iconbtn" aria-label="Réécouter"><svg class="ico"><use href="#i-play"/></svg></button><button class="iconbtn" aria-label="Garder"><svg class="ico"><use href="#i-star"/></svg></button></div></div>
+            </div></div>
+          </div>
+
+          <div class="pane" id="models">
+            <div class="pane-head"><h3 class="disp">Modèles</h3><p>Tous tournent en local. Changez à tout moment, sans redémarrer.</p></div>
+            <div class="rows">
+              <div class="model"><b>Qwen3-ASR 1.7B <span class="tag on">Actif</span></b><span class="meta">Multilingue, ponctuation soignée</span><button class="btn">Options</button></div>
+              <div class="model"><b>Parakeet V3</b><span class="meta">456 Mo · très rapide, 25 langues européennes</span><button class="btn primary">Utiliser</button></div>
+              <div class="model"><b>SenseVoice</b><span class="meta">152 Mo · léger, langues asiatiques</span><button class="btn">Télécharger</button></div>
+              <div class="model"><b>Moonshine V2 Small <span class="tag">Anglais</span></b><span class="meta">99 Mo · pour les petites machines</span><button class="btn">Télécharger</button></div>
+            </div>
+          </div>
+
+          <div class="pane" id="post">
+            <div class="pane-head"><h3 class="disp">Post-traitement</h3><p>Nettoyez et mettez en forme le texte avant de le coller.</p></div>
+            <div class="group"><h4>Style d’écriture</h4>
+              <div class="styles" role="group" aria-label="Style d’écriture">
+                <button class="stylecard" aria-pressed="false"><b>Formel</b><p>« Je vous confirme notre rendez-vous de jeudi. »</p></button>
+                <button class="stylecard" aria-pressed="true"><b>Naturel</b><p>« Je te confirme le rendez-vous de jeudi. »</p></button>
+                <button class="stylecard" aria-pressed="false"><b>Décontracté</b><p>« ok pour jeudi 👍 »</p></button>
+              </div>
+            </div>
+            <div class="group"><h4>Nettoyage</h4><div class="rows">
+              <div class="row"><div class="t"><b>Retirer les hésitations</b><span>« euh », « bah », répétitions</span></div><input class="toggle" type="checkbox" checked aria-label="Retirer les hésitations"></div>
+              <div class="row"><div class="t"><b>Apprendre mes corrections</b><span>Retient l’orthographe des noms que vous corrigez</span></div><input class="toggle" type="checkbox" checked aria-label="Apprendre mes corrections"></div>
+            </div></div>
+          </div>
+
+          <div class="pane" id="look">
+            <div class="pane-head"><h3 class="disp">Apparence</h3><p>Le choix s’applique tout de suite, partout : fenêtre, pastille et icône.</p></div>
+            <div class="group"><h4>Thème</h4><div class="palettes" id="picker"></div></div>
+            <div class="group"><h4>Affichage</h4><div class="rows">
+              <div class="row"><div class="t"><b>Mode</b><span>Système suit le réglage de Windows</span></div><div class="seg" role="group" aria-label="Mode" data-ctl="mode"><button data-v="system">Système</button><button data-v="light">Clair</button><button data-v="dark">Sombre</button></div></div>
+              <div class="row"><div class="t"><b>Titres</b><span>Éditorial (serif) ou moderne (sans)</span></div><div class="seg" role="group" aria-label="Titres" data-ctl="type"><button data-v="serif">Éditorial</button><button data-v="sans">Moderne</button></div></div>
+              <div class="row"><div class="t"><b>Densité</b><span>Compact affiche plus de réglages à l’écran</span></div><div class="seg" role="group" aria-label="Densité" data-ctl="density"><button data-v="comfy">Confortable</button><button data-v="compact">Compact</button></div></div>
+              <div class="row"><div class="t"><b>Pastille de dictée</b><span>Ce qui s’affiche pendant que vous parlez</span></div><div class="seg" role="group" aria-label="Pastille" data-ctl="overlay"><button data-v="pill">Pastille</button><button data-v="wave">Onde</button><button data-v="live">Live</button></div></div>
+            </div></div>
+          </div>
+
+          <div class="pane" id="advanced">
+            <div class="pane-head"><h3 class="disp">Avancé</h3><p>Démarrage, collage, historique.</p></div>
+            <div class="group"><h4>Application</h4><div class="rows">
+              <div class="row"><div class="t"><b>Lancer au démarrage</b><span>Handy Flow attend discrètement dans la barre des tâches</span></div><input class="toggle" type="checkbox" checked aria-label="Lancer au démarrage"></div>
+              <div class="row"><div class="t"><b>Icône dans la zone de notification</b></div><input class="toggle" type="checkbox" checked aria-label="Icône dans la zone de notification"></div>
+            </div></div>
+            <div class="group"><h4>Sortie</h4><div class="rows">
+              <div class="row"><div class="t"><b>Méthode de collage</b><span>Si le texte n’arrive pas, essayez « Saisie directe »</span></div><span class="select">Ctrl+V</span></div>
+              <div class="row"><div class="t"><b>Garder les dictées</b></div><span class="select">30 jours</span></div>
+            </div></div>
+          </div>
+
+          <div class="pane" id="about">
+            <div class="pane-head"><h3 class="disp">À propos</h3><p>Version 0.10.1 · fork de Handy, licence MIT.</p></div>
+            <div class="rows"><div class="row"><div class="app-icon" style="width:56px;height:56px"><span class="dot"></span><svg><use href="#hand"/></svg></div><div class="t"><b class="wm" style="font-size:22px"><b>Handy</b><i>Flow</i></b><span>Dictée locale, rien ne quitte votre ordinateur.</span></div><button class="btn" style="grid-row:auto">Vérifier les mises à jour</button></div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <div class="sec-head"><h2 class="disp">Les huit thèmes</h2><p>Chaque carte montre le thème en clair (gauche) et en sombre (droite). Cliquez pour l’appliquer à toute la page.</p></div>
+    <div class="gallery" id="gallery"></div>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <div class="sec-head"><h2 class="disp">Pendant la dictée</h2><p>Trois styles de pastille au choix dans Apparence. Dimensions identiques à l’actuel (40&nbsp;px de haut, Live à 392&nbsp;px), donc <code>overlay.rs</code> ne bouge pas.</p></div>
+    <div class="desk">
+      <div class="seg" role="group" aria-label="Style de pastille" data-ctl="overlay"><button data-v="pill">Pastille</button><button data-v="wave">Onde</button><button data-v="live">Live</button></div>
+      <div class="doc">Bonjour Camille, suite à notre échange de ce matin<span class="caret"></span></div>
+      <div class="ov-row ov-only pill-s">
+        <figure><div class="pill"><span class="rec"></span><span class="wave"><i></i><i></i><i></i><i></i><i></i><i></i><i></i></span>À l’écoute</div><figcaption>Écoute</figcaption></figure>
+        <figure><div class="pill"><span class="spin"></span><span class="shimmer">Transcription…</span></div><figcaption>Traitement</figcaption></figure>
+        <figure><div class="pill"><svg class="check"><use href="#i-check"/></svg>Collé</div><figcaption>Terminé</figcaption></figure>
+      </div>
+      <div class="ov-row ov-only wave-s">
+        <figure><div class="pill wave-only"><span class="rec"></span><span class="wave"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></span></div><figcaption>Écoute, sans texte</figcaption></figure>
+        <figure><div class="pill wave-only"><span class="spin"></span></div><figcaption>Traitement</figcaption></figure>
+        <figure><div class="pill wave-only"><svg class="check"><use href="#i-check"/></svg></div><figcaption>Terminé</figcaption></figure>
+      </div>
+      <div class="ov-row ov-only live-s">
+        <figure><div class="livep"><div class="txt" id="livetxt"></div><div class="bar"><span class="rec"></span><span class="wave"><i></i><i></i><i></i><i></i><i></i><i></i><i></i></span>Live<span class="sp">Échap pour annuler</span></div></div><figcaption>Le texte s’écrit pendant que vous parlez</figcaption></figure>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <div class="sec-head"><h2 class="disp">L’icône suit le thème</h2><p>Une icône par thème, générée depuis le même SVG. Dans la zone de notification, la main seule reste lisible à 16&nbsp;px, sur barre claire comme sombre.</p></div>
+    <div class="iconrow" id="iconrow"></div>
+    <div class="taskbars">
+      <div class="taskbar l" data-palette><span class="ghost"></span><span class="ghost"></span><div class="app-icon"><span></span><svg><use href="#hand"/></svg></div><span>14:32</span></div>
+      <div class="taskbar d" data-palette><span class="ghost"></span><span class="ghost"></span><div class="app-icon"><span></span><svg><use href="#hand"/></svg></div><span>14:32</span></div>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <div class="sec-head"><h2 class="disp">Sous le capot</h2><p>Un thème coûte 13 lignes de CSS. Le reste se calcule. Ajouter un neuvième thème plus tard prend dix minutes.</p></div>
+    <div class="cap">
+      <div class="panel"><h3 class="disp">Un thème, en entier</h3>
+<pre><span class="c">/* src/styles/themes.css — une ligne par couleur, clair puis sombre */</span>
+<span class="k">[data-palette="sauge"]</span> {
+  --bg:          light-dark(#f5f3e8, #0f1916);
+  --ink:         light-dark(#171a16, #eef0e6);
+  --accent:      light-dark(#12443d, #8fd3bd);
+  --on-accent:   light-dark(#f5f3e8, #0c2420);
+  --accent-text: light-dark(#12443d, #8fd3bd);
+  --side:        light-dark(#12443d, #0b2420);
+  --pill:        light-dark(#12443d, #173a33);
+  <span class="c">/* … pill-ink, pill-accent, icon-* */</span>
+}
+<span class="c">/* Mode : seul color-scheme change */</span>
+<span class="k">html[data-mode="dark"]</span> { color-scheme: dark; }</pre>
+      </div>
+      <div class="panel"><h3 class="disp">Ce qu’il faut changer</h3>
+        <ol>
+          <li><b>Réglages</b> : ajouter <code>palette</code> à côté de <code>theme</code> (déjà Système/Clair/Sombre), plus <code>headings</code>, <code>density</code>, <code>overlay_style</code>.</li>
+          <li><b>theme.css</b> : remplacer les paires <code>--light-*/--dark-*</code> par les palettes ci-contre ; les noms de tokens existants restent des alias.</li>
+          <li><b>theme.ts</b> : poser <code>data-palette</code> en plus de <code>data-theme</code> ; l’overlay lit les deux.</li>
+          <li><b>Polices</b> : Figtree + Instrument Serif en woff2 locaux (OFL), aucune requête réseau.</li>
+          <li><b>Icônes</b> : un SVG maître, <code>tauri icon</code> pour l’icône d’installation ; l’icône de la barre et de la fenêtre change à chaud.</li>
+        </ol>
+      </div>
+      <div class="panel" style="grid-column:1/-1"><h3 class="disp">Nom et processus</h3>
+        <table>
+          <tr><th>Nom produit (<code>tauri.conf.json</code>)</th><td><s>Handy</s> → Handy Flow</td></tr>
+          <tr><th>Exécutable / processus</th><td><s>handy.exe</s> → <code>handy-flow.exe</code> (<code>mainBinaryName</code>)</td></tr>
+          <tr><th>Fenêtres (<code>lib.rs</code>, <code>overlay.rs</code>)</th><td><s>Handy</s>, <s>Recording</s> → Handy Flow, Handy Flow · Dictée</td></tr>
+          <tr><th>À garder tel quel</th><td><code>identifier com.pais.handy</code>, sinon réglages, historique et modèles changent de dossier</td></tr>
+        </table>
+      </div>
+    </div>
+  </div>
+</section>
+
+<footer><div class="wrap">Pilote v2 · rien n’est encore appliqué au code. Modèles et tailles tirés de <code>model.rs</code> ; dictées d’exemple fictives.</div></footer>
+
+<div class="dock" role="toolbar" aria-label="Apparence du pilote">
+  <div class="dots" id="dots"></div>
+  <div class="seg" role="group" aria-label="Mode" data-ctl="mode"><button data-v="system">Auto</button><button data-v="light">Clair</button><button data-v="dark">Sombre</button></div>
+</div>
+
+<script>
+const PALETTES = [
+  ["rose", "Rose", "Handy d’origine, sur papier crème."],
+  ["sauge", "Sauge", "Vert profond, calme, éditorial."],
+  ["prune", "Prune", "Violet doux, touche lavande."],
+  ["encre", "Encre", "Noir et blanc, rien qui distrait."],
+  ["ocean", "Océan", "Bleu nuit, accent turquoise."],
+  ["ambre", "Ambre", "Sable chaud et terre cuite."],
+  ["lime", "Lime", "Noir graphite, vert électrique."],
+  ["contraste", "Contraste", "Lisibilité maximale, pour tous."],
+];
+const root = document.documentElement;
+const $ = (s, el = document) => el.querySelector(s);
+const $$ = (s, el = document) => [...el.querySelectorAll(s)];
+const hand = `<svg><use href="#hand"/></svg>`;
+const mini = `<div class="mini"><div class="ms"><i></i><i></i><i></i><i></i></div><div class="mm"><span class="h"></span><span class="r"></span><span class="p"></span></div></div>`;
+const check = `<svg viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>`;
+
+$("#picker").innerHTML = PALETTES.map(([id, name]) =>
+  `<button class="pal-pick" data-palette="${id}" data-pick="${id}" aria-label="Thème ${name}">${mini}<span class="name">${name}${check}</span></button>`).join("");
+$("#gallery").innerHTML = PALETTES.map(([id, name, line]) =>
+  `<button class="gcard" data-palette="${id}" data-pick="${id}" aria-label="Appliquer le thème ${name}"><div class="duo">` +
+  ["light", "dark"].map(cs => `<div class="half" style="color-scheme:${cs}">${mini}<div class="ic"><div class="app-icon"><span class="dot"></span>${hand}</div><span class="wm"><b>Handy</b><i>Flow</i></span></div></div>`).join("") +
+  `</div><div class="info"><b>${name}</b><span>${line}</span></div></button>`).join("");
+$("#iconrow").innerHTML = PALETTES.map(([id, name]) =>
+  `<button data-palette="${id}" data-pick="${id}" style="background:none"><div class="app-icon"><span class="dot"></span>${hand}</div>${name}</button>`).join("");
+$("#dots").innerHTML = PALETTES.map(([id, name]) => `<button data-palette="${id}" data-pick="${id}" aria-label="${name}" title="${name}"></button>`).join("");
+
+const state = { palette: "rose", mode: "system", type: "serif", density: "comfy", overlay: "pill" };
+function render() {
+  for (const k in state) root.dataset[k === "palette" ? "palette" : k] = state[k];
+  $$("[data-pick]").forEach(b => b.setAttribute("aria-pressed", b.dataset.pick === state.palette));
+  $$("[data-ctl]").forEach(g => $$("button", g).forEach(b => b.setAttribute("aria-pressed", b.dataset.v === state[g.dataset.ctl])));
+  try { localStorage.setItem("hf-v2", JSON.stringify(state)); } catch {}
+}
+function set(k, v) {
+  if (state[k] === v) return;
+  state[k] = v;
+  const big = k === "palette" || k === "mode";
+  if (big && document.startViewTransition && !matchMedia("(prefers-reduced-motion: reduce)").matches) document.startViewTransition(render);
+  else render();
+}
+document.addEventListener("click", e => {
+  const pick = e.target.closest("[data-pick]");
+  if (pick) return set("palette", pick.dataset.pick);
+  const opt = e.target.closest("[data-ctl] button");
+  if (opt) return set(opt.closest("[data-ctl]").dataset.ctl, opt.dataset.v);
+  const nav = e.target.closest(".side button.nav");
+  if (nav) {
+    $$(".side button.nav").forEach(n => n.removeAttribute("aria-current"));
+    nav.setAttribute("aria-current", "page");
+    $$(".pane").forEach(p => p.classList.toggle("on", p.id === nav.dataset.pane));
+    $(".main").scrollTop = 0;
+    return;
+  }
+  const local = e.target.closest(".seg:not([data-ctl]) button, .stylecard");
+  if (local) $$("button", local.parentElement).forEach(b => b.setAttribute("aria-pressed", b === local));
+});
+try { Object.assign(state, JSON.parse(localStorage.getItem("hf-v2")) || {}); } catch {}
+if (!PALETTES.some(p => p[0] === state.palette)) state.palette = "rose";
+render();
+
+// Texte Live : s'écrit mot à mot, en boucle.
+const LIVE = "Bonjour Camille, suite à notre échange de ce matin, je vous confirme notre venue jeudi à dix heures. Pouvez-vous nous réserver la salle du deuxième étage ?".split(" ");
+let li = 0;
+const liveEl = $("#livetxt");
+const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
+if (reduce) liveEl.textContent = LIVE.join(" ");
+else setInterval(() => { li = (li + 1) % (LIVE.length + 6); liveEl.textContent = LIVE.slice(0, Math.min(li, LIVE.length)).join(" "); }, 260);
+</script>
+</body>
+</html>
