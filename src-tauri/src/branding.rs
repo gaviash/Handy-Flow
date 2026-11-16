@@ -7,6 +7,21 @@ pub const APP_NAME: &str = "Handy Flow";
 /// Title of the recording overlay window (never shown in the taskbar).
 pub const OVERLAY_TITLE: &str = "Handy Flow Overlay";
 
+/// The 256px app icon in a palette's colors (rendered by scripts/render-icons.ts).
+pub fn palette_icon_resource(p: crate::settings::Palette) -> &'static str {
+    use crate::settings::Palette::*;
+    match p {
+        Rose => "resources/icons/palette-rose.png",
+        Sauge => "resources/icons/palette-sauge.png",
+        Prune => "resources/icons/palette-prune.png",
+        Encre => "resources/icons/palette-encre.png",
+        Ocean => "resources/icons/palette-ocean.png",
+        Ambre => "resources/icons/palette-ambre.png",
+        Lime => "resources/icons/palette-lime.png",
+        Contraste => "resources/icons/palette-contraste.png",
+    }
+}
+
 #[cfg(test)]
 mod tests {
     const CONF: &str = include_str!("../tauri.conf.json");
