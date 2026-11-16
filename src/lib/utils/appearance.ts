@@ -42,7 +42,10 @@ const isTheme = (v: unknown): v is Theme =>
 
 /** Keeps every valid field of `raw`, defaults the rest. */
 export function normalizeAppearance(raw: unknown): Appearance {
-  const r = (raw && typeof raw === "object" ? raw : {}) as Record<string, unknown>;
+  const r = (raw && typeof raw === "object" ? raw : {}) as Record<
+    string,
+    unknown
+  >;
   const d = DEFAULT_APPEARANCE;
   return {
     theme: isTheme(r.theme) ? r.theme : d.theme,
@@ -50,7 +53,9 @@ export function normalizeAppearance(raw: unknown): Appearance {
     heading_style: r.heading_style === "modern" ? "modern" : "editorial",
     ui_density: r.ui_density === "compact" ? "compact" : "comfortable",
     overlay_show_label:
-      typeof r.overlay_show_label === "boolean" ? r.overlay_show_label : d.overlay_show_label,
+      typeof r.overlay_show_label === "boolean"
+        ? r.overlay_show_label
+        : d.overlay_show_label,
   };
 }
 
@@ -93,7 +98,9 @@ export function withThemeTransition(change: () => void): void {
   const doc = document as Document & {
     startViewTransition?: (cb: () => void) => unknown;
   };
-  const reduced = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
+  const reduced = window.matchMedia?.(
+    "(prefers-reduced-motion: reduce)",
+  ).matches;
   if (doc.startViewTransition && !reduced) doc.startViewTransition(change);
   else change();
 }
@@ -103,7 +110,8 @@ export async function syncAppearanceFromSettings(): Promise<void> {
   try {
     const { commands } = await import("@/bindings");
     const result = await commands.getAppSettings();
-    if (result.status === "ok") applyAppearance(normalizeAppearance(result.data));
+    if (result.status === "ok")
+      applyAppearance(normalizeAppearance(result.data));
   } catch (e) {
     console.warn("Failed to sync appearance from settings:", e);
   }

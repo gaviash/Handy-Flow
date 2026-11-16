@@ -1553,6 +1553,15 @@ fn apply_settings_migrations(
 ) -> bool {
     let mut updated = false;
 
+    // Handy Flow rename: the house prompt (found by id) shows the app's name.
+    // Idempotent, so it needs no version number.
+    for prompt in &mut settings.post_process_prompts {
+        if prompt.id == crate::adaptive::HOUSE_PROMPT_ID && prompt.name == "Handy Adaptive" {
+            prompt.name = crate::adaptive::HOUSE_PROMPT_NAME.to_string();
+            updated = true;
+        }
+    }
+
     // One-time onboarding migration: users with an explicit selected model have
     // already made it through model selection. Users who merely have compatible
     // files on disk should still see onboarding.
@@ -2110,6 +2119,51 @@ mod tests {
         for p in Palette::ALL {
             assert_eq!(serde_json::to_value(p).unwrap(), serde_json::json!(p.id()));
         }
+    }
+
+    #[test]
+    fn house_prompt_takes_the_handy_flow_name_once() {
+        let mut settings = get_default_settings();
+        settings.post_process_prompts = vec![
+            LLMPrompt {
+                id: crate::adaptive::HOUSE_PROMPT_ID.into(),
+                name: "Handy Adaptive".into(),
+                prompt: "p".into(),
+            },
+            LLMPrompt {
+                id: "mine".into(),
+                name: "Handy Adaptive".into(),
+                prompt: "q".into(),
+            },
+        ];
+        let raw = serde_json::to_value(&settings).unwrap();
+        assert!(apply_settings_migrations(&mut settings, &raw));
+        assert_eq!(settings.post_process_prompts[0].name, "Handy Flow");
+        // The user's own prompt keeps the name they gave it.
+        assert_eq!(settings.post_process_prompts[1].name, "Handy Adaptive");
+        let raw = serde_json::to_value(&settings).unwrap();
+        assert!(!apply_settings_migrations(&mut settings, &raw));
+    }
+
+    /// The Playwright tests (tests/*.spec.ts) feed this file to the frontend
+    /// as `get_app_settings`. Refresh with UPDATE_FIXTURES=1.
+    #[test]
+    fn default_settings_fixture_is_current() {
+        let path = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+            .join("../tests/fixtures/app-settings.json");
+        let mut defaults = get_default_settings();
+        // The default follows the OS language; pin it so the fixture is the
+        // same on every machine (and the UI under test is English).
+        defaults.app_language = "en".into();
+        let current = serde_json::to_value(defaults).unwrap();
+        if std::env::var_os("UPDATE_FIXTURES").is_some() {
+            let text = serde_json::to_string_pretty(&current).unwrap() + "\n";
+            std::fs::write(&path, text).unwrap();
+        }
+        let stored: serde_json::Value =
+            serde_json::from_str(&std::fs::read_to_string(&path).unwrap_or_default())
+                .unwrap_or_default();
+        assert_eq!(stored, current, "run with UPDATE_FIXTURES=1 to refresh");
     }
 
     #[test]

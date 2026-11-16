@@ -37,11 +37,17 @@ if (import.meta.main) {
     for (const key of bareHandyKeys(json)) failures.push(`${locale}:${key}`);
   }
   for (const html of ["index.html", "src/overlay/index.html"]) {
-    if (!readFileSync(join(ROOT, html), "utf8").includes("<title>Handy Flow</title>"))
+    if (
+      !readFileSync(join(ROOT, html), "utf8").includes(
+        "<title>Handy Flow</title>",
+      )
+    )
       failures.push(`${html}: <title>Handy Flow</title> missing`);
   }
   if (failures.length) {
-    console.error(`Bare "Handy" found (${failures.length}):\n  ${failures.join("\n  ")}`);
+    console.error(
+      `Bare "Handy" found (${failures.length}):\n  ${failures.join("\n  ")}`,
+    );
     process.exit(1);
   }
   console.log("Branding OK: every locale says Handy Flow.");

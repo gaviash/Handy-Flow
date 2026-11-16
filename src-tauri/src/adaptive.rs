@@ -6,7 +6,7 @@ use crate::audio_toolkit::detect_output_language;
 
 /// Prompt entry id of the house prompt in `post_process_prompts`.
 pub const HOUSE_PROMPT_ID: &str = "adaptive_house";
-pub const HOUSE_PROMPT_NAME: &str = "Handy Adaptive";
+pub const HOUSE_PROMPT_NAME: &str = "Handy Flow";
 
 /// Q7: Groq model for the rewrite, and the one used when it is rate-limited.
 pub const GROQ_MAIN_MODEL: &str = "openai/gpt-oss-120b";

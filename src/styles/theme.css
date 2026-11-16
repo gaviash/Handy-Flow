@@ -61,12 +61,18 @@
   --color-background-ui: var(--accent);
   --color-on-accent: var(--on-accent);
   --color-plum: var(--accent-text);
-  --color-warning: light-dark(var(--light-color-warning), var(--dark-color-warning));
+  --color-warning: light-dark(
+    var(--light-color-warning),
+    var(--dark-color-warning)
+  );
   --color-error: light-dark(var(--light-color-error), var(--dark-color-error));
   --color-moss: light-dark(var(--light-color-moss), var(--dark-color-moss));
   --demo-pill-shadow: var(--light-demo-pill-shadow);
   --color-demo-window: var(--surface);
-  --color-demo-lid: light-dark(var(--light-color-demo-lid), var(--dark-color-demo-lid));
+  --color-demo-lid: light-dark(
+    var(--light-color-demo-lid),
+    var(--dark-color-demo-lid)
+  );
   --color-demo-alu-hi: light-dark(
     var(--light-color-demo-alu-hi),
     var(--dark-color-demo-alu-hi)
@@ -91,7 +97,11 @@
   --color-wordmark-stroke: var(--ink);
   --color-mascot-line: light-dark(var(--on-accent), var(--bg));
   --color-moss-wash: color-mix(in oklab, var(--color-moss) 13%, var(--bg));
-  --color-warning-wash: color-mix(in oklab, var(--color-warning) 13%, var(--bg));
+  --color-warning-wash: color-mix(
+    in oklab,
+    var(--color-warning) 13%,
+    var(--bg)
+  );
   --color-error-wash: color-mix(in oklab, var(--color-error) 13%, var(--bg));
 
   /* Grey steps: secondary text, hints/icons, control edges, dividers, hover fill. */

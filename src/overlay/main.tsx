@@ -16,7 +16,9 @@ import "@/i18n";
 // booted first, then follow live changes.
 applyAppearance(getStoredAppearance());
 syncAppearanceFromSettings();
-listen<Appearance>("appearance-changed", (event) => applyAppearance(event.payload));
+listen<Appearance>("appearance-changed", (event) =>
+  applyAppearance(event.payload),
+);
 
 // The overlay floats over other apps, so a stray right-click must not open the
 // webview's default menu (Reload, Save as, Print, ...). Kept in dev for Inspect.

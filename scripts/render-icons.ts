@@ -12,7 +12,10 @@ const ROOT = join(import.meta.dir, "..");
 const CHROME = "C:/Program Files/Google/Chrome/Application/chrome.exe";
 
 /** Light-mode icon colors, from the spec's palette table. */
-export const ICON_COLORS: Record<string, { bg: string; fg: string; dot: string }> = {
+export const ICON_COLORS: Record<
+  string,
+  { bg: string; fg: string; dot: string }
+> = {
   rose: { bg: "#f28cbb", fg: "#3b1d2c", dot: "#1c1915" },
   sauge: { bg: "#12443d", fg: "#f5f3e8", dot: "#f39ac2" },
   prune: { bg: "#2a1f33", fg: "#f6a5c8", dot: "#c9b6f2" },
@@ -24,7 +27,10 @@ export const ICON_COLORS: Record<string, { bg: string; fg: string; dot: string }
 };
 
 function masterSvg(): string {
-  const tsx = readFileSync(join(ROOT, "src/components/icons/HandyHand.tsx"), "utf8");
+  const tsx = readFileSync(
+    join(ROOT, "src/components/icons/HandyHand.tsx"),
+    "utf8",
+  );
   const d = tsx.match(/d="([^"]+)"/)![1];
   const size = 1024;
   const scale = ((size * 0.62) / 135).toFixed(4); // hand is 62% of the tile
@@ -41,7 +47,10 @@ function masterSvg(): string {
 }
 
 const fill = (svg: string, c: { bg: string; fg: string; dot: string }) =>
-  svg.replaceAll("{{bg}}", c.bg).replaceAll("{{fg}}", c.fg).replaceAll("{{dot}}", c.dot);
+  svg
+    .replaceAll("{{bg}}", c.bg)
+    .replaceAll("{{fg}}", c.fg)
+    .replaceAll("{{dot}}", c.dot);
 
 if (import.meta.main) {
   const svg = masterSvg();
@@ -59,12 +68,17 @@ if (import.meta.main) {
       [256, join(resDir, `palette-${id}.png`)],
     ] as const) {
       await page.setViewportSize({ width: px, height: px });
-      const html = `<html><body style="margin:0;background:transparent">${fill(svg, colors).replace(
+      const html = `<html><body style="margin:0;background:transparent">${fill(
+        svg,
+        colors,
+      ).replace(
         /width="1024" height="1024"/,
         `width="${px}" height="${px}"`,
       )}</body></html>`;
       await page.setContent(html);
-      await page.locator("svg").screenshot({ path: file, omitBackground: true });
+      await page
+        .locator("svg")
+        .screenshot({ path: file, omitBackground: true });
     }
     console.log(`rendered ${id}`);
   }

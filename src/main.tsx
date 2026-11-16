@@ -20,7 +20,9 @@ document.documentElement.dataset.platform = platform();
 // of the wrong palette, then reconcile with the persisted setting once it loads.
 applyAppearance(getStoredAppearance());
 syncAppearanceFromSettings();
-listen<Appearance>("appearance-changed", (event) => applyAppearance(event.payload));
+listen<Appearance>("appearance-changed", (event) =>
+  applyAppearance(event.payload),
+);
 
 // Initialize i18n
 import "./i18n";
