@@ -113,7 +113,7 @@ function App() {
         title: t("settings.postProcessing.learning.notice", {
           terms: payload.join(", "),
         }),
-        level: "warning",
+        level: "info",
         key: "learned-words",
         action: {
           label: t("settings.postProcessing.learning.undo"),

@@ -18,7 +18,10 @@ const NoticeChip: React.FC = () => {
     return () => setFooterShown(false);
   }, [setFooterShown]);
 
-  const notices = [...backendNotices, ...local.filter((n) => n.kept)];
+  // Good news (a learned word) is not a problem to list in the footer.
+  const notices = [...backendNotices, ...local.filter((n) => n.kept)].filter(
+    (n) => n.level !== "info",
+  );
   if (notices.length === 0) return null;
 
   // Plain keys, not plural ones: languages with more plural forms than this

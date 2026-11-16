@@ -2,7 +2,10 @@ import React, { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { X } from "lucide-react";
 import type { NoticeLevel } from "@/bindings";
-import { NoticeBadgeIcon } from "@/components/icons/NoticeBadgeIcon";
+import {
+  CheckBadgeIcon,
+  NoticeBadgeIcon,
+} from "@/components/icons/NoticeBadgeIcon";
 import { noticeDisplay } from "@/lib/notices";
 import { type LocalNotice, useNoticeStore } from "@/stores/noticeStore";
 
@@ -28,10 +31,17 @@ const NoticeRow: React.FC<NoticeRowProps> = ({
 }) => {
   const { t } = useTranslation();
   const color = level === "error" ? "text-error" : "text-warning";
+  // A learned word is good news: the overlay's green check, not a warning.
+  const icon =
+    level === "info" ? (
+      <CheckBadgeIcon className="mt-[3px] h-3.5 w-3.5 shrink-0 text-[#22c55e]" />
+    ) : (
+      <NoticeBadgeIcon className={`mt-[3px] h-3.5 w-3.5 shrink-0 ${color}`} />
+    );
 
   return (
     <div className="flex items-start gap-2.5 px-3 py-2.5">
-      <NoticeBadgeIcon className={`mt-[3px] h-3.5 w-3.5 shrink-0 ${color}`} />
+      {icon}
       <div className="min-w-0 flex-1 select-text break-words">
         <p className="text-sm font-medium text-text">{title}</p>
         {explanation && <p className="mt-0.5">{explanation}</p>}
