@@ -37,7 +37,7 @@ static MIGRATIONS: &[M] = &[
 
 /// Nullable columns added outside [`MIGRATIONS`]; see
 /// [`HistoryManager::apply_migrations`].
-const ADDED_COLUMNS: &[&str] = &["source_name", "language", "language_source", "app"];
+const ADDED_COLUMNS: &[&str] = &["source_name", "language", "language_source", "app", "kept_text"];
 
 /// Every column a [`HistoryEntry`] is read from.
 const ENTRY_COLUMNS: &str = "id, file_name, timestamp, saved, title, transcription_text, \
@@ -475,6 +475,52 @@ impl HistoryManager {
         Ok(())
     }
 
+    /// Handy Adaptive: the text the user kept after editing a dictation.
+    pub fn set_kept_text(&self, id: i64, text: &str) -> Result<()> {
+        set_kept_text_on(&self.get_connection()?, id, text)
+    }
+
+    /// Handy Adaptive: dictations since `since` (Unix s), newest first.
+    pub fn past_dictations(&self, since: i64) -> Result<Vec<PastDictation>> {
+        past_dictations_on(&self.get_connection()?, since)
+    }
+}
+
+/// A past dictation as the rewrite and the recall see it.
+#[derive(Debug, Clone, PartialEq)]
+pub struct PastDictation {
+    pub text: String,
+    pub app: Option<String>,
+    pub timestamp: i64,
+}
+
+fn set_kept_text_on(conn: &Connection, id: i64, text: &str) -> Result<()> {
+    conn.execute(
+        "UPDATE transcription_history SET kept_text = ?1 WHERE id = ?2",
+        params![text, id],
+    )?;
+    Ok(())
+}
+
+fn past_dictations_on(conn: &Connection, since: i64) -> Result<Vec<PastDictation>> {
+    let mut stmt = conn.prepare(
+        "SELECT COALESCE(kept_text, post_processed_text, transcription_text), app, timestamp
+         FROM transcription_history
+         WHERE timestamp >= ?1 AND transcription_text != ''
+         ORDER BY timestamp DESC LIMIT 500",
+    )?;
+    let rows = stmt.query_map(params![since], |r| {
+        Ok(PastDictation {
+            text: r.get(0)?,
+            app: r.get(1)?,
+            timestamp: r.get(2)?,
+        })
+    })?;
+    Ok(rows.collect::<std::result::Result<_, _>>()?)
+}
+
+impl HistoryManager {
+
     /// Q4: text is kept 30 days, audio only for the 20 newest dictations.
     fn trim_audio(&self, keep: usize) -> Result<()> {
         let conn = self.get_connection()?;
@@ -854,6 +900,24 @@ mod tests {
     fn user_version(conn: &Connection) -> i32 {
         conn.pragma_query_value(None, "user_version", |row| row.get(0))
             .expect("read user_version")
+    }
+
+    #[test]
+    fn past_dictations_prefer_the_text_the_user_kept() {
+        let mut conn = Connection::open_in_memory().expect("open in-memory db");
+        HistoryManager::apply_migrations(&mut conn).expect("migrate");
+        insert_entry(&conn, 10, "raw old", Some("old"));
+        insert_entry(&conn, 100, "raw a", Some("rewritten a"));
+        insert_entry(&conn, 200, "raw b", None);
+        let id: i64 = conn
+            .query_row("SELECT id FROM transcription_history WHERE timestamp = 100", [], |r| r.get(0))
+            .unwrap();
+        set_kept_text_on(&conn, id, "kept a").unwrap();
+        let past = past_dictations_on(&conn, 50).unwrap();
+        let texts: Vec<_> = past.iter().map(|p| p.text.as_str()).collect();
+        // Most recent first; kept text, else the rewrite, else the transcript.
+        assert_eq!(texts, vec!["raw b", "kept a"]);
+        assert_eq!(past[1].timestamp, 100);
     }
 
     #[test]

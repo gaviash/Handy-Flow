@@ -712,7 +712,13 @@ pub fn locate(text: &str, inserted: &str, caret: usize) -> Option<(String, Strin
 
 /// F80–F83: watches the field the text was pasted into, then learns from the
 /// last reading whose anchors still hold.
-pub fn observe(app: &AppHandle, field: &crate::context::Field, inserted: &str) {
+pub fn observe(
+    app: &AppHandle,
+    field: &crate::context::Field,
+    inserted: &str,
+    history_id: Option<i64>,
+    _app_name: String,
+) {
     if !crate::settings::get_settings(app).learning_enabled {
         return;
     }
@@ -789,6 +795,14 @@ pub fn observe(app: &AppHandle, field: &crate::context::Field, inserted: &str) {
                 last.as_ref().is_some_and(|fin| fin != &inserted),
                 found.len()
             );
+            // What the user kept feeds the next dictations' context.
+            if let (Some(id), Some(fin)) = (history_id, &last) {
+                use tauri::Manager;
+                let hm = app.state::<std::sync::Arc<crate::managers::history::HistoryManager>>();
+                if let Err(e) = hm.set_kept_text(id, fin) {
+                    log::warn!("Learning: couldn't record the kept text: {e}");
+                }
+            }
         });
 }
 
