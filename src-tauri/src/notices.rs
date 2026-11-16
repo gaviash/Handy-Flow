@@ -23,6 +23,8 @@ pub enum NoticeLevel {
     Error,
     /// The user got a result, but not the one they set up.
     Warning,
+    /// Handy Flow: good news shown on the overlay pill, never kept as a notice.
+    Info,
 }
 
 /// Each source has one slot in the store. Only dictation notices use the
@@ -46,6 +48,8 @@ pub enum NoticeCode {
     PasteSkippedExcluded,
     /// Handy Adaptive (F121–F123): no editable selection to transform.
     SelectionUnavailable,
+    /// Handy Flow (F95): words learned from the user's corrections.
+    WordsLearned,
     NoMicrophone,
     MicrophoneSilent,
     MicPermissionDenied,
@@ -74,6 +78,7 @@ impl NoticeCode {
             | Self::FilePostProcessFailed
             | Self::PasteSkippedExcluded
             | Self::SelectionUnavailable => NoticeLevel::Warning,
+            Self::WordsLearned => NoticeLevel::Info,
         }
     }
 
@@ -85,6 +90,7 @@ impl NoticeCode {
             Self::PasteBlockedElevated => &strings.paste_blocked_elevated_title,
             Self::PasteSkippedExcluded => &strings.paste_skipped_excluded_title,
             Self::SelectionUnavailable => &strings.selection_unavailable_title,
+            Self::WordsLearned => &strings.words_learned_title,
             Self::NoMicrophone => &strings.no_input_device_title,
             Self::MicrophoneSilent => &strings.microphone_silent_title,
             Self::MicPermissionDenied => &strings.mic_permission_denied_title,

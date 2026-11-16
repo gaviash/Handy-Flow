@@ -347,9 +347,50 @@ fn learn(app: &AppHandle, inserted: &str, fin: &str) -> usize {
     });
     if !new_terms.is_empty() {
         let _ = app.emit("learned-words", &new_terms);
+        announce(app, &new_terms);
     }
     n
 }
+
+/// F95, as Wispr: the overlay pill says what was learned, over the window the
+/// user dictates into, with the system's notification sound.
+fn announce(app: &AppHandle, words: &[String]) {
+    use crate::notices::{Notice, NoticeCode, NoticeSource};
+    let (app, detail) = (app.clone(), words.join(", "));
+    std::thread::spawn(move || {
+        // A dictation on the pill goes first: the news waits for it (≤ 20 s).
+        for _ in 0..80 {
+            if !crate::overlay::is_session_showing() {
+                break;
+            }
+            std::thread::sleep(Duration::from_millis(250));
+        }
+        crate::overlay::show_overlay_notice(
+            &app,
+            &Notice::new(NoticeCode::WordsLearned, NoticeSource::Dictation).with_detail(detail),
+        );
+        if crate::settings::get_settings(&app).audio_feedback {
+            play_notification_sound();
+        }
+    });
+}
+
+#[cfg(windows)]
+fn play_notification_sound() {
+    use windows::core::w;
+    use windows::Win32::Media::Audio::{PlaySoundW, SND_ALIAS, SND_ASYNC, SND_NODEFAULT};
+    // SAFETY: a static alias string; the sound plays asynchronously.
+    unsafe {
+        let _ = PlaySoundW(
+            w!("Notification.Default"),
+            None,
+            SND_ALIAS | SND_ASYNC | SND_NODEFAULT,
+        );
+    }
+}
+
+#[cfg(not(windows))]
+fn play_notification_sound() {}
 
 pub fn count(app: &AppHandle) -> usize {
     with_memory(app, |m| m.len())
@@ -392,7 +433,6 @@ pub fn export_learned_words(app: AppHandle, path: String) -> Result<(), String> 
 /// The current observation; a newer dictation ends the older one.
 static OBSERVATION: AtomicU64 = AtomicU64::new(0);
 const WINDOW: Duration = Duration::from_secs(60);
-const ANCHOR_CHARS: usize = 40;
 
 /// Ends the running observation now (a new dictation started): it learns
 /// from its last reading before this dictation's rewrite (F98).
@@ -400,26 +440,12 @@ pub fn end_observation() {
     OBSERVATION.fetch_add(1, Ordering::SeqCst);
 }
 
-/// The inserted region in the field's text, between the anchors read at
-/// release. `None` if an anchor is missing or ambiguous (PAR §7.1, R6).
+/// The dictated region: what lies between the whole text before it and the
+/// whole text after it, as Wispr's anchors (E71, E72). `None` once the field
+/// no longer starts and ends with them.
 pub fn region<'a>(text: &'a str, before: &str, after: &str) -> Option<&'a str> {
-    let start = if before.is_empty() {
-        0
-    } else {
-        let mut found = text.match_indices(before);
-        let (i, _) = found.next()?;
-        if found.next().is_some() {
-            return None;
-        }
-        i + before.len()
-    };
-    let rest = &text[start..];
-    let end = if after.is_empty() {
-        rest.len()
-    } else {
-        rest.find(after)?
-    };
-    Some(&rest[..end])
+    (text.len() >= before.len() + after.len() && text.starts_with(before) && text.ends_with(after))
+        .then(|| &text[before.len()..text.len() - after.len()])
 }
 
 /// Spaces and apostrophes as fields give them back: the rewrite's French
@@ -465,19 +491,20 @@ pub fn mismatch(text: &str, inserted: &str) -> String {
     )
 }
 
-/// The anchors around the one occurrence of `inserted` in `text`.
-pub fn anchors_around(text: &str, inserted: &str) -> Option<(String, String)> {
-    let mut found = text.match_indices(inserted);
-    let (i, _) = found.next()?;
-    if inserted.is_empty() || found.next().is_some() {
+/// Wispr's anchors for the pasted text once it shows up in the field: the
+/// whole text before and after it. With several copies, the one nearest the
+/// caret read at release (in chars).
+pub fn locate(text: &str, inserted: &str, caret: usize) -> Option<(String, String)> {
+    if inserted.is_empty() {
         return None;
     }
+    let i = text
+        .match_indices(inserted)
+        .map(|(i, _)| i)
+        .min_by_key(|&i| text[..i].chars().count().abs_diff(caret))?;
     Some((
-        crate::context::tail_chars(&text[..i], ANCHOR_CHARS),
-        text[i + inserted.len()..]
-            .chars()
-            .take(ANCHOR_CHARS)
-            .collect(),
+        text[..i].to_string(),
+        text[i + inserted.len()..].to_string(),
     ))
 }
 
@@ -491,8 +518,7 @@ pub fn observe(app: &AppHandle, field: &crate::context::Field, inserted: &str) {
         log::debug!("Learning: not observing, the field's caret position is unknown");
         return;
     }
-    let mut before = unify(&crate::context::tail_chars(&field.before, ANCHOR_CHARS));
-    let mut after = unify(&field.after.chars().take(ANCHOR_CHARS).collect::<String>());
+    let caret = field.before.chars().count();
     let inserted = unify(inserted.trim());
     let id = OBSERVATION.fetch_add(1, Ordering::SeqCst) + 1;
     let app = app.clone();
@@ -505,6 +531,7 @@ pub fn observe(app: &AppHandle, field: &crate::context::Field, inserted: &str) {
             }
             let started = Instant::now();
             let mut last: Option<String> = None;
+            let mut anchors: Option<(String, String)> = None;
             // Lengths only in the log: the text itself stays private.
             let mut ended = "the 60 s window closed";
             // A newer dictation ended this one: learn from the last reading,
@@ -516,35 +543,28 @@ pub fn observe(app: &AppHandle, field: &crate::context::Field, inserted: &str) {
                 }
                 match crate::context::read_watched().map(|t| unify(&t)) {
                     // An empty field was sent or cleared: keep the last reading.
-                    Some(text) if !text.trim().is_empty() => match {
-                        // The anchors read at release can vanish (a placeholder
-                        // read as text, spaces rewritten): take them around the
-                        // pasted text itself once it shows up.
-                        if last.is_none() {
-                            if let Some((b, a)) = anchors_around(&text, &inserted) {
-                                (before, after) = (b, a);
-                            }
+                    Some(text) if !text.trim().is_empty() => {
+                        if anchors.is_none() {
+                            anchors = locate(&text, &inserted, caret);
                         }
-                        region(&text, &before, &after)
-                    } {
-                        // Tracked only once the pasted text has shown up there.
-                        Some(r) if last.is_some() || r.trim() == inserted => {
-                            last = Some(r.trim().to_string())
-                        }
-                        _ if last.is_none() && started.elapsed() < Duration::from_secs(3) => {}
-                        Some(_) if last.is_none() => {
-                            ended = "the pasted text never showed up in the field";
-                            log::debug!("Learning: {}", mismatch(&text, &inserted));
-                            break;
-                        }
-                        _ => {
-                            ended = "the text around the dictation changed";
-                            if last.is_none() {
+                        match &anchors {
+                            // The paste can take a moment to show up.
+                            None if started.elapsed() < Duration::from_secs(3) => {}
+                            None => {
+                                ended = "the pasted text never showed up in the field";
                                 log::debug!("Learning: {}", mismatch(&text, &inserted));
+                                break;
                             }
-                            break;
+                            Some((before, after)) => match region(&text, before, after) {
+                                Some(r) => last = Some(r.trim().to_string()),
+                                // Text typed outside the dictation (Wispr: anchor_mismatch).
+                                None => {
+                                    ended = "the text around the dictation changed";
+                                    break;
+                                }
+                            },
                         }
-                    },
+                    }
                     Some(_) => {
                         ended = "the field was emptied (sent)";
                         break;
@@ -574,37 +594,43 @@ mod tests {
     use super::*;
 
     #[test]
-    fn explains_a_mismatch_without_the_text() {
-        let m = mismatch("Bonjour Adrien, ça va", "Bonjour Adryen, ça va");
-        assert!(m.contains("same for 11 chars"), "{m}");
-        assert!(m.contains("U+0079") && m.contains("U+0069"), "{m}");
-        assert!(!m.contains("Bonjour"));
+    fn tracks_the_dictation_with_wispr_anchors() {
+        // Notepad: a space joined after the pasted text used to cut the region
+        // at the first space of the field.
+        let pasted = "Concernant le benchmark, est-il meilleur entre Gemma et Quen ?";
+        let field = format!("{pasted} ");
+        let (b, a) = locate(&field, pasted, 0).unwrap();
+        assert_eq!(region(&field, &b, &a), Some(pasted));
+        let fixed = "Concernant le benchmark, est-il meilleur entre Gemma et Qwen ? ";
+        let r = region(fixed, &b, &a).unwrap();
+        assert_eq!(
+            candidates(pasted, r.trim()),
+            vec![("Qwen".into(), "Quen".into())]
+        );
+        // Text typed outside the dictation ends the tracking.
+        assert_eq!(region("Bonjour, autre chose", "Bonjour, ", " Merci"), None);
+        // A placeholder read at release doesn't matter: the field is searched.
+        let (b, a) = locate("Salut Quinn.", "Salut Quinn.", 22).unwrap();
+        assert_eq!((b.as_str(), a.as_str()), ("", ""));
+        // Two copies: the one nearest the caret read at release.
+        let (b, _) = locate("ok. ok. ok.", "ok.", 4).unwrap();
+        assert_eq!(b, "ok. ");
     }
 
     #[test]
     fn finds_the_pasted_text_despite_a_narrow_no_break_space() {
         let pasted = unify("est-il meilleur entre Gemma et Quen\u{202f}?");
         let field = unify("Concernant le benchmark, est-il meilleur entre Gemma et Quen ?");
-        assert!(anchors_around(&field, &pasted).is_some());
+        assert!(locate(&field, &pasted, 0).is_some());
         assert_eq!(unify("l\u{2019}apprentissage"), "l'apprentissage");
     }
 
     #[test]
-    fn re_anchors_when_a_placeholder_was_read_at_release() {
-        let pasted = "Alors que j'ai bien corrigé Gemma et Quinn.";
-        // At release the empty input read as its placeholder: no anchor fits.
-        let (before, after) = ("Ask Claude to edit…", "");
-        assert_eq!(region(pasted, before, after), None);
-        // Once the pasted text shows up, anchors come from the field itself.
-        let (b, a) = anchors_around(pasted, pasted).unwrap();
-        let fin = "Alors que j'ai bien corrigé Gemma et Qwen.";
-        let r = region(fin, &b, &a).unwrap();
-        assert_eq!(candidates(pasted, r), vec![("Qwen".into(), "Quinn".into())]);
-        // Text typed before and after in the same field stays outside.
-        let field = format!("Bonjour, {pasted} Merci");
-        let (b, a) = anchors_around(&field, pasted).unwrap();
-        assert_eq!(region(&field, &b, &a), Some(pasted));
-        assert_eq!(anchors_around("a a", "a"), None);
+    fn explains_a_mismatch_without_the_text() {
+        let m = mismatch("Bonjour Adrien, ça va", "Bonjour Adryen, ça va");
+        assert!(m.contains("same for 11 chars"), "{m}");
+        assert!(m.contains("U+0079") && m.contains("U+0069"), "{m}");
+        assert!(!m.contains("Bonjour"));
     }
 
     #[test]
@@ -705,16 +731,5 @@ mod tests {
             ),
             vec![("PostgreSQL".into(), "postgéré".into())]
         ); // L03
-    }
-
-    #[test]
-    fn finds_the_inserted_region() {
-        assert_eq!(
-            region("Bonjour Adryen, merci.", "Bonjour ", ", merci."),
-            Some("Adryen")
-        );
-        assert_eq!(region("tout le texte", "", ""), Some("tout le texte"));
-        assert_eq!(region("a X b a Y b", "a ", " b"), None); // ambiguous anchor
-        assert_eq!(region("autre chose", "Bonjour ", ""), None);
     }
 }

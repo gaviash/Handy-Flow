@@ -1077,7 +1077,8 @@
     "fileTranscriptionFailedTitle": "Transkriptionen av filen misslyckades",
     "transcriptionFailedTitle": "Transkriptionen misslyckades",
     "selectionUnavailableTitle": "Select Some Text First",
-    "selectionUnavailable": "Polish and voice instructions change the selected text (up to 8,000 characters). Nothing was changed."
+    "selectionUnavailable": "Polish and voice instructions change the selected text (up to 8,000 characters). Nothing was changed.",
+    "wordsLearnedTitle": "Learned: {{detail}}"
   },
   "notices": {
     "errorOne": "{{n}} fel",

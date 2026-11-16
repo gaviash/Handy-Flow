@@ -1077,7 +1077,8 @@
     "fileTranscriptionFailedTitle": "Échec de la transcription du fichier",
     "transcriptionFailedTitle": "Échec de la transcription",
     "selectionUnavailableTitle": "Sélectionnez d'abord un texte",
-    "selectionUnavailable": "Polish et les instructions vocales modifient le texte sélectionné (8 000 caractères au plus). Rien n'a été modifié."
+    "selectionUnavailable": "Polish et les instructions vocales modifient le texte sélectionné (8 000 caractères au plus). Rien n'a été modifié.",
+    "wordsLearnedTitle": "Appris : {{detail}}"
   },
   "notices": {
     "errorOne": "{{n}} erreur",
