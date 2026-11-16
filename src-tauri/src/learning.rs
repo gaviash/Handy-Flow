@@ -422,6 +422,19 @@ pub fn region<'a>(text: &'a str, before: &str, after: &str) -> Option<&'a str> {
     Some(&rest[..end])
 }
 
+/// Spaces and apostrophes as fields give them back: the rewrite's French
+/// narrow no-break space before "?" reads as a plain space in VS Code and
+/// Notepad, so the pasted text was never found.
+pub fn unify(s: &str) -> String {
+    s.chars()
+        .map(|c| match c {
+            '\u{a0}' | '\u{202f}' | '\u{2009}' | '\u{2007}' => ' ',
+            '\u{2019}' => '\'',
+            _ => c,
+        })
+        .collect()
+}
+
 /// The anchors around the one occurrence of `inserted` in `text`.
 pub fn anchors_around(text: &str, inserted: &str) -> Option<(String, String)> {
     let mut found = text.match_indices(inserted);
@@ -448,9 +461,9 @@ pub fn observe(app: &AppHandle, field: &crate::context::Field, inserted: &str) {
         log::debug!("Learning: not observing, the field's caret position is unknown");
         return;
     }
-    let mut before: String = crate::context::tail_chars(&field.before, ANCHOR_CHARS);
-    let mut after: String = field.after.chars().take(ANCHOR_CHARS).collect();
-    let inserted = inserted.trim().to_string();
+    let mut before = unify(&crate::context::tail_chars(&field.before, ANCHOR_CHARS));
+    let mut after = unify(&field.after.chars().take(ANCHOR_CHARS).collect::<String>());
+    let inserted = unify(inserted.trim());
     let id = OBSERVATION.fetch_add(1, Ordering::SeqCst) + 1;
     let app = app.clone();
     let _ = std::thread::Builder::new()
@@ -471,7 +484,7 @@ pub fn observe(app: &AppHandle, field: &crate::context::Field, inserted: &str) {
                     ended = "a newer dictation started";
                     break;
                 }
-                match crate::context::read_watched() {
+                match crate::context::read_watched().map(|t| unify(&t)) {
                     // An empty field was sent or cleared: keep the last reading.
                     Some(text) if !text.trim().is_empty() => match {
                         // The anchors read at release can vanish (a placeholder
@@ -512,7 +525,9 @@ pub fn observe(app: &AppHandle, field: &crate::context::Field, inserted: &str) {
                         break;
                     }
                 }
-                std::thread::sleep(Duration::from_secs(1));
+                // Often enough to catch a fix made just before Enter sends it
+                // (Wispr learns from the last reading before the send, E224).
+                std::thread::sleep(Duration::from_millis(300));
             }
             let found = match &last {
                 Some(fin) if fin != &inserted => learn(&app, &inserted, fin),
@@ -528,6 +543,14 @@ pub fn observe(app: &AppHandle, field: &crate::context::Field, inserted: &str) {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn finds_the_pasted_text_despite_a_narrow_no_break_space() {
+        let pasted = unify("est-il meilleur entre Gemma et Quen\u{202f}?");
+        let field = unify("Concernant le benchmark, est-il meilleur entre Gemma et Quen ?");
+        assert!(anchors_around(&field, &pasted).is_some());
+        assert_eq!(unify("l\u{2019}apprentissage"), "l'apprentissage");
+    }
 
     #[test]
     fn re_anchors_when_a_placeholder_was_read_at_release() {
