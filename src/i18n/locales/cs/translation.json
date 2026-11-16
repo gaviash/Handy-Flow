@@ -1237,7 +1237,7 @@
     "transcribing": "Přepisuji...",
     "processing": "Zpracovávám...",
     "loadingModel": "Načítání modelu...",
-    "recording": "Recording..."
+    "recording": "Listening"
   },
   "secureInput": {
     "blockedWithCulprit_one": "{{name}} může blokovat 1 zkratku",

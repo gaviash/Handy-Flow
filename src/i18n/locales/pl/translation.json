@@ -1237,7 +1237,7 @@
     "transcribing": "Transkrypcja...",
     "processing": "Przetwarzanie...",
     "loadingModel": "Wczytywanie modelu...",
-    "recording": "Recording..."
+    "recording": "Listening"
   },
   "secureInput": {
     "blockedWithCulprit_one": "{{name}} może blokować 1 skrót",

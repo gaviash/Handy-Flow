@@ -490,7 +490,7 @@
 :root[data-overlay-label="false"] .scard.compact .swork-label {
   display: none;
 }
-:root[data-overlay-label="false"] .scard.compact .sbase {
+:root[data-overlay-label="false"] .scard.compact .sworking {
   grid-template-columns: 1fr 1fr;
 }
 :focus-visible {
@@ -505,4 +505,36 @@
     transition-duration: 0s !important;
     scroll-behavior: auto !important;
   }
+}
+.slisten {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 0;
+}
+.slisten-label {
+  display: none;
+}
+.scard.compact .sbase:not(.sworking):not(.snotice) {
+  grid-template-columns: 22px minmax(0, 1fr) 22px;
+  gap: 4px;
+}
+:root:not([data-overlay-label="false"]) .scard.compact .slisten {
+  gap: 6px;
+}
+:root:not([data-overlay-label="false"]) .scard.compact .slisten-label {
+  display: block;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--pill-ink);
+  font-size: 12px;
+}
+:root:not([data-overlay-label="false"]) .scard.compact .swave {
+  gap: 2px;
+  padding-right: 0;
+}
+:root:not([data-overlay-label="false"]) .scard.compact .swave i {
+  width: 2px;
 }

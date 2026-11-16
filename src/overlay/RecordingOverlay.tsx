@@ -322,7 +322,10 @@ const RecordingOverlay: React.FC = () => {
       <div className="sbase-l">
         <span className={`sdot ${captureReady ? "ready" : "arming"}`} />
       </div>
-      {waveform}
+      <div className="slisten">
+        {waveform}
+        <span className="slisten-label">{t("overlay.recording")}</span>
+      </div>
       <div className="sbase-r">
         {showTimer && <span className="stimer">{fmtTime(elapsed)}</span>}
         {showCancel && cancelBtn}
@@ -333,7 +336,7 @@ const RecordingOverlay: React.FC = () => {
   // spinner (left) | label (center) | cancel (right) — same 3-zone grid as the
   // listening row, so the label is centered.
   const workingRow = (label: string, showCancel: boolean) => (
-    <div className="sbase">
+    <div className="sbase sworking">
       <div className="sbase-l">
         <span className="sspinner" />
       </div>

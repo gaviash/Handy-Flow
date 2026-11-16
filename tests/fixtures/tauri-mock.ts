@@ -183,15 +183,21 @@ export async function mockTauri(page: Page, opts: MockOptions = {}) {
         for (const id of listeners.get(event) ?? [])
           callbacks.get(id)?.({ event, id, payload });
       };
+      w.__hasListener = (event: string) => listeners.has(event);
     },
     { results, label: opts.label ?? "main" },
   );
   return {
     calls: () => page.evaluate(() => (window as any).__calls as Call[]),
-    emit: (event: string, payload: unknown) =>
-      page.evaluate(([e, p]) => (window as any).__emit(e, p), [
+    emit: async (event: string, payload: unknown) => {
+      await page.waitForFunction(
+        (event) => (window as any).__hasListener(event),
+        event,
+      );
+      return page.evaluate(([e, p]) => (window as any).__emit(e, p), [
         event,
         payload,
-      ] as const),
+      ] as const);
+    },
   };
 }

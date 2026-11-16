@@ -1237,7 +1237,7 @@
     "transcribing": "Расшифровка...",
     "processing": "Обработка...",
     "loadingModel": "Загрузка модели...",
-    "recording": "Recording..."
+    "recording": "Listening"
   },
   "secureInput": {
     "blockedWithCulprit_one": "{{name}} может блокировать 1 сочетание клавиш",

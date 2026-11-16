@@ -2,6 +2,38 @@ import { test, expect } from "@playwright/test";
 import { mockTauri } from "./fixtures/tauri-mock";
 import { DEFAULT_APPEARANCE } from "../src/lib/utils/appearance";
 
+test("recording Pill has a label and Wave keeps Cancel inside the pill", async ({
+  page,
+}) => {
+  const backend = await mockTauri(page, { label: "recording_overlay" });
+  await page.goto("/src/overlay/index.html");
+  await expect
+    .poll(async () =>
+      (await backend.calls()).some((c) => c.cmd === "get_app_settings"),
+    )
+    .toBe(true);
+  await backend.emit("show-overlay", "recording");
+  await expect(page.locator(".ov-stage")).toHaveClass(/show/);
+  await backend.emit("appearance-changed", {
+    ...DEFAULT_APPEARANCE,
+    overlay_show_label: false,
+  });
+  const card = await page.locator(".scard").boundingBox();
+  const cancel = await page
+    .getByRole("button", { name: "Cancel" })
+    .boundingBox();
+  const dot = await page.locator(".sdot").boundingBox();
+  expect(
+    Math.abs(cancel!.y + cancel!.height / 2 - (dot!.y + dot!.height / 2)),
+  ).toBeLessThan(1);
+  expect(cancel!.y + cancel!.height).toBeLessThanOrEqual(
+    card!.y + card!.height,
+  );
+  await backend.emit("appearance-changed", DEFAULT_APPEARANCE);
+  await expect(page.locator(".slisten-label")).toBeVisible();
+  await expect(page.locator(".swave i")).toHaveCount(9);
+});
+
 test("recolors live and hides only the label in Wave", async ({ page }) => {
   const backend = await mockTauri(page, { label: "recording_overlay" });
   await page.goto("/src/overlay/index.html");

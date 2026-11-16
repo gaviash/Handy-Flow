@@ -2145,15 +2145,16 @@ mod tests {
         assert!(!apply_settings_migrations(&mut settings, &raw));
     }
 
-    /// The Playwright tests (tests/*.spec.ts) feed this file to the frontend
+    /// The Windows IPC mock in Playwright feeds this file to the frontend
     /// as `get_app_settings`. Refresh with UPDATE_FIXTURES=1.
     #[test]
+    #[cfg(target_os = "windows")]
     fn default_settings_fixture_is_current() {
         let path = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
             .join("../tests/fixtures/app-settings.json");
         let mut defaults = get_default_settings();
         // The default follows the OS language; pin it so the fixture is the
-        // same on every machine (and the UI under test is English).
+        // same on every Windows machine (and the UI under test is English).
         defaults.app_language = "en".into();
         let current = serde_json::to_value(defaults).unwrap();
         if std::env::var_os("UPDATE_FIXTURES").is_some() {
