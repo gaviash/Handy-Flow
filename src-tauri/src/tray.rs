@@ -213,7 +213,12 @@ fn windows_taskbar_theme() -> Option<AppTheme> {
 /// `badge` marks the idle icon while something needs attention (a notice, or
 /// macOS Secure Input). Busy states keep their normal icons. The menu line says
 /// what's wrong, so the badge doesn't vary by level.
-pub fn get_icon_path(theme: AppTheme, state: TrayIconState, badge: bool) -> &'static str {
+pub fn get_icon_path(
+    theme: AppTheme,
+    state: TrayIconState,
+    badge: bool,
+    palette: settings::Palette,
+) -> &'static str {
     if badge && state == TrayIconState::Idle {
         return match theme {
             AppTheme::Dark => "resources/tray_idle_warning.png",
@@ -230,8 +235,8 @@ pub fn get_icon_path(theme: AppTheme, state: TrayIconState, badge: bool) -> &'st
         (AppTheme::Light, TrayIconState::Idle) => "resources/tray_idle_dark.png",
         (AppTheme::Light, TrayIconState::Recording) => "resources/tray_recording_dark.png",
         (AppTheme::Light, TrayIconState::Transcribing) => "resources/tray_transcribing_dark.png",
-        // Colored theme uses pink icons (for Linux)
-        (AppTheme::Colored, TrayIconState::Idle) => "resources/handy.png",
+        // The idle colored icon follows the palette; busy states keep their signals.
+        (AppTheme::Colored, TrayIconState::Idle) => crate::branding::palette_icon_resource(palette),
         (AppTheme::Colored, TrayIconState::Recording) => "resources/recording.png",
         (AppTheme::Colored, TrayIconState::Transcribing) => "resources/transcribing.png",
     }
@@ -382,7 +387,7 @@ fn compute_desired(app: &AppHandle, icon_state: TrayIconState) -> TrayDesired {
     };
 
     TrayDesired {
-        icon_path: get_icon_path(theme, icon_state, badge),
+        icon_path: get_icon_path(theme, icon_state, badge, settings.palette),
         menu: MenuInputs {
             busy: icon_state.is_busy(),
             models_locked,
@@ -876,7 +881,7 @@ mod tests {
     };
     use crate::managers::history::HistoryEntry;
     use crate::managers::model::{ModelInfo, ModelSource};
-    use crate::settings::{get_default_settings, AppSettings};
+    use crate::settings::{self, get_default_settings, AppSettings};
 
     fn codes(list: &str) -> Vec<String> {
         list.split_whitespace().map(String::from).collect()
@@ -1042,18 +1047,48 @@ mod tests {
     }
 
     #[test]
+    fn tray_colored_icon_follows_palette() {
+        for palette in crate::settings::Palette::ALL {
+            assert_eq!(
+                get_icon_path(AppTheme::Colored, TrayIconState::Idle, false, palette),
+                crate::branding::palette_icon_resource(palette)
+            );
+        }
+    }
+
+    #[test]
     fn the_badge_shows_at_idle_only_and_exists() {
         let root = std::path::Path::new(env!("CARGO_MANIFEST_DIR"));
         for theme in [AppTheme::Dark, AppTheme::Light, AppTheme::Colored] {
-            let badged = get_icon_path(theme.clone(), TrayIconState::Idle, true);
+            let badged = get_icon_path(
+                theme.clone(),
+                TrayIconState::Idle,
+                true,
+                settings::Palette::Rose,
+            );
             assert_ne!(
                 badged,
-                get_icon_path(theme.clone(), TrayIconState::Idle, false)
+                get_icon_path(
+                    theme.clone(),
+                    TrayIconState::Idle,
+                    false,
+                    settings::Palette::Rose
+                )
             );
             assert!(root.join(badged).is_file(), "{badged} is missing");
             assert_eq!(
-                get_icon_path(theme.clone(), TrayIconState::Recording, true),
-                get_icon_path(theme, TrayIconState::Recording, false)
+                get_icon_path(
+                    theme.clone(),
+                    TrayIconState::Recording,
+                    true,
+                    settings::Palette::Rose
+                ),
+                get_icon_path(
+                    theme,
+                    TrayIconState::Recording,
+                    false,
+                    settings::Palette::Rose
+                )
             );
         }
     }

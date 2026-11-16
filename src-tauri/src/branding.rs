@@ -22,6 +22,28 @@ pub fn palette_icon_resource(p: crate::settings::Palette) -> &'static str {
     }
 }
 
+/// Repaints the main window icon without changing the installed app icon.
+pub fn apply_window_icon(app: &tauri::AppHandle, palette: crate::settings::Palette) {
+    use tauri::Manager;
+    let result = app
+        .path()
+        .resolve(
+            palette_icon_resource(palette),
+            tauri::path::BaseDirectory::Resource,
+        )
+        .and_then(tauri::image::Image::from_path);
+    match result {
+        Ok(icon) => {
+            if let Some(window) = app.get_webview_window("main") {
+                if let Err(error) = window.set_icon(icon) {
+                    log::warn!("Failed to apply palette window icon: {error}");
+                }
+            }
+        }
+        Err(error) => log::warn!("Failed to load palette window icon: {error}"),
+    }
+}
+
 #[cfg(test)]
 mod tests {
     const CONF: &str = include_str!("../tauri.conf.json");

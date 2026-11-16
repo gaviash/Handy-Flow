@@ -688,6 +688,8 @@ fn update_appearance(app: &AppHandle, apply: impl FnOnce(&mut settings::AppSetti
 pub fn change_palette_setting(app: AppHandle, palette: String) -> Result<(), String> {
     let palette = settings::Palette::from_setting(&palette);
     update_appearance(&app, |s| s.palette = palette);
+    crate::branding::apply_window_icon(&app, palette);
+    crate::tray::refresh_tray_icon(&app);
     Ok(())
 }
 
