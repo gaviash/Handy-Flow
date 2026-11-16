@@ -11,6 +11,19 @@
   --color-background-ui: var(--color-background-ui);
   --color-logo-primary: var(--color-logo-primary);
   --color-on-accent: var(--color-on-accent);
+  /* Palette tokens (src/styles/palettes.css) used directly by the shell. */
+  --color-accent: var(--accent);
+  --color-accent-text: var(--accent-text);
+  --color-accent-wash: var(--accent-wash);
+  --color-side: var(--side);
+  --color-side-ink: var(--side-ink);
+  --color-side-ink-2: var(--side-ink-2);
+  --color-side-active: var(--side-active);
+  --color-surface: var(--surface);
+  --color-raised: var(--raised);
+  --color-pill: var(--pill);
+  --color-pill-ink: var(--pill-ink);
+  --color-pill-accent: var(--pill-accent);
   --color-warning: var(--color-warning);
   --color-error: var(--color-error);
   --color-moss: var(--color-moss);
@@ -37,15 +50,54 @@
   font-display: block;
 }
 
+/* Handy Flow's faces, bundled (OFL, src/assets/fonts/OFL.txt): no network. */
+@font-face {
+  font-family: "Figtree";
+  src: url("./assets/fonts/Figtree-Variable.woff2") format("woff2");
+  font-weight: 300 900;
+  font-display: block;
+}
+@font-face {
+  font-family: "Instrument Serif";
+  src: url("./assets/fonts/InstrumentSerif-Regular.woff2") format("woff2");
+  font-weight: 400;
+  font-style: normal;
+  font-display: block;
+}
+@font-face {
+  font-family: "Instrument Serif";
+  src: url("./assets/fonts/InstrumentSerif-Italic.woff2") format("woff2");
+  font-weight: 400;
+  font-style: italic;
+  font-display: block;
+}
+
+/* Screen titles follow the "Titres" setting: editorial serif or modern sans. */
+:root {
+  --heading-font: "Instrument Serif", Georgia, serif;
+  --heading-weight: 400;
+  --heading-tracking: -0.01em;
+}
+:root[data-headings="modern"] {
+  --heading-font: "Figtree", system-ui, sans-serif;
+  --heading-weight: 700;
+  --heading-tracking: -0.03em;
+}
+
 /* Onboarding's scale in px (rem steps land on fractions at a 15px root).
    Names avoid Tailwind's defaults, which Settings still uses. */
 @theme {
+  --font-sans:
+    "Figtree", system-ui, -apple-system, "Segoe UI Variable Text", "Segoe UI",
+    Roboto, "Noto Sans", sans-serif;
   --font-display:
-    ui-rounded, "SF Pro Rounded", system-ui, -apple-system,
-    "Segoe UI Variable Display", "Segoe UI", sans-serif;
+    "Figtree", system-ui, -apple-system, "Segoe UI Variable Display",
+    "Segoe UI", sans-serif;
   --font-ui:
-    system-ui, -apple-system, "Segoe UI Variable Text", "Segoe UI", Roboto,
-    "Noto Sans", sans-serif;
+    "Figtree", system-ui, -apple-system, "Segoe UI Variable Text", "Segoe UI",
+    Roboto, "Noto Sans", sans-serif;
+  --font-heading: var(--heading-font);
+  --font-serif: "Instrument Serif", Georgia, serif;
   --font-cjk-subset:
     "Handy CJK Subset", -apple-system, "Segoe UI Variable Text", "Segoe UI",
     system-ui, sans-serif;
