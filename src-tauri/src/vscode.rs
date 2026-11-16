@@ -85,7 +85,8 @@ fn scan(text: &str) -> Option<Scan> {
             }
             b':' if depth == 1 => {
                 let key = last_key.take()?;
-                wants_value = text[key].trim_matches('"') == KEY;
+                // Decoded, so an escaped spelling of the key is the key too.
+                wants_value = serde_json::from_str::<String>(&text[key]).ok()?.as_str() == KEY;
                 i += 1;
             }
             b'{' | b'[' => {
@@ -256,6 +257,11 @@ mod tests {
             with_screen_reader_on("{\"a\": \"}{\", \"editor.accessibilitySupport\": off,}")
                 .unwrap(),
             "{\"a\": \"}{\", \"editor.accessibilitySupport\": \"on\",}"
+        );
+        // An escaped spelling of the key is the key.
+        assert_eq!(
+            with_screen_reader_on(r#"{"editor\u002eaccessibilitySupport":"off"}"#).unwrap(),
+            r#"{"editor\u002eaccessibilitySupport":"on"}"#
         );
         // Not one object: untouched.
         assert_eq!(with_screen_reader_on("{} {}"), None);
