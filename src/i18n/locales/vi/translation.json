@@ -793,6 +793,10 @@
           "learnedWordsDescription": "Words learned from your corrections, with the forms they were misheard as.",
           "styleRulesDescription": "Your writing preferences learned from your corrections.",
           "pastDictationsDescription": "Up to 5 of your recent rewritten dictations that look like this one."
+        },
+        "vscode": {
+          "label": "VS Code Screen Reader Mode",
+          "description": "Turns on \"Screen Reader Optimized\" (editor.accessibilitySupport) in VS Code, Cursor and VSCodium, so the text around the cursor can be read for the context and the learning."
         }
       },
       "learning": {

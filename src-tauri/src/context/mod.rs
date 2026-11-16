@@ -720,6 +720,8 @@ pub struct AsrReport {
 /// F114: what one dictation or transformation read and sent. Memory only.
 #[derive(Debug, Clone, Default, Serialize, Type)]
 pub struct ContextReport {
+    /// Set by [`set_report`]; what [`record_sent`] finds the report by.
+    pub id: u64,
     pub kind: ReportKind,
     /// Unix seconds.
     pub at: i64,
@@ -735,20 +737,32 @@ const REPORTS_MAX: usize = 10;
 static REPORTS: Lazy<Mutex<std::collections::VecDeque<ContextReport>>> =
     Lazy::new(Default::default);
 
-pub fn set_report(mut report: ContextReport) {
+/// Keeps `report` and returns its id, for [`record_sent`].
+pub fn set_report(mut report: ContextReport) -> u64 {
+    static NEXT: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(1);
+    let id = NEXT.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+    report.id = id;
     report.at = chrono::Utc::now().timestamp();
     let mut reports = REPORTS.lock().unwrap_or_else(|e| e.into_inner());
     reports.push_back(report);
     while reports.len() > REPORTS_MAX {
         reports.pop_front();
     }
+    id
 }
 
-/// Records the exact user message sent for the current dictation (F114).
-// shortcut: goes to the newest report; a dictation whose rewrite ends after
-// the next one started would land on that one. Pass an id if that happens.
-pub fn record_sent(message: &str) {
-    if let Some(r) = REPORTS.lock().unwrap_or_else(|e| e.into_inner()).back_mut() {
+/// Records the exact user message sent for report `id` (F114). `None`: a
+/// retry or a file, which have no report.
+pub fn record_sent(id: Option<u64>, message: &str) {
+    let Some(id) = id else {
+        return;
+    };
+    if let Some(r) = REPORTS
+        .lock()
+        .unwrap_or_else(|e| e.into_inner())
+        .iter_mut()
+        .find(|r| r.id == id)
+    {
         r.sent = Some(message.to_string());
     }
 }
@@ -971,14 +985,19 @@ mod tests {
 
     #[test]
     fn the_last_ten_reports_are_kept_newest_first() {
+        let mut ids = Vec::new();
         for i in 0..12 {
-            set_report(ContextReport {
+            ids.push(set_report(ContextReport {
                 sent: Some(format!("m{i}")),
                 ..Default::default()
-            });
+            }));
         }
-        // Other tests may record a send on the newest report meanwhile.
+        // A send lands on its own report, not the newest one.
+        record_sent(Some(ids[5]), "five");
+        record_sent(None, "nowhere");
         let reports = get_context_reports();
+        assert!(reports.iter().any(|r| r.sent.as_deref() == Some("five")));
+        assert!(reports.iter().all(|r| r.sent.as_deref() != Some("nowhere")));
         assert_eq!(reports.len(), REPORTS_MAX);
         assert_eq!(reports[1].sent.as_deref(), Some("m10"));
         assert_eq!(reports[9].sent.as_deref(), Some("m2"));

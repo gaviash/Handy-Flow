@@ -147,6 +147,16 @@ struct Reply {
     text: String,
 }
 
+/// The provider's `error.message`, short, as `: …`; nothing else of the body
+/// (it could echo what was sent).
+fn error_message(body: &str) -> String {
+    serde_json::from_str::<serde_json::Value>(body)
+        .ok()
+        .and_then(|v| v["error"]["message"].as_str().map(str::to_string))
+        .map(|m| format!(": {}", m.chars().take(120).collect::<String>()))
+        .unwrap_or_default()
+}
+
 /// Transcribes `samples` with the speech API. `prompt` is Whisper's
 /// conditioning text (spellings, expressions, previous text).
 pub async fn transcribe(
@@ -154,9 +164,16 @@ pub async fn transcribe(
     samples: &[f32],
     language: Option<&str>,
     prompt: Option<&str>,
+    translate: bool,
 ) -> Result<String, String> {
+    // Whisper's translation endpoint writes English and takes no language.
+    let (endpoint, language) = if translate {
+        ("translations", None)
+    } else {
+        ("transcriptions", language)
+    };
     let url = format!(
-        "{}/audio/transcriptions",
+        "{}/audio/{endpoint}",
         asr.provider.base_url.trim_end_matches('/')
     );
     let file = reqwest::multipart::Part::bytes(wav(samples)?)
@@ -189,20 +206,16 @@ pub async fn transcribe(
         if e.is_timeout() {
             format!("timed out after {:?}", asr.timeout)
         } else {
-            format!("request failed: {e}")
+            // Without the URL: a custom one may hold a token.
+            format!("request failed: {}", e.without_url())
         }
     })?;
     let status = response.status();
     if !status.is_success() {
-        // The body is the provider's error message, never the audio.
-        let body: String = response
-            .text()
-            .await
-            .unwrap_or_default()
-            .chars()
-            .take(200)
-            .collect();
-        return Err(format!("HTTP {status}: {body}"));
+        return Err(format!(
+            "HTTP {status}{}",
+            error_message(&response.text().await.unwrap_or_default())
+        ));
     }
     let reply: Reply = response
         .json()
@@ -239,6 +252,15 @@ mod tests {
         );
         let s: Vec<i16> = r.into_samples().map(Result::unwrap).collect();
         assert_eq!(s, vec![0, 16383, -32767, 32767]);
+    }
+
+    #[test]
+    fn only_the_providers_error_message_is_kept() {
+        assert_eq!(
+            error_message(r#"{"error":{"message":"Rate limit reached","type":"x"}}"#),
+            ": Rate limit reached"
+        );
+        assert_eq!(error_message("<html>Bearer sk-secret</html>"), "");
     }
 
     #[test]

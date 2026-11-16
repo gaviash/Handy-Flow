@@ -793,6 +793,10 @@
           "learnedWordsDescription": "Les mots appris de vos corrections, avec les formes mal entendues.",
           "styleRulesDescription": "Vos préférences d'écriture apprises de vos corrections.",
           "pastDictationsDescription": "Jusqu'à 5 de vos dictées reformulées récentes qui ressemblent à celle-ci."
+        },
+        "vscode": {
+          "label": "Mode lecteur d'écran de VS Code",
+          "description": "Active « Screen Reader Optimized » (editor.accessibilitySupport) dans VS Code, Cursor et VSCodium, pour que le texte autour du curseur puisse être lu pour le contexte et l'apprentissage."
         }
       },
       "learning": {

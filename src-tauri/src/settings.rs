@@ -460,6 +460,10 @@ pub struct AppSettings {
     /// local model, which stays the fallback.
     #[serde(default)]
     pub cloud_asr: crate::cloud_asr::CloudAsrSettings,
+    /// Turn on VS Code's Screen Reader Optimized mode, so its editor text can
+    /// be read for the context and the learning.
+    #[serde(default = "default_true")]
+    pub vscode_screen_reader: bool,
     /// Defaults to empty on partial stores; the load path merges in the
     /// default bindings for any missing keys before the settings are used.
     #[serde(default)]
@@ -1222,6 +1226,7 @@ pub fn get_default_settings() -> AppSettings {
         rewrite_context: Default::default(),
         transform_context: Default::default(),
         cloud_asr: Default::default(),
+        vscode_screen_reader: true,
         styles: crate::context::Styles::default(),
         snippets: Vec::new(),
         user_name: String::new(),
