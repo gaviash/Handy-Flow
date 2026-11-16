@@ -34,6 +34,14 @@ bun install
 bun run tauri build --no-bundle
 ```
 
+Le build `release` réoptimise tout le programme (LTO) et prend environ 8 minutes. Pour essayer une modification, utilisez le profil `fast`, sans LTO et incrémental, donc nettement plus rapide après un premier build complet :
+
+```bash
+bun run tauri build --no-bundle -- --profile fast
+```
+
+L'exécutable est alors dans `src-tauri/target/fast/handy.exe`. Gardez `release` pour une version à distribuer.
+
 ## Licence
 
 MIT, comme Handy : voir [LICENSE](LICENSE). Basé sur Handy de CJ Pais, et sur Tauri, transcribe.cpp et Silero VAD.
