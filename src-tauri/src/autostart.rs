@@ -19,6 +19,11 @@ use tauri_plugin_autostart::ManagerExt;
 /// startup. This mirrors the pre-existing behavior of ignoring
 /// enable()/disable() results.
 pub fn apply_autostart(app: &AppHandle, enabled: bool) {
+    #[cfg(windows)]
+    if let Ok(exe) = std::env::current_exe() {
+        legacy::remove_legacy_run_value(&exe);
+    }
+
     #[cfg(target_os = "macos")]
     if macos::login_item_api_available() {
         macos::remove_plugin_launch_agent(app);
@@ -38,6 +43,119 @@ pub fn apply_autostart(app: &AppHandle, enabled: bool) {
             enabled,
             e
         );
+    }
+}
+
+/// Before the rename the autostart plugin stored its Run value under "Handy".
+/// Only a value that launches *this* install is ours to remove: the original
+/// Handy app, installed elsewhere, uses the same value name.
+#[cfg_attr(not(windows), allow(dead_code))]
+mod legacy {
+    use std::path::Path;
+
+    pub const LEGACY_VALUE_NAME: &str = "Handy";
+
+    /// The executable a Run value launches: the quoted path, or everything up
+    /// to the first `.exe` when unquoted.
+    fn launched_exe(value: &str) -> Option<&str> {
+        let value = value.trim();
+        if let Some(rest) = value.strip_prefix('"') {
+            return rest.split('"').next().filter(|p| !p.is_empty());
+        }
+        let end = value.to_ascii_lowercase().find(".exe")? + ".exe".len();
+        Some(&value[..end])
+    }
+
+    fn norm(path: &str) -> String {
+        path.replace('/', "\\").to_lowercase()
+    }
+
+    /// True when the Run value launches `current_exe`, or the pre-rename
+    /// `handy.exe` sitting in the same folder (same install, old name).
+    pub fn legacy_value_points_to(value: &str, current_exe: &Path) -> bool {
+        let Some(launched) = launched_exe(value) else {
+            return false;
+        };
+        let launched = norm(launched);
+        let current = norm(&current_exe.to_string_lossy());
+        if launched == current {
+            return true;
+        }
+        let (Some((l_dir, l_file)), Some((c_dir, _))) =
+            (launched.rsplit_once('\\'), current.rsplit_once('\\'))
+        else {
+            return false;
+        };
+        l_dir == c_dir && l_file == "handy.exe"
+    }
+
+    #[cfg(windows)]
+    pub fn remove_legacy_run_value(current_exe: &Path) {
+        use winreg::enums::{HKEY_CURRENT_USER, KEY_READ, KEY_SET_VALUE};
+        let run = match winreg::RegKey::predef(HKEY_CURRENT_USER).open_subkey_with_flags(
+            r"Software\Microsoft\Windows\CurrentVersion\Run",
+            KEY_READ | KEY_SET_VALUE,
+        ) {
+            Ok(key) => key,
+            Err(e) => {
+                log::warn!("Could not open the Run key: {}", e);
+                return;
+            }
+        };
+        let Ok(value) = run.get_value::<String, _>(LEGACY_VALUE_NAME) else {
+            return;
+        };
+        if legacy_value_points_to(&value, current_exe) {
+            match run.delete_value(LEGACY_VALUE_NAME) {
+                Ok(()) => log::info!("Removed pre-rename autostart entry {:?}", value),
+                Err(e) => log::warn!("Failed to remove pre-rename autostart entry: {}", e),
+            }
+        }
+    }
+
+    #[cfg(test)]
+    mod tests {
+        use super::legacy_value_points_to;
+        use std::path::Path;
+
+        const CURRENT: &str = r"C:\Users\u\Desktop\Handy Flow\Handy Flow.exe";
+
+        #[test]
+        fn quoted_path_with_args_matches() {
+            assert!(legacy_value_points_to(
+                r#""C:\Users\u\Desktop\Handy Flow\Handy Flow.exe" --start-hidden"#,
+                Path::new(CURRENT)
+            ));
+        }
+
+        #[test]
+        fn case_insensitive_match() {
+            assert!(legacy_value_points_to(
+                r#""c:\users\u\desktop\handy flow\HANDY FLOW.EXE""#,
+                Path::new(CURRENT)
+            ));
+        }
+
+        #[test]
+        fn original_handy_install_is_left_alone() {
+            assert!(!legacy_value_points_to(
+                r#""C:\Users\u\Desktop\Handy\Handy.exe""#,
+                Path::new(CURRENT)
+            ));
+        }
+
+        #[test]
+        fn pre_rename_exe_in_same_folder_matches() {
+            assert!(legacy_value_points_to(
+                r"C:\Users\u\Desktop\Handy Flow\handy.exe --minimized",
+                Path::new(CURRENT)
+            ));
+        }
+
+        #[test]
+        fn empty_value_is_ignored() {
+            assert!(!legacy_value_points_to("", Path::new(r"C:\a\b.exe")));
+        }
     }
 }
 
