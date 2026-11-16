@@ -18,6 +18,7 @@ import type {
 } from "@/bindings";
 import { commands } from "@/bindings";
 import { notify } from "@/stores/noticeStore";
+import { applyAppearance, normalizeAppearance } from "@/lib/utils/appearance";
 
 interface SettingsStore {
   settings: Settings | null;
@@ -178,6 +179,26 @@ const settingUpdaters: {
   log_level: (value) => commands.setLogLevel(value as any),
   app_language: (value) => commands.changeAppLanguageSetting(value as string),
   theme: (value) => commands.changeThemeSetting(value as string),
+  palette: async (value) => {
+    const result = await commands.changePaletteSetting(value ?? "rose");
+    if (result.status === "error") throw new Error(result.error);
+  },
+  heading_style: async (value) => {
+    const result = await commands.changeHeadingStyleSetting(
+      value ?? "editorial",
+    );
+    if (result.status === "error") throw new Error(result.error);
+  },
+  ui_density: async (value) => {
+    const result = await commands.changeUiDensitySetting(
+      value ?? "comfortable",
+    );
+    if (result.status === "error") throw new Error(result.error);
+  },
+  overlay_show_label: async (value) => {
+    const result = await commands.changeOverlayShowLabelSetting(value ?? true);
+    if (result.status === "error") throw new Error(result.error);
+  },
   experimental_enabled: (value) =>
     commands.changeExperimentalEnabledSetting(value as boolean),
   lazy_stream_close: (value) =>
@@ -378,6 +399,17 @@ export const useSettingsStore = create<SettingsStore>()(
         set((state) => ({
           settings: state.settings ? { ...state.settings, [key]: value } : null,
         }));
+        if (
+          [
+            "theme",
+            "palette",
+            "heading_style",
+            "ui_density",
+            "overlay_show_label",
+          ].includes(updateKey)
+        ) {
+          applyAppearance(normalizeAppearance(get().settings));
+        }
 
         const updater = settingUpdaters[key];
         if (updater) {
@@ -389,6 +421,17 @@ export const useSettingsStore = create<SettingsStore>()(
         console.error(`Failed to update setting ${String(key)}:`, error);
         if (settings) {
           set({ settings: { ...settings, [key]: originalValue } });
+          if (
+            [
+              "theme",
+              "palette",
+              "heading_style",
+              "ui_density",
+              "overlay_show_label",
+            ].includes(updateKey)
+          ) {
+            applyAppearance(normalizeAppearance(get().settings));
+          }
         }
       } finally {
         setUpdating(updateKey, false);

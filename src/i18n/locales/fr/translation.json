@@ -1090,7 +1090,62 @@
       }
     },
     "appearance": {
-      "title": "Apparence"
+      "title": "Apparence",
+      "description": "Le choix s’applique tout de suite, partout : fenêtre, pastille et icône.",
+      "palette": "Thème",
+      "palettes": {
+        "rose": {
+          "name": "Rose",
+          "tagline": "Handy Flow d’origine, sur papier crème."
+        },
+        "sauge": {
+          "name": "Sauge",
+          "tagline": "Vert profond, calme, éditorial."
+        },
+        "prune": {
+          "name": "Prune",
+          "tagline": "Violet doux, touche lavande."
+        },
+        "encre": {
+          "name": "Encre",
+          "tagline": "Noir et blanc, rien qui distrait."
+        },
+        "ocean": {
+          "name": "Océan",
+          "tagline": "Bleu nuit, accent turquoise."
+        },
+        "ambre": {
+          "name": "Ambre",
+          "tagline": "Sable chaud et terre cuite."
+        },
+        "lime": {
+          "name": "Lime",
+          "tagline": "Noir graphite, vert électrique."
+        },
+        "contraste": {
+          "name": "Contraste",
+          "tagline": "Lisibilité maximale, pour tous."
+        }
+      },
+      "headings": {
+        "title": "Titres",
+        "description": "Éditorial (serif) ou moderne (sans).",
+        "editorial": "Éditorial",
+        "modern": "Moderne"
+      },
+      "density": {
+        "title": "Densité",
+        "description": "L’espacement des rangées de réglages.",
+        "comfortable": "Confortable",
+        "compact": "Compact"
+      },
+      "overlay": {
+        "title": "Pastille de dictée",
+        "description": "Le style affiché pendant la dictée. Masquée reste disponible dans Avancé.",
+        "pill": "Pastille",
+        "wave": "Onde",
+        "live": "Live"
+      }
     }
   },
   "footer": {

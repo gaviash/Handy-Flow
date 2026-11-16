@@ -1090,7 +1090,62 @@
       }
     },
     "appearance": {
-      "title": "Appearance"
+      "title": "Appearance",
+      "description": "Your choice applies immediately to the window, dictation overlay and icon.",
+      "palette": "Palette",
+      "palettes": {
+        "rose": {
+          "name": "Rose",
+          "tagline": "The original Handy Flow, on cream paper."
+        },
+        "sauge": {
+          "name": "Sage",
+          "tagline": "Deep green, calm and editorial."
+        },
+        "prune": {
+          "name": "Plum",
+          "tagline": "Soft purple with a lavender touch."
+        },
+        "encre": {
+          "name": "Ink",
+          "tagline": "Black and white, free of distractions."
+        },
+        "ocean": {
+          "name": "Ocean",
+          "tagline": "Midnight blue with turquoise accents."
+        },
+        "ambre": {
+          "name": "Amber",
+          "tagline": "Warm sand and terracotta."
+        },
+        "lime": {
+          "name": "Lime",
+          "tagline": "Graphite black, electric green."
+        },
+        "contraste": {
+          "name": "Contrast",
+          "tagline": "Maximum legibility, for everyone."
+        }
+      },
+      "headings": {
+        "title": "Headings",
+        "description": "Editorial serif or modern sans serif.",
+        "editorial": "Editorial",
+        "modern": "Modern"
+      },
+      "density": {
+        "title": "Density",
+        "description": "Spacing between settings rows.",
+        "comfortable": "Comfortable",
+        "compact": "Compact"
+      },
+      "overlay": {
+        "title": "Dictation overlay",
+        "description": "The overlay shown during dictation. Hidden remains available in Advanced.",
+        "pill": "Pill",
+        "wave": "Wave",
+        "live": "Live"
+      }
     }
   },
   "footer": {
