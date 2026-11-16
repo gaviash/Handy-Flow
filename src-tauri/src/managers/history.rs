@@ -37,7 +37,13 @@ static MIGRATIONS: &[M] = &[
 
 /// Nullable columns added outside [`MIGRATIONS`]; see
 /// [`HistoryManager::apply_migrations`].
-const ADDED_COLUMNS: &[&str] = &["source_name", "language", "language_source", "app", "kept_text"];
+const ADDED_COLUMNS: &[&str] = &[
+    "source_name",
+    "language",
+    "language_source",
+    "app",
+    "kept_text",
+];
 
 /// Every column a [`HistoryEntry`] is read from.
 const ENTRY_COLUMNS: &str = "id, file_name, timestamp, saved, title, transcription_text, \
@@ -520,7 +526,6 @@ fn past_dictations_on(conn: &Connection, since: i64) -> Result<Vec<PastDictation
 }
 
 impl HistoryManager {
-
     /// Q4: text is kept 30 days, audio only for the 20 newest dictations.
     fn trim_audio(&self, keep: usize) -> Result<()> {
         let conn = self.get_connection()?;
@@ -910,7 +915,11 @@ mod tests {
         insert_entry(&conn, 100, "raw a", Some("rewritten a"));
         insert_entry(&conn, 200, "raw b", None);
         let id: i64 = conn
-            .query_row("SELECT id FROM transcription_history WHERE timestamp = 100", [], |r| r.get(0))
+            .query_row(
+                "SELECT id FROM transcription_history WHERE timestamp = 100",
+                [],
+                |r| r.get(0),
+            )
             .unwrap();
         set_kept_text_on(&conn, id, "kept a").unwrap();
         let past = past_dictations_on(&conn, 50).unwrap();

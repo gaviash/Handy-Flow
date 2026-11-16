@@ -28,7 +28,10 @@ fn wer_counts_word_edits() {
     assert_eq!(wer("le log du serveur", "le gag du serveur"), 0.25);
     assert_eq!(wer("Le log, du serveur.", "le log du serveur"), 0.0);
     assert_eq!(wer("", ""), 0.0);
-    assert_eq!(terms_ok(&["log".into(), "Claude".into()], "le log de claude"), 2);
+    assert_eq!(
+        terms_ok(&["log".into(), "Claude".into()], "le log de claude"),
+        2
+    );
 }
 
 #[test]
@@ -57,7 +60,11 @@ fn asr_context_bench() {
         let total_terms: usize = cases.iter().map(|c| c.terms.len()).sum();
         for (case, pcm) in cases.iter().zip(&audio) {
             for (i, with) in [false, true].into_iter().enumerate() {
-                let options = if with { with_context(caps, &case.terms) } else { RunOptions::default() };
+                let options = if with {
+                    with_context(caps, &case.terms)
+                } else {
+                    RunOptions::default()
+                };
                 let started = Instant::now();
                 let text = session.run(pcm, &options).expect("run").text;
                 stats[i].2 += started.elapsed().as_millis();
@@ -69,10 +76,17 @@ fn asr_context_bench() {
         println!(
             "{} | vocab={} prompt={} initial={} | {:.3} | {:.3} | {}/{} | {}/{} | {} | {}",
             path.rsplit(['/', '\\']).next().unwrap_or(path),
-            caps.0, caps.1, caps.2,
-            stats[0].0 / n, stats[1].0 / n,
-            stats[0].1, total_terms, stats[1].1, total_terms,
-            stats[0].2, stats[1].2
+            caps.0,
+            caps.1,
+            caps.2,
+            stats[0].0 / n,
+            stats[1].0 / n,
+            stats[0].1,
+            total_terms,
+            stats[1].1,
+            total_terms,
+            stats[0].2,
+            stats[1].2
         );
     }
 }
@@ -102,7 +116,12 @@ fn with_context(caps: (bool, bool, bool), terms: &[String]) -> RunOptions {
 /// Letters and digits, lowercased (as `learning::key`).
 fn words(s: &str) -> Vec<String> {
     s.split_whitespace()
-        .map(|w| w.chars().filter(|c| c.is_alphanumeric()).flat_map(char::to_lowercase).collect::<String>())
+        .map(|w| {
+            w.chars()
+                .filter(|c| c.is_alphanumeric())
+                .flat_map(char::to_lowercase)
+                .collect::<String>()
+        })
         .filter(|w| !w.is_empty())
         .collect()
 }
@@ -119,7 +138,9 @@ fn wer(reference: &str, hypothesis: &str) -> f64 {
         row[0] = i;
         for j in 1..=h.len() {
             let cur = row[j];
-            row[j] = (prev + usize::from(r[i - 1] != h[j - 1])).min(row[j] + 1).min(row[j - 1] + 1);
+            row[j] = (prev + usize::from(r[i - 1] != h[j - 1]))
+                .min(row[j] + 1)
+                .min(row[j - 1] + 1);
             prev = cur;
         }
     }
@@ -146,9 +167,14 @@ fn read_wav(path: &str) -> Vec<f32> {
         hound::SampleFormat::Float => r.samples::<f32>().map(Result::unwrap).collect(),
         hound::SampleFormat::Int => {
             let scale = (1i64 << (spec.bits_per_sample - 1)) as f32;
-            r.samples::<i32>().map(|s| s.unwrap() as f32 / scale).collect()
+            r.samples::<i32>()
+                .map(|s| s.unwrap() as f32 / scale)
+                .collect()
         }
     };
     // Mono: keep the first channel.
-    samples.into_iter().step_by(spec.channels as usize).collect()
+    samples
+        .into_iter()
+        .step_by(spec.channels as usize)
+        .collect()
 }

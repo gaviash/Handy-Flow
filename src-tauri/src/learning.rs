@@ -175,7 +175,12 @@ const PENDING_DAYS: i64 = 30;
 /// Reads the memory, including the older format: a bare array of words.
 fn parse_memory(json: &[u8]) -> Memory {
     serde_json::from_slice::<Memory>(json)
-        .or_else(|_| serde_json::from_slice::<Vec<Learned>>(json).map(|words| Memory { words, rules: Vec::new() }))
+        .or_else(|_| {
+            serde_json::from_slice::<Vec<Learned>>(json).map(|words| Memory {
+                words,
+                rules: Vec::new(),
+            })
+        })
         .unwrap_or_default()
 }
 
@@ -186,11 +191,13 @@ pub(crate) fn prune(m: &mut Memory, now: i64) {
     m.words.retain(|w| w.active || w.last_seen >= expired);
     m.rules.retain(|r| r.active || r.last_seen >= expired);
     if m.words.len() > WORDS_MAX {
-        m.words.sort_by(|a, b| b.count.cmp(&a.count).then(b.last_seen.cmp(&a.last_seen)));
+        m.words
+            .sort_by(|a, b| b.count.cmp(&a.count).then(b.last_seen.cmp(&a.last_seen)));
         m.words.truncate(WORDS_MAX);
     }
     if m.rules.len() > RULES_MAX {
-        m.rules.sort_by(|a, b| b.count.cmp(&a.count).then(b.last_seen.cmp(&a.last_seen)));
+        m.rules
+            .sort_by(|a, b| b.count.cmp(&a.count).then(b.last_seen.cmp(&a.last_seen)));
         m.rules.truncate(RULES_MAX);
     }
 }
@@ -368,25 +375,106 @@ const MISHEARD_DISTANCE: f64 = 0.7;
 /// never learned as misheard, however close they sound.
 const MEANING_WORDS: &[&str] = &[
     // numbers
-    "zéro", "zero", "un", "une", "deux", "trois", "quatre", "cinq", "six", "sept", "huit", "neuf",
-    "dix", "onze", "douze", "treize", "quatorze", "quinze", "seize", "vingt", "trente", "cent",
-    "mille", "one", "two", "three", "four", "five", "seven", "eight", "nine", "ten", "eleven",
-    "twelve", "twenty", "hundred", "thousand",
+    "zéro",
+    "zero",
+    "un",
+    "une",
+    "deux",
+    "trois",
+    "quatre",
+    "cinq",
+    "six",
+    "sept",
+    "huit",
+    "neuf",
+    "dix",
+    "onze",
+    "douze",
+    "treize",
+    "quatorze",
+    "quinze",
+    "seize",
+    "vingt",
+    "trente",
+    "cent",
+    "mille",
+    "one",
+    "two",
+    "three",
+    "four",
+    "five",
+    "seven",
+    "eight",
+    "nine",
+    "ten",
+    "eleven",
+    "twelve",
+    "twenty",
+    "hundred",
+    "thousand",
     // yes / no / negation
-    "oui", "non", "si", "yes", "no", "ne", "pas", "jamais", "rien", "plus", "not", "never",
+    "oui",
+    "non",
+    "si",
+    "yes",
+    "no",
+    "ne",
+    "pas",
+    "jamais",
+    "rien",
+    "plus",
+    "not",
+    "never",
     // personal pronouns
-    "je", "tu", "il", "elle", "on", "nous", "vous", "ils", "elles", "moi", "toi", "lui", "eux",
-    "i", "you", "he", "she", "we", "they", "me", "him", "her", "us", "them",
+    "je",
+    "tu",
+    "il",
+    "elle",
+    "on",
+    "nous",
+    "vous",
+    "ils",
+    "elles",
+    "moi",
+    "toi",
+    "lui",
+    "eux",
+    "i",
+    "you",
+    "he",
+    "she",
+    "we",
+    "they",
+    "me",
+    "him",
+    "her",
+    "us",
+    "them",
     // English days and months (French ones come from adaptive)
-    "monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday", "january",
-    "february", "march", "april", "may", "june", "july", "august", "september", "october",
-    "november", "december",
+    "monday",
+    "tuesday",
+    "wednesday",
+    "thursday",
+    "friday",
+    "saturday",
+    "sunday",
+    "january",
+    "february",
+    "march",
+    "april",
+    "may",
+    "june",
+    "july",
+    "august",
+    "september",
+    "october",
+    "november",
+    "december",
 ];
 
 fn has_meaning_word(s: &str) -> bool {
-    s.split_whitespace().any(|w| {
-        MEANING_WORDS.contains(&w) || crate::adaptive::FR_COMMON_NAMES.contains(&w)
-    })
+    s.split_whitespace()
+        .any(|w| MEANING_WORDS.contains(&w) || crate::adaptive::FR_COMMON_NAMES.contains(&w))
 }
 
 /// Whether `heard` → `term` can be a misheard common word (also checked on
@@ -488,7 +576,10 @@ fn with_memory<T>(app: &AppHandle, f: impl FnOnce(&mut Memory) -> T) -> T {
 }
 
 fn save(app: &AppHandle, m: &mut Memory) {
-    let (Some(path), Ok(json)) = (memory_path(app), { prune(m, chrono::Utc::now().timestamp()); serde_json::to_vec(&*m) }) else {
+    let (Some(path), Ok(json)) = (memory_path(app), {
+        prune(m, chrono::Utc::now().timestamp());
+        serde_json::to_vec(&*m)
+    }) else {
         return;
     };
     let Some(bytes) = dpapi::run(&json, true) else {
@@ -508,7 +599,9 @@ fn save(app: &AppHandle, m: &mut Memory) {
 /// Learned spellings for the rewrite of `transcription`: those it sounds
 /// like first, then the most used (≤ 40).
 pub fn terms_for(app: &AppHandle, transcription: &str) -> Vec<String> {
-    with_memory(app, |m| crate::recall::relevant_terms(&m.words, transcription, 40))
+    with_memory(app, |m| {
+        crate::recall::relevant_terms(&m.words, transcription, 40)
+    })
 }
 
 /// Learned terms alone (no heard forms), most used first: what the ASR gets.
@@ -760,7 +853,8 @@ pub fn clear_learned_words(app: AppHandle) {
 #[tauri::command]
 #[specta::specta]
 pub fn export_learned_words(app: AppHandle, path: String) -> Result<(), String> {
-    let json = with_memory(&app, |m| serde_json::to_string_pretty(&m.words)).map_err(|e| e.to_string())?;
+    let json =
+        with_memory(&app, |m| serde_json::to_string_pretty(&m.words)).map_err(|e| e.to_string())?;
     std::fs::write(path, json).map_err(|e| e.to_string())
 }
 
@@ -1154,20 +1248,29 @@ mod tests {
     #[test]
     fn verdicts_respect_the_guards() {
         use crate::judge::{Verdict, VerdictKind};
-        let v = |kind, heard: Option<&str>, term: Option<&str>, rule: Option<&str>, same_as, ok| Verdict {
-            kind,
-            heard: heard.map(Into::into),
-            term: term.map(Into::into),
-            rule: rule.map(Into::into),
-            same_as,
-            consistent_with_history: ok,
+        let v = |kind, heard: Option<&str>, term: Option<&str>, rule: Option<&str>, same_as, ok| {
+            Verdict {
+                kind,
+                heard: heard.map(Into::into),
+                term: term.map(Into::into),
+                rule: rule.map(Into::into),
+                same_as,
+                consistent_with_history: ok,
+            }
         };
         let mut m = Memory::default();
         // A meaning change learns nothing, even proposed as misheard.
         apply_verdicts(
             &mut m,
             &[
-                v(VerdictKind::Misheard, Some("mardi"), Some("jeudi"), None, None, true),
+                v(
+                    VerdictKind::Misheard,
+                    Some("mardi"),
+                    Some("jeudi"),
+                    None,
+                    None,
+                    true,
+                ),
                 v(VerdictKind::ContentChange, None, None, None, None, true),
             ],
             "Code",
@@ -1175,24 +1278,91 @@ mod tests {
         );
         assert!(m.words.is_empty() && m.rules.is_empty());
         // A misheard word from the judge is pending until seen twice too.
-        apply_verdicts(&mut m, &[v(VerdictKind::Misheard, Some("gag"), Some("log"), None, None, true)], "Code", 0);
+        apply_verdicts(
+            &mut m,
+            &[v(
+                VerdictKind::Misheard,
+                Some("gag"),
+                Some("log"),
+                None,
+                None,
+                true,
+            )],
+            "Code",
+            0,
+        );
         assert!(!m.words[0].active);
         // A lone rule not backed by history waits for a second sighting.
         let rule = "Préférer « de manière claire et concise ».";
-        apply_verdicts(&mut m, &[v(VerdictKind::StyleRule, None, None, Some(rule), None, false)], "Code", 0);
+        apply_verdicts(
+            &mut m,
+            &[v(
+                VerdictKind::StyleRule,
+                None,
+                None,
+                Some(rule),
+                None,
+                false,
+            )],
+            "Code",
+            0,
+        );
         assert!(!m.rules[0].active);
-        let on = apply_verdicts(&mut m, &[v(VerdictKind::StyleRule, None, None, Some("…"), Some(0), false)], "Code", 1);
+        let on = apply_verdicts(
+            &mut m,
+            &[v(
+                VerdictKind::StyleRule,
+                None,
+                None,
+                Some("…"),
+                Some(0),
+                false,
+            )],
+            "Code",
+            1,
+        );
         assert!(m.rules[0].active && m.rules[0].count == 2);
         assert_eq!(on, vec![rule.to_string()]);
         // A rule consistent with history is active at once.
-        apply_verdicts(&mut m, &[v(VerdictKind::Filler, None, None, Some("Supprimer « donc voilà »."), None, true)], "Code", 2);
+        apply_verdicts(
+            &mut m,
+            &[v(
+                VerdictKind::Filler,
+                None,
+                None,
+                Some("Supprimer « donc voilà »."),
+                None,
+                true,
+            )],
+            "Code",
+            2,
+        );
         assert!(m.rules[1].active);
         // A `same_as` out of range is a new rule, not a crash.
-        apply_verdicts(&mut m, &[v(VerdictKind::StyleRule, None, None, Some("Autre."), Some(99), false)], "Code", 3);
+        apply_verdicts(
+            &mut m,
+            &[v(
+                VerdictKind::StyleRule,
+                None,
+                None,
+                Some("Autre."),
+                Some(99),
+                false,
+            )],
+            "Code",
+            3,
+        );
         assert_eq!(m.rules.len(), 3);
     }
 
-    fn word(term: &str, heard: &str, count: u32, last_seen: i64, kind: WordKind, active: bool) -> Learned {
+    fn word(
+        term: &str,
+        heard: &str,
+        count: u32,
+        last_seen: i64,
+        kind: WordKind,
+        active: bool,
+    ) -> Learned {
         Learned {
             term: term.into(),
             heard: vec![heard.into()],
@@ -1219,8 +1389,10 @@ mod tests {
     fn prune_expires_pending_and_caps() {
         let day = 86_400;
         let mut m = Memory::default();
-        m.words.push(word("log", "gag", 1, 0, WordKind::Misheard, false));
-        m.words.push(word("Qwen", "Quen", 1, 0, WordKind::Term, true));
+        m.words
+            .push(word("log", "gag", 1, 0, WordKind::Misheard, false));
+        m.words
+            .push(word("Qwen", "Quen", 1, 0, WordKind::Term, true));
         prune(&mut m, 31 * day);
         assert_eq!(
             m.words.iter().map(|w| w.term.as_str()).collect::<Vec<_>>(),
