@@ -23,7 +23,7 @@ pub enum Tag {
 }
 
 /// Comparison key: letters and digits, lowercased.
-fn key(w: &str) -> String {
+pub(crate) fn key(w: &str) -> String {
     let k: String = w
         .chars()
         .filter(|c| c.is_alphanumeric())
@@ -505,21 +505,19 @@ fn save(app: &AppHandle, m: &mut Memory) {
     }
 }
 
-/// Learned spellings as terms for the rewrite, most used first.
-pub fn terms(app: &AppHandle) -> Vec<String> {
+/// Learned spellings for the rewrite of `transcription`: those it sounds
+/// like first, then the most used (≤ 40).
+pub fn terms_for(app: &AppHandle, transcription: &str) -> Vec<String> {
+    with_memory(app, |m| crate::recall::relevant_terms(&m.words, transcription, 40))
+}
+
+/// Active style rules that hold in `app_name` (or everywhere).
+pub fn active_rules(app: &AppHandle, app_name: &str) -> Vec<String> {
     with_memory(app, |m| {
-        let mut m = m.words.iter().filter(|w| w.active).cloned().collect::<Vec<_>>();
-        m.sort_by(|a, b| b.count.cmp(&a.count).then(b.last_seen.cmp(&a.last_seen)));
-        m.iter()
-            .take(30)
-            .map(|l| {
-                let heard = l
-                    .heard
-                    .iter()
-                    .map(|h| format!("\"{h}\""))
-                    .collect::<Vec<_>>();
-                format!("{} (heard as {})", l.term, heard.join(", "))
-            })
+        m.rules
+            .iter()
+            .filter(|r| r.active && (r.apps.is_empty() || r.apps.iter().any(|a| a == app_name)))
+            .map(|r| r.rule.clone())
             .collect()
     })
 }

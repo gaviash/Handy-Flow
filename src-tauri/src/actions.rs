@@ -1179,7 +1179,7 @@ impl ShortcutAction for TranscribeAction {
                                     .custom_words
                                     .iter()
                                     .cloned()
-                                    .chain(crate::learning::terms(&ah))
+                                    .chain(crate::learning::terms_for(&ah, &transcription))
                                     .collect::<Vec<_>>()
                                     .iter()
                                 {

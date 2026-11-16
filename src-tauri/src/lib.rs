@@ -17,6 +17,7 @@ mod input;
 mod language_detection;
 mod languages;
 mod learning;
+mod recall;
 mod llm_client;
 mod managers;
 mod memory;
