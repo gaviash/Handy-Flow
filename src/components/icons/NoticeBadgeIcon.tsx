@@ -20,3 +20,20 @@ export const NoticeBadgeIcon: React.FC<{ className?: string }> = ({
     />
   </svg>
 );
+
+/** Handy Flow: good news (a learned word). Colored by `currentColor`. */
+export const CheckBadgeIcon: React.FC<{ className?: string }> = ({
+  className,
+}) => (
+  <svg className={className} viewBox="0 0 16 16" aria-hidden="true">
+    <circle cx="8" cy="8" r="8" fill="currentColor" />
+    <path
+      d="M4.6 8.3l2.3 2.3 4.5-4.8"
+      fill="none"
+      stroke="var(--color-background)"
+      strokeWidth="1.9"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    />
+  </svg>
+);

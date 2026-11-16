@@ -174,7 +174,26 @@
   --notice: var(--color-warning);
 }
 .scard.level-info {
-  --notice: var(--color-moss);
+  --notice: #22c55e;
+}
+/* A learned word: the check pops in, a small reward. */
+.scard.level-info .nglyph {
+  animation: check-pop 420ms cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+@keyframes check-pop {
+  from {
+    transform: scale(0.3);
+    opacity: 0;
+  }
+  to {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .scard.level-info .nglyph {
+    animation: none;
+  }
 }
 .sbase.snotice {
   grid-template-columns: auto minmax(0, max-content);

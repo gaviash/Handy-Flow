@@ -10,7 +10,10 @@ import type {
   StreamTextEvent,
   StreamWorkKind,
 } from "@/bindings";
-import { NoticeBadgeIcon } from "@/components/icons/NoticeBadgeIcon";
+import {
+  CheckBadgeIcon,
+  NoticeBadgeIcon,
+} from "@/components/icons/NoticeBadgeIcon";
 import i18n, { syncLanguageFromSettings } from "@/i18n";
 import { noticeDisplay } from "@/lib/notices";
 import type { ModelStateEvent } from "@/lib/types/events";
@@ -341,7 +344,11 @@ const RecordingOverlay: React.FC = () => {
 
   const noticeRow = (
     <div className="sbase snotice">
-      <NoticeBadgeIcon className="nglyph" />
+      {shownNotice?.level === "info" ? (
+        <CheckBadgeIcon className="nglyph" />
+      ) : (
+        <NoticeBadgeIcon className="nglyph" />
+      )}
       <span className="nlabel">{noticeTitle}</span>
     </div>
   );

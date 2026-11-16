@@ -117,14 +117,45 @@ pub fn align(inserted: &[&str], fin: &[&str]) -> Vec<(Tag, Option<usize>, Option
     out
 }
 
-/// A learned spelling: `term` is what the user wrote, `heard` what was inserted.
+/// A learned spelling: `term` is what the user wrote, `heard` every form that
+/// was inserted for it ("Quen", "Quinn" → "Qwen"), most recent last.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Type)]
 pub struct Learned {
     pub term: String,
-    pub heard: String,
+    #[serde(deserialize_with = "one_or_many")]
+    pub heard: Vec<String>,
     pub count: u32,
     /// Unix seconds.
     pub last_seen: i64,
+}
+
+/// Forms heard kept per learned word.
+const HEARD_MAX: usize = 10;
+
+/// Memory saved before several heard forms held a single string.
+fn one_or_many<'de, D: serde::Deserializer<'de>>(d: D) -> Result<Vec<String>, D::Error> {
+    #[derive(Deserialize)]
+    #[serde(untagged)]
+    enum Heard {
+        One(String),
+        Many(Vec<String>),
+    }
+    Ok(match Heard::deserialize(d)? {
+        Heard::One(s) => vec![s],
+        Heard::Many(v) => v,
+    })
+}
+
+/// Adds a heard form to a learned word; `true` if it's a new one.
+fn add_heard(l: &mut Learned, heard: String) -> bool {
+    if l.heard.iter().any(|h| h.eq_ignore_ascii_case(&heard)) {
+        return false;
+    }
+    l.heard.push(heard);
+    if l.heard.len() > HEARD_MAX {
+        l.heard.remove(0);
+    }
+    true
 }
 
 /// Corrections worth learning (F85–F87): runs of 1 to 4 substituted words
@@ -309,7 +340,14 @@ pub fn terms(app: &AppHandle) -> Vec<String> {
         m.sort_by(|a, b| b.count.cmp(&a.count).then(b.last_seen.cmp(&a.last_seen)));
         m.iter()
             .take(30)
-            .map(|l| format!("{} (heard as \"{}\")", l.term, l.heard))
+            .map(|l| {
+                let heard = l
+                    .heard
+                    .iter()
+                    .map(|h| format!("\"{h}\""))
+                    .collect::<Vec<_>>();
+                format!("{} (heard as {})", l.term, heard.join(", "))
+            })
             .collect()
     })
 }
@@ -330,13 +368,16 @@ fn learn(app: &AppHandle, inserted: &str, fin: &str) -> usize {
                 Some(l) => {
                     l.count += 1;
                     l.last_seen = now;
-                    l.heard = heard;
+                    // A new way of hearing the same word is news too.
+                    if add_heard(l, heard) {
+                        new_terms.push(term.clone());
+                    }
                 }
                 None => {
                     new_terms.push(term.clone());
                     m.push(Learned {
                         term,
-                        heard,
+                        heard: vec![heard],
                         count: 1,
                         last_seen: now,
                     })
@@ -623,6 +664,22 @@ mod tests {
         let field = unify("Concernant le benchmark, est-il meilleur entre Gemma et Quen ?");
         assert!(locate(&field, &pasted, 0).is_some());
         assert_eq!(unify("l\u{2019}apprentissage"), "l'apprentissage");
+    }
+
+    #[test]
+    fn one_learned_word_keeps_every_form_heard() {
+        // Memory saved with a single heard form still loads.
+        let mut l: Learned =
+            serde_json::from_str(r#"{"term":"Qwen","heard":"Quen","count":1,"last_seen":0}"#)
+                .unwrap();
+        assert_eq!(l.heard, vec!["Quen"]);
+        assert!(add_heard(&mut l, "Quinn".into()));
+        assert!(!add_heard(&mut l, "quen".into()));
+        assert_eq!(l.heard, vec!["Quen", "Quinn"]);
+        for i in 0..20 {
+            add_heard(&mut l, format!("forme{i}"));
+        }
+        assert_eq!(l.heard.len(), HEARD_MAX);
     }
 
     #[test]
