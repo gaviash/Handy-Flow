@@ -33,7 +33,7 @@ Chaque palette définit exactement 13 tokens. Valeurs en `clair | sombre` ; une 
 | prune | #f7f3fa \| #141117 | #1d1622 \| #f4eef6 | #6b3fa0 \| #c9b6f2 | #ffffff \| #1d1426 | #6b3fa0 \| #d4c4f6 | #eee7f4 \| #1a151f | =ink | #2a1f33 \| #2b2333 | #f7f3fa | #f6a5c8 | #2a1f33 \| #2b2333 | #f6a5c8 | #c9b6f2 |
 | encre | #fafaf8 \| #111111 | #111111 \| #f2f2ef | #111111 \| #f2f2ef | #fafaf8 \| #111111 | =ink | #f1f1ee \| #161616 | =ink | #111111 \| #222222 | #fafaf8 | #ffffff | #111111 \| #f2f2ef | #fafaf8 \| #111111 | #f28cbb |
 | ocean | #f4f7fb \| #0c1420 | #0f1b2a \| #e9f0f8 | #2459c7 \| #7aa7ff | #ffffff \| #0b1a33 | #2459c7 \| #9cbcff | #0f2a4a \| #0a192b | #eaf1fb | #0f2a4a \| #14283f | #eaf1fb | #6ee7d8 | #0f2a4a | #eaf1fb | #6ee7d8 |
-| ambre | #fbf6ee \| #1a140f | #22180f \| #f7eee3 | #c8582c \| #f0956a | #ffffff \| #2a130a | #a8461f \| #f4a985 | #f4eadb \| #201812 | =ink | #2a1d14 \| #2e231a | #fbf6ee | #f0956a | #c8582c \| #2e231a | #fff7ee \| #f0956a | #22180f \| #f7d38a |
+| ambre | #fbf6ee \| #1a140f | #22180f \| #f7eee3 | #c2532a \| #f0956a | #ffffff \| #2a130a | #a8461f \| #f4a985 | #f4eadb \| #201812 | =ink | #2a1d14 \| #2e231a | #fbf6ee | #f0956a | #c8582c \| #2e231a | #fff7ee \| #f0956a | #22180f \| #f7d38a |
 | lime | #f6f7f0 \| #0b0c0a | #141611 \| #eef2e4 | #c6ff3d | #141611 | #4a7300 \| #c6ff3d | #141611 \| #0b0c0a | #eef2e4 | #141611 | #eef2e4 | #c6ff3d | #141611 | #c6ff3d | #ffffff |
 | contraste | #ffffff \| #000000 | #000000 \| #ffffff | #0040d6 \| #ffd84a | #ffffff \| #000000 | #0040d6 \| #ffd84a | =bg | =ink | #000000 | #ffffff | #ffd84a | #000000 \| #ffd84a | #ffd84a \| #000000 | #ffffff \| #000000 |
 
