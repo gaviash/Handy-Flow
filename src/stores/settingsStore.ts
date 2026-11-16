@@ -13,6 +13,7 @@ import type {
   ShortcutActivation,
   VadBackend,
   LanguageDetectionMode,
+  AsrContextSettings,
 } from "@/bindings";
 import { commands } from "@/bindings";
 import { notify } from "@/stores/noticeStore";
@@ -234,6 +235,8 @@ const settingUpdaters: {
     commands.changeLearningEnabledSetting(value as boolean),
   learned_sound_enabled: (value) =>
     commands.changeLearnedSoundEnabledSetting(value as boolean),
+  asr_context: (value) =>
+    commands.changeAsrContextSetting(value as AsrContextSettings),
   context_excluded_domains: (value) =>
     commands.changeContextExcludedDomainsSetting(value as string[]),
   language_detection: (value) =>

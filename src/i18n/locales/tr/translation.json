@@ -777,6 +777,19 @@
           "label": "Üslup kuralları",
           "description": "Handy'nin düzeltmelerinizden çıkardığı ve sonraki diktelerinize uyguladığı ifade tercihleri.",
           "empty": "Henüz kural yok."
+        },
+        "asr": {
+          "label": "Transkripsiyon bağlamı",
+          "description": "Konuşma tanıma modelinin dinlemeden önce aldığı bilgi: kelimeleriniz ve sık ifadeleriniz. Yalnızca bağlam kabul eden modeller kullanır.",
+          "enabled": "Konuşma tanıma modeline bağlam gönder",
+          "learnedWords": "Öğrenilen kelimeler",
+          "expressions": "Sık ifadeler",
+          "screen": "Uygulama ve imleçten önceki metin (daha yavaş)",
+          "maxTerms": "En fazla kelime",
+          "captureWait": "Ekran için en fazla bekleme (ms)",
+          "noModel": "Yüklü model yok.",
+          "supported": "Geçerli model bağlam kabul ediyor.",
+          "unsupported": "Geçerli model bağlam kabul etmiyor: hiçbir şey gönderilmez, hiçbir şey beklemez."
         }
       },
       "styles": {

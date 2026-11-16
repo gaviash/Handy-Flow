@@ -777,6 +777,19 @@
           "label": "Stilregler",
           "description": "Formuleringer, Handy lærer af dine rettelser og bruger i dine næste dikteringer.",
           "empty": "Ingen regler endnu."
+        },
+        "asr": {
+          "label": "Transskriptionskontekst",
+          "description": "Det talegenkendelsesmodellen får, før den lytter: dine ord og hyppige udtryk. Kun modeller, der accepterer kontekst, bruger det.",
+          "enabled": "Send kontekst til talegenkendelsesmodellen",
+          "learnedWords": "Lærte ord",
+          "expressions": "Hyppige udtryk",
+          "screen": "App og tekst før markøren (langsommere)",
+          "maxTerms": "Maks. ord",
+          "captureWait": "Maks. ventetid på skærmen (ms)",
+          "noModel": "Ingen model indlæst.",
+          "supported": "Den aktuelle model accepterer kontekst.",
+          "unsupported": "Den aktuelle model accepterer ikke kontekst: intet sendes, og intet venter."
         }
       },
       "styles": {

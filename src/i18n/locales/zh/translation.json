@@ -777,6 +777,19 @@
           "label": "风格规则",
           "description": "Handy 从你的修改中学到的措辞偏好，会用于之后的听写。",
           "empty": "暂无规则。"
+        },
+        "asr": {
+          "label": "转写上下文",
+          "description": "语音识别模型在听写前收到的内容：你的词汇和常用表达。只有支持上下文的模型会使用。",
+          "enabled": "向语音识别模型发送上下文",
+          "learnedWords": "已学词汇",
+          "expressions": "常用表达",
+          "screen": "应用及光标前文本（较慢）",
+          "maxTerms": "最多词数",
+          "captureWait": "屏幕读取最长等待（毫秒）",
+          "noModel": "未加载模型。",
+          "supported": "当前模型支持上下文。",
+          "unsupported": "当前模型不支持上下文：不发送任何内容，也不等待。"
         }
       },
       "styles": {

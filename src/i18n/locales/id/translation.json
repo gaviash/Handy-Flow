@@ -777,6 +777,19 @@
           "label": "Aturan gaya",
           "description": "Preferensi kalimat yang dipelajari Handy dari koreksi Anda dan diterapkan pada dikte berikutnya.",
           "empty": "Belum ada aturan."
+        },
+        "asr": {
+          "label": "Konteks transkripsi",
+          "description": "Yang diterima model pengenalan suara sebelum mendengar: kata dan ungkapan yang sering Anda pakai. Hanya model yang menerima konteks yang memakainya.",
+          "enabled": "Kirim konteks ke model pengenalan",
+          "learnedWords": "Kata yang dipelajari",
+          "expressions": "Ungkapan yang sering dipakai",
+          "screen": "Aplikasi dan teks sebelum kursor (lebih lambat)",
+          "maxTerms": "Maks. kata",
+          "captureWait": "Maks. menunggu layar (ms)",
+          "noModel": "Tidak ada model dimuat.",
+          "supported": "Model saat ini menerima konteks.",
+          "unsupported": "Model saat ini tidak menerima konteks: tidak ada yang dikirim dan tidak ada yang menunggu."
         }
       },
       "styles": {

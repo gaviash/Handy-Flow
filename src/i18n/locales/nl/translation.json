@@ -777,6 +777,19 @@
           "label": "Stijlregels",
           "description": "Formuleringsvoorkeuren die Handy uit je correcties haalt en toepast op je volgende dictaten.",
           "empty": "Nog geen regels."
+        },
+        "asr": {
+          "label": "Transcriptiecontext",
+          "description": "Wat het spraakmodel krijgt voordat het luistert: je woorden en vaste uitdrukkingen. Alleen modellen die context accepteren gebruiken het.",
+          "enabled": "Context naar het spraakmodel sturen",
+          "learnedWords": "Geleerde woorden",
+          "expressions": "Vaste uitdrukkingen",
+          "screen": "App en tekst vóór de cursor (trager)",
+          "maxTerms": "Max. woorden",
+          "captureWait": "Max. wachttijd scherm (ms)",
+          "noModel": "Geen model geladen.",
+          "supported": "Het huidige model accepteert context.",
+          "unsupported": "Het huidige model accepteert geen context: er wordt niets verstuurd en niets wacht."
         }
       },
       "styles": {

@@ -777,6 +777,19 @@
           "label": "風格規則",
           "description": "Handy 從你的修改中學到的措辭偏好，會用於之後的聽寫。",
           "empty": "尚無規則。"
+        },
+        "asr": {
+          "label": "轉寫上下文",
+          "description": "語音辨識模型在聽寫前收到的內容：你的詞彙和常用表達。只有支援上下文的模型會使用。",
+          "enabled": "向語音辨識模型傳送上下文",
+          "learnedWords": "已學詞彙",
+          "expressions": "常用表達",
+          "screen": "應用程式及游標前文字（較慢）",
+          "maxTerms": "最多詞數",
+          "captureWait": "螢幕讀取最長等待（毫秒）",
+          "noModel": "未載入模型。",
+          "supported": "目前模型支援上下文。",
+          "unsupported": "目前模型不支援上下文：不傳送任何內容，也不等待。"
         }
       },
       "styles": {
