@@ -251,7 +251,9 @@ const RecordingOverlay: React.FC = () => {
 
   const shownNotice = notice && isNoticeState(state) ? notice : null;
   const noticeTitle = shownNotice
-    ? t(noticeDisplay(shownNotice.code).title)
+    ? t(noticeDisplay(shownNotice.code).title, {
+        detail: shownNotice.detail ?? "",
+      })
     : "";
 
   // CSS can't animate to an intrinsic width, so a notice pill gets a measured one.

@@ -1530,7 +1530,7 @@ export type Tone = "formal" | "casual" | "very_casual" | "excited" | "default"
 export type Styles = { work: Tone; email: Tone; personal: Tone; other: Tone }
 export type Learned = { term: string; heard: string; count: number; last_seen: number }
 export type ContextReport = { capture: Capture | null; sent: string | null }
-export type NoticeCode = "TranscriptionFailed" | "PasteFailed" | "PasteBlockedElevated" | "PasteSkippedExcluded" | "SelectionUnavailable" | "NoMicrophone" | "MicrophoneSilent" | "MicPermissionDenied" | "RecordingFailed" | "ModelLoadFailed" | "NoModelSelected" | "PostProcessFailed" | "FileTranscriptionFailed" | "FilePostProcessFailed"
+export type NoticeCode = "TranscriptionFailed" | "PasteFailed" | "PasteBlockedElevated" | "PasteSkippedExcluded" | "SelectionUnavailable" | "WordsLearned" | "NoMicrophone" | "MicrophoneSilent" | "MicPermissionDenied" | "RecordingFailed" | "ModelLoadFailed" | "NoModelSelected" | "PostProcessFailed" | "FileTranscriptionFailed" | "FilePostProcessFailed"
 export type NoticeLevel = 
 /**
  * Nothing came out, or Handy can't do its job.
@@ -1539,7 +1539,11 @@ export type NoticeLevel =
 /**
  * The user got a result, but not the one they set up.
  */
-"warning"
+"warning" | 
+/**
+ * Handy Flow: good news shown on the overlay pill, never kept as a notice.
+ */
+"info"
 /**
  * Each source has one slot in the store. Only dictation notices use the
  * overlay: a file job finishes while the user is doing something else, and

@@ -173,6 +173,9 @@
 .scard.level-warning {
   --notice: var(--color-warning);
 }
+.scard.level-info {
+  --notice: var(--color-moss);
+}
 .sbase.snotice {
   grid-template-columns: auto minmax(0, max-content);
   justify-content: center;
