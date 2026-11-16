@@ -50,7 +50,10 @@ const fakeRoot = () => ({ dataset: {} as Record<string, string | undefined> });
 // light/dark set data-theme
 {
   const root = fakeRoot();
-  applyAppearance({ ...DEFAULT_APPEARANCE, theme: "dark" }, root as unknown as HTMLElement);
+  applyAppearance(
+    { ...DEFAULT_APPEARANCE, theme: "dark" },
+    root as unknown as HTMLElement,
+  );
   assert.equal(root.dataset.theme, "dark");
 }
 
@@ -62,7 +65,11 @@ assert.deepEqual(getStoredAppearance(), DEFAULT_APPEARANCE);
 // unknown palette → rose, other fields kept
 store.set(
   APPEARANCE_STORAGE_KEY,
-  JSON.stringify({ ...DEFAULT_APPEARANCE, palette: "neon", ui_density: "compact" }),
+  JSON.stringify({
+    ...DEFAULT_APPEARANCE,
+    palette: "neon",
+    ui_density: "compact",
+  }),
 );
 assert.equal(getStoredAppearance().palette, "rose");
 assert.equal(getStoredAppearance().ui_density, "compact");
@@ -76,7 +83,10 @@ storageThrows = false;
 // legacy key handy.theme="dark" → theme dark, palette rose
 store.clear();
 store.set("handy.theme", "dark");
-assert.deepEqual(getStoredAppearance(), { ...DEFAULT_APPEARANCE, theme: "dark" });
+assert.deepEqual(getStoredAppearance(), {
+  ...DEFAULT_APPEARANCE,
+  theme: "dark",
+});
 
 assert.equal(DEFAULT_APPEARANCE.palette, "rose");
 assert.equal(DEFAULT_APPEARANCE.theme, "system");
