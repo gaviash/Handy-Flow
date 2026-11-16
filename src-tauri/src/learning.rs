@@ -511,6 +511,15 @@ pub fn terms_for(app: &AppHandle, transcription: &str) -> Vec<String> {
     with_memory(app, |m| crate::recall::relevant_terms(&m.words, transcription, 40))
 }
 
+/// Learned terms alone (no heard forms), most used first: what the ASR gets.
+pub fn plain_terms(app: &AppHandle) -> Vec<String> {
+    with_memory(app, |m| {
+        let mut words: Vec<&Learned> = m.words.iter().filter(|w| w.active).collect();
+        words.sort_by(|a, b| b.count.cmp(&a.count).then(b.last_seen.cmp(&a.last_seen)));
+        words.into_iter().map(|w| w.term.clone()).collect()
+    })
+}
+
 /// Every style rule, pending ones too, in stored order (the judge's `same_as`
 /// numbers refer to this order).
 pub fn all_rules(app: &AppHandle) -> Vec<String> {

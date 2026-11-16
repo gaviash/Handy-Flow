@@ -70,17 +70,6 @@ pub struct AsrContext {
     pub prompt: AsrPrompt,
 }
 
-impl AsrContext {
-    /// Every word the model was given, for the echo guard.
-    pub fn given_words(&self) -> Vec<String> {
-        let prompt = match &self.prompt {
-            AsrPrompt::None => None,
-            AsrPrompt::Context(p) | AsrPrompt::Initial(p) => Some(p.clone()),
-        };
-        self.vocabulary.iter().cloned().chain(prompt).collect()
-    }
-}
-
 /// The context `caps` can take, from `src`, as `cfg` allows.
 pub fn build(caps: AsrCaps, src: &AsrSources, cfg: &AsrContextSettings) -> AsrContext {
     if !cfg.enabled || caps == AsrCaps::default() {
