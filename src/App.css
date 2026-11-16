@@ -216,13 +216,14 @@
   }
 }
 
-/* Onboarding honours reduced motion everywhere inside it. */
+/* All surfaces honour reduced motion, including generated switch knobs. */
 @media (prefers-reduced-motion: reduce) {
-  [data-onboarding] *,
-  [data-onboarding] *::before,
-  [data-onboarding] *::after {
-    animation-duration: 1ms !important;
-    transition-duration: 1ms !important;
+  *,
+  *::before,
+  *::after {
+    animation: none !important;
+    transition-duration: 0s !important;
+    scroll-behavior: auto !important;
   }
 }
 
@@ -239,12 +240,8 @@
   -moz-osx-font-smoothing: grayscale;
   -webkit-text-size-adjust: 100%;
 
-  --scrollbar-thumb: color-mix(in srgb, var(--color-text), transparent 85%);
-  --scrollbar-thumb-hover: color-mix(
-    in srgb,
-    var(--color-text),
-    transparent 70%
-  );
+  --scrollbar-thumb: var(--line-strong);
+  --scrollbar-thumb-hover: var(--ink-3);
 
   /* Log console surface — a subtle shade off the app background so the live log
      viewer reads as a distinct console. In light mode this is a faint gray code
@@ -308,4 +305,33 @@
   fill: var(--color-wordmark-stroke);
   stroke: var(--color-wordmark-stroke);
   stroke-width: 1;
+}
+:root {
+  --row-y: 14px;
+}
+:root[data-density="compact"] {
+  --row-y: 9px;
+}
+.row-setting {
+  padding-block: var(--row-y);
+}
+:focus-visible {
+  outline: 2px solid var(--accent-text);
+  outline-offset: 2px;
+}
+::selection {
+  background: var(--accent);
+  color: var(--on-accent);
+}
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation-duration: 450ms;
+  animation-timing-function: var(--ease-glide);
+}
+.page-title {
+  font-family: var(--heading-font);
+  font-weight: var(--heading-weight);
+  letter-spacing: var(--heading-tracking);
+  font-size: 30px;
+  line-height: 1.2;
 }

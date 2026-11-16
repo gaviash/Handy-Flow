@@ -36,9 +36,13 @@ test("primary button text uses on-accent, not white", async ({ page }) => {
 test("settings rows follow the density setting", async ({ page }) => {
   await mockTauri(page, { settings: { ui_density: "compact" } });
   await page.goto("/");
-  const row = page.getByText("Mute While Recording").locator("xpath=ancestor::*[contains(@class,'row-setting')][1]");
+  const row = page
+    .getByText("Mute While Recording")
+    .locator("xpath=ancestor::*[contains(@class,'row-setting')][1]");
   const compact = await row.evaluate((el) => el.getBoundingClientRect().height);
-  await page.evaluate(() => (document.documentElement.dataset.density = "comfortable"));
+  await page.evaluate(
+    () => (document.documentElement.dataset.density = "comfortable"),
+  );
   const comfy = await row.evaluate((el) => el.getBoundingClientRect().height);
   expect(comfy).toBeGreaterThan(compact);
 });
@@ -48,6 +52,8 @@ test("reduced motion stops the switch transition", async ({ page }) => {
   await mockTauri(page);
   await page.goto("/");
   const track = muteSwitch(page).locator("xpath=following-sibling::*[1]");
-  const d = await track.evaluate((el) => getComputedStyle(el, "::after").transitionDuration);
+  const d = await track.evaluate(
+    (el) => getComputedStyle(el, "::after").transitionDuration,
+  );
   expect(d).toBe("0s");
 });
