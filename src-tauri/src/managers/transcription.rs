@@ -1194,7 +1194,11 @@ impl TranscriptionManager {
     /// What the ASR context may draw from. Custom words only when learning
     /// is off, as before.
     fn asr_sources(&self, settings: &AppSettings, language: Option<String>) -> AsrSources {
-        let screen = self.asr_screen.lock().unwrap_or_else(|e| e.into_inner()).take();
+        let screen = self
+            .asr_screen
+            .lock()
+            .unwrap_or_else(|e| e.into_inner())
+            .take();
         let mut src = AsrSources {
             custom_words: settings.custom_words.clone(),
             language,
@@ -1213,7 +1217,10 @@ impl TranscriptionManager {
     }
 
     fn frequent_expressions(&self) -> Vec<String> {
-        let mut cache = self.asr_expressions.lock().unwrap_or_else(|e| e.into_inner());
+        let mut cache = self
+            .asr_expressions
+            .lock()
+            .unwrap_or_else(|e| e.into_inner());
         if let Some((at, list)) = cache.as_ref() {
             if at.elapsed() < Duration::from_secs(300) {
                 return list.clone();
@@ -2175,10 +2182,12 @@ mod tests {
         );
         assert!(matches!(
             o.family,
-            Some(transcribe_cpp::RunExtension::Whisper(transcribe_cpp::WhisperRunOptions {
-                initial_prompt: Some(_),
-                ..
-            }))
+            Some(transcribe_cpp::RunExtension::Whisper(
+                transcribe_cpp::WhisperRunOptions {
+                    initial_prompt: Some(_),
+                    ..
+                }
+            ))
         ));
         assert!(o.vocabulary.is_empty() && o.prompt.is_none());
     }
@@ -2187,7 +2196,10 @@ mod tests {
     fn a_recited_prompt_is_not_a_transcript() {
         let p = "Vocabulaire : log, Claude, Handy. Expressions : « de manière claire ».";
         assert!(echoes_prompt("Vocabulaire : log, Claude, Handy.", Some(p)));
-        assert!(!echoes_prompt("regarde le log de Claude dans le terminal", Some(p)));
+        assert!(!echoes_prompt(
+            "regarde le log de Claude dans le terminal",
+            Some(p)
+        ));
         assert!(!echoes_prompt("log Claude", Some(p)), "too short to tell");
         assert!(!echoes_prompt("Vocabulaire log Claude", None));
     }

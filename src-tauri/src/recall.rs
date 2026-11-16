@@ -80,8 +80,11 @@ pub fn similar_dictations(
         .filter(|(s, _)| *s > 0.0)
         .collect();
     scored.sort_by(|a, b| b.0.total_cmp(&a.0).then(b.1.timestamp.cmp(&a.1.timestamp)));
-    let mut chosen: Vec<&PastDictation> =
-        scored.into_iter().take(PAST_SIMILAR).map(|(_, p)| p).collect();
+    let mut chosen: Vec<&PastDictation> = scored
+        .into_iter()
+        .take(PAST_SIMILAR)
+        .map(|(_, p)| p)
+        .collect();
     let mut same_app: Vec<&PastDictation> = recent
         .into_iter()
         .filter(|p| !app.is_empty() && p.app.as_deref() == Some(app))
@@ -95,7 +98,10 @@ pub fn similar_dictations(
             chosen.push(p);
         }
     }
-    chosen.into_iter().map(|p| cut(&p.text, PAST_CHARS)).collect()
+    chosen
+        .into_iter()
+        .map(|p| cut(&p.text, PAST_CHARS))
+        .collect()
 }
 
 /// Function words: a phrase made only of them is no expression (fr/en).
@@ -137,8 +143,10 @@ pub fn frequent_expressions(
             }
         }
     }
-    let mut found: Vec<(String, usize)> =
-        counts.into_iter().filter(|(_, c)| *c >= min_count).collect();
+    let mut found: Vec<(String, usize)> = counts
+        .into_iter()
+        .filter(|(_, c)| *c >= min_count)
+        .collect();
     // Longest first, so a shorter phrase it contains is dropped below.
     found.sort_by(|a, b| {
         b.0.split(' ')
@@ -192,10 +200,17 @@ mod tests {
         // Without a match, the most used come first; pending words never.
         let mut pending = w("log", "gag", 5);
         pending.active = false;
-        let words = vec![w("Claude", "Cloud", 1), w("Postgres", "PostGer", 9), pending];
+        let words = vec![
+            w("Claude", "Cloud", 1),
+            w("Postgres", "PostGer", 9),
+            pending,
+        ];
         assert_eq!(
             relevant_terms(&words, "bonjour", 5),
-            vec![r#"Postgres (heard as "PostGer")"#, r#"Claude (heard as "Cloud")"#]
+            vec![
+                r#"Postgres (heard as "PostGer")"#,
+                r#"Claude (heard as "Cloud")"#
+            ]
         );
     }
 

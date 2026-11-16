@@ -104,7 +104,11 @@ pub fn build(caps: AsrCaps, src: &AsrSources, cfg: &AsrContextSettings) -> AsrCo
         }
     }
     terms.truncate(cfg.max_terms);
-    let expressions: &[String] = if cfg.expressions { &src.expressions } else { &[] };
+    let expressions: &[String] = if cfg.expressions {
+        &src.expressions
+    } else {
+        &[]
+    };
     let prompt_text = || prompt(&terms, expressions, src, cfg.screen);
     if caps.initial_prompt {
         return AsrContext {
@@ -113,7 +117,11 @@ pub fn build(caps: AsrCaps, src: &AsrSources, cfg: &AsrContextSettings) -> AsrCo
         };
     }
     AsrContext {
-        vocabulary: if caps.vocabulary { terms.clone() } else { Vec::new() },
+        vocabulary: if caps.vocabulary {
+            terms.clone()
+        } else {
+            Vec::new()
+        },
         prompt: if caps.context_prompt {
             prompt_text().map_or(AsrPrompt::None, AsrPrompt::Context)
         } else {
@@ -123,10 +131,20 @@ pub fn build(caps: AsrCaps, src: &AsrSources, cfg: &AsrContextSettings) -> AsrCo
 }
 
 /// One short conditioning text in the dictation's language, `None` if empty.
-fn prompt(terms: &[String], expressions: &[String], src: &AsrSources, screen: bool) -> Option<String> {
+fn prompt(
+    terms: &[String],
+    expressions: &[String],
+    src: &AsrSources,
+    screen: bool,
+) -> Option<String> {
     let fr = src.language.as_deref().is_none_or(|l| l.starts_with("fr"));
     let (vocab, expr, app, before) = if fr {
-        ("Vocabulaire", "Expressions", "Application", "Texte précédent")
+        (
+            "Vocabulaire",
+            "Expressions",
+            "Application",
+            "Texte précédent",
+        )
     } else {
         ("Vocabulary", "Expressions", "App", "Previous text")
     };
@@ -161,8 +179,9 @@ fn cut(text: &str, max: usize) -> String {
         return text.to_string();
     }
     let head: String = text.chars().take(max).collect();
-    head.rsplit_once(' ')
-        .map_or(head.clone(), |(h, _)| h.trim_end_matches([',', ' ']).to_string())
+    head.rsplit_once(' ').map_or(head.clone(), |(h, _)| {
+        h.trim_end_matches([',', ' ']).to_string()
+    })
 }
 
 #[cfg(test)]
@@ -213,7 +232,10 @@ mod tests {
         let AsrPrompt::Context(p) = c.prompt else {
             panic!("context prompt expected")
         };
-        assert!(p.contains("Claude") && p.contains("de manière claire et concise"), "{p}");
+        assert!(
+            p.contains("Claude") && p.contains("de manière claire et concise"),
+            "{p}"
+        );
         assert!(!p.contains("slack") && !p.contains("serveur"), "{p}");
         assert!(p.chars().count() <= PROMPT_MAX_CHARS);
         // With the screen option, the app and the text before the cursor too.
@@ -224,7 +246,10 @@ mod tests {
         let AsrPrompt::Context(p) = build(caps, &src(), &cfg).prompt else {
             panic!()
         };
-        assert!(p.contains("slack.exe") && p.contains("on regarde le serveur"), "{p}");
+        assert!(
+            p.contains("slack.exe") && p.contains("on regarde le serveur"),
+            "{p}"
+        );
     }
 
     #[test]
@@ -260,7 +285,10 @@ mod tests {
         assert_eq!(c.vocabulary, vec!["Handy"]);
         // Nothing to say: no prompt at all.
         let empty = AsrSources::default();
-        assert_eq!(build(caps, &empty, &AsrContextSettings::default()), AsrContext::default());
+        assert_eq!(
+            build(caps, &empty, &AsrContextSettings::default()),
+            AsrContext::default()
+        );
     }
 
     #[test]

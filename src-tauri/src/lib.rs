@@ -1,8 +1,8 @@
 mod actions;
 mod adaptive;
-mod asr_context;
 #[cfg(all(target_os = "macos", target_arch = "aarch64"))]
 mod apple_intelligence;
+mod asr_context;
 mod audio_feedback;
 pub mod audio_toolkit;
 mod autostart;
@@ -15,11 +15,10 @@ mod context;
 pub mod engine_supervisor;
 mod helpers;
 mod input;
+mod judge;
 mod language_detection;
 mod languages;
 mod learning;
-mod judge;
-mod recall;
 mod llm_client;
 mod managers;
 mod memory;
@@ -29,6 +28,7 @@ mod paste_tx;
 pub mod portable;
 #[cfg(target_os = "linux")]
 mod primary_selection;
+mod recall;
 mod secure_input;
 mod settings;
 mod shortcut;

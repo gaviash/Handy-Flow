@@ -1116,10 +1116,7 @@ impl ShortcutAction for TranscribeAction {
                     // Spec §7: only a model that takes context, with the screen
                     // option on, waits for the capture, and at most capture_wait_ms.
                     let asr = get_settings(&ah).asr_context;
-                    if asr.screen
-                        && get_settings(&ah).learning_enabled
-                        && tm.asr_context_wanted()
-                    {
+                    if asr.screen && get_settings(&ah).learning_enabled && tm.asr_context_wanted() {
                         let wait = Duration::from_millis(asr.capture_wait_ms);
                         tm.set_asr_screen(screen_rx.recv_timeout(wait).ok().flatten());
                     }

@@ -877,8 +877,14 @@ mod tests {
         assert!(m.contains("app: slack.exe\n"), "{m}");
         assert!(m.contains("window: «général - Slack»\n"), "{m}");
         assert!(m.contains("site: app.slack.com\n"), "{m}");
-        assert!(m.contains("past dictations:\n- «le log du serveur est vide»\n"), "{m}");
-        assert!(m.contains("style rules:\n- Supprimer « donc voilà » en début de phrase.\n"), "{m}");
+        assert!(
+            m.contains("past dictations:\n- «le log du serveur est vide»\n"),
+            "{m}"
+        );
+        assert!(
+            m.contains("style rules:\n- Supprimer « donc voilà » en début de phrase.\n"),
+            "{m}"
+        );
         assert_eq!(
             output_anomaly("surely it is fine", "Surely it is fine."),
             None,

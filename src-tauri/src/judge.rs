@@ -183,7 +183,12 @@ pub async fn run(
     );
     let reply = match tokio::time::timeout(TIMEOUT, call).await {
         Err(_) => return skip("timeout"),
-        Ok(Err(e)) => return skip(&format!("error: {}", e.chars().take(80).collect::<String>())),
+        Ok(Err(e)) => {
+            return skip(&format!(
+                "error: {}",
+                e.chars().take(80).collect::<String>()
+            ))
+        }
         Ok(Ok(None)) => return skip("empty reply"),
         Ok(Ok(Some(r))) => r,
     };
