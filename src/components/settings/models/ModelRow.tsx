@@ -88,6 +88,10 @@ export const ModelRow: React.FC<{ entry: Entry }> = ({ entry }) => {
         total: size,
       })}
     </span>
+  ) : on ? (
+    <span className="rounded-full bg-accent px-2 py-0.5 text-xs font-medium text-on-accent">
+      {t("modelSelector.active")}
+    </span>
   ) : undefined;
 
   // Pressing a download makes it the one to switch to when it's done.

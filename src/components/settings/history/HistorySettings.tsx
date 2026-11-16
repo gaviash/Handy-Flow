@@ -497,10 +497,12 @@ const HistoryEntryComponent: React.FC<HistoryEntryProps> = ({
   }
 
   return (
-    <div className="px-4 py-2 pb-5 flex flex-col gap-3">
+    <div className="group/history px-4 py-2 pb-5 flex flex-col gap-3">
       <div className="flex justify-between items-center gap-3">
         <div className="flex items-center gap-2 min-w-0">
-          <p className="text-sm font-medium shrink-0">{formattedDate}</p>
+          <p className="text-sm font-medium shrink-0 tabular-nums">
+            {formattedDate}
+          </p>
           {entry.app && (
             <span className="truncate text-sm text-ink-3" title={entry.app}>
               {entry.app}
@@ -516,7 +518,7 @@ const HistoryEntryComponent: React.FC<HistoryEntryProps> = ({
             </span>
           )}
         </div>
-        <div className="flex items-center shrink-0">
+        <div className="flex items-center shrink-0 opacity-0 transition-opacity duration-150 group-hover/history:opacity-100 group-focus-within/history:opacity-100 [@media(hover:none)]:opacity-100">
           <IconButton
             onClick={handleCopyText}
             disabled={!hasTranscription || retrying}
