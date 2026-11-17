@@ -152,6 +152,8 @@ pub struct DictationStats {
     /// Most used apps, with their dictation count.
     pub top_apps: Vec<(String, u32)>,
     pub learned_words: u32,
+    /// Words dictated today (local calendar day).
+    pub words_today: u32,
 }
 
 #[tauri::command]
@@ -160,11 +162,13 @@ pub fn get_dictation_stats(
     app: AppHandle,
     history_manager: State<'_, Arc<HistoryManager>>,
 ) -> Result<DictationStats, String> {
-    let (dictations, words, top_apps) = history_manager.stats().map_err(|e| e.to_string())?;
+    let (dictations, words, top_apps, words_today) =
+        history_manager.stats().map_err(|e| e.to_string())?;
     Ok(DictationStats {
         dictations,
         words,
         top_apps,
         learned_words: crate::learning::count(&app) as u32,
+        words_today,
     })
 }

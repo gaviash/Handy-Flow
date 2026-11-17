@@ -331,6 +331,12 @@
     },
     "general": {
       "title": "Umum",
+      "today": {
+        "words": "Kata yang didikte hari ini",
+        "saved": "Hemat dibanding mengetik",
+        "savedHint": "Perkiraan: mengetik {{typing}} kata per menit, berbicara {{speaking}}.",
+        "empty": "Belum ada yang didikte hari ini."
+      },
       "shortcut": {
         "title": "Pintasan Handy Flow",
         "description": "Atur pintasan keyboard untuk memulai perekaman ucapan-ke-teks",

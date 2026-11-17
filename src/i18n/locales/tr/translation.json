@@ -331,6 +331,12 @@
     },
     "general": {
       "title": "Genel",
+      "today": {
+        "words": "Bugün dikte edilen kelimeler",
+        "saved": "Yazmaya göre kazanılan",
+        "savedHint": "Tahmin: dakikada {{typing}} kelime yazma, {{speaking}} kelime konuşma.",
+        "empty": "Bugün henüz bir şey dikte edilmedi."
+      },
       "shortcut": {
         "title": "Handy Flow Kısayolları",
         "description": "Sesle yazma kaydını başlatmak için klavye kısayollarını yapılandırın",

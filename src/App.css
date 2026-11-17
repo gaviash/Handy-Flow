@@ -134,6 +134,8 @@
   --animate-drop: drop 160ms var(--ease-glide);
   /* A word swapped in place (the Models page's pinned section name) */
   --animate-fade: fade 180ms ease-out;
+  /* A figure that just grew lights up in the accent, then cools */
+  --animate-glow: glow 1200ms var(--ease-glide);
   /* A shortcut being captured: the empty slot's dashed edge breathes */
   --animate-key-slot: key-slot 1.2s ease-in-out infinite;
 
@@ -193,6 +195,12 @@
   @keyframes fade {
     from {
       opacity: 0;
+    }
+  }
+  @keyframes glow {
+    from {
+      color: var(--accent);
+      scale: 1.06;
     }
   }
   @keyframes rise {
@@ -328,6 +336,14 @@
 ::view-transition-new(root) {
   animation-duration: 450ms;
   animation-timing-function: var(--ease-glide);
+}
+.today-figure {
+  font-family: var(--heading-font);
+  font-weight: var(--heading-weight);
+  letter-spacing: var(--heading-tracking);
+  font-size: 44px;
+  line-height: 1;
+  transform-origin: left bottom;
 }
 .page-title {
   font-family: var(--heading-font);

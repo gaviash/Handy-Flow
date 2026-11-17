@@ -331,6 +331,12 @@
     },
     "general": {
       "title": "Général",
+      "today": {
+        "words": "Mots dictés aujourd'hui",
+        "saved": "Gagnées sur le clavier",
+        "savedHint": "Estimation : frappe à {{typing}} mots par minute, parole à {{speaking}}.",
+        "empty": "Rien de dicté aujourd'hui pour l'instant."
+      },
       "shortcut": {
         "title": "Raccourcis Handy Flow",
         "description": "Configurer les raccourcis clavier pour déclencher l'enregistrement de la reconnaissance vocale",

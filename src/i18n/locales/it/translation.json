@@ -331,6 +331,12 @@
     },
     "general": {
       "title": "Generale",
+      "today": {
+        "words": "Parole dettate oggi",
+        "saved": "Risparmiato rispetto alla tastiera",
+        "savedHint": "Stima: digitazione a {{typing}} parole al minuto, voce a {{speaking}}.",
+        "empty": "Ancora nulla dettato oggi."
+      },
       "shortcut": {
         "title": "Scorciatoie di Handy Flow",
         "description": "Configura le scorciatoie per attivare la trascrizione vocale",

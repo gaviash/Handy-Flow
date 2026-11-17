@@ -331,6 +331,12 @@
     },
     "general": {
       "title": "Obecné",
+      "today": {
+        "words": "Dnes nadiktovaná slova",
+        "saved": "Ušetřeno oproti psaní",
+        "savedHint": "Odhad: psaní {{typing}} slov za minutu, mluvení {{speaking}}.",
+        "empty": "Dnes zatím nic nenadiktováno."
+      },
       "shortcut": {
         "title": "Zkratky Handy Flow",
         "description": "Nastavte klávesové zkratky pro spuštění nahrávání řeči na text",

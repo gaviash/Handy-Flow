@@ -331,6 +331,12 @@
     },
     "general": {
       "title": "Allmänt",
+      "today": {
+        "words": "Dikterade ord i dag",
+        "saved": "Sparat jämfört med att skriva",
+        "savedHint": "Uppskattning: skriva {{typing}} ord per minut, tala {{speaking}}.",
+        "empty": "Inget dikterat än i dag."
+      },
       "shortcut": {
         "title": "Handy Flow-kortkommandon",
         "description": "Konfigurera kortkommandon för att starta tal-till-text-inspelning",

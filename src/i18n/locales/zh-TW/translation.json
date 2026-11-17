@@ -331,6 +331,12 @@
     },
     "general": {
       "title": "一般",
+      "today": {
+        "words": "今日聽寫字詞",
+        "saved": "比打字節省",
+        "savedHint": "估算：打字每分鐘 {{typing}} 詞，說話每分鐘 {{speaking}} 詞。",
+        "empty": "今天還沒有聽寫。"
+      },
       "shortcut": {
         "title": "Handy Flow 快捷鍵",
         "description": "設定啟動語音轉文字錄製的鍵盤快捷鍵",

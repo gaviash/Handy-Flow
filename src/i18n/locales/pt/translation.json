@@ -331,6 +331,12 @@
     },
     "general": {
       "title": "Geral",
+      "today": {
+        "words": "Palavras ditadas hoje",
+        "saved": "Poupado face a digitar",
+        "savedHint": "Estimativa: digitar a {{typing}} palavras por minuto, falar a {{speaking}}.",
+        "empty": "Ainda nada ditado hoje."
+      },
       "shortcut": {
         "title": "Atalhos do Handy Flow",
         "description": "Configure atalhos de teclado para iniciar a gravação de voz para texto",

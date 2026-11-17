@@ -331,6 +331,12 @@
     },
     "general": {
       "title": "General",
+      "today": {
+        "words": "Words dictated today",
+        "saved": "Saved vs typing",
+        "savedHint": "Estimate: typing at {{typing}} words per minute, speaking at {{speaking}}.",
+        "empty": "Nothing dictated yet today."
+      },
       "shortcut": {
         "title": "Handy Flow Shortcuts",
         "description": "Configure keyboard shortcuts to trigger speech-to-text recording",

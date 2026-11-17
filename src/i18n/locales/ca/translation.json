@@ -331,6 +331,12 @@
     },
     "general": {
       "title": "General",
+      "today": {
+        "words": "Paraules dictades avui",
+        "saved": "Estalviat respecte a teclejar",
+        "savedHint": "Estimació: teclejar a {{typing}} paraules per minut, parlar a {{speaking}}.",
+        "empty": "Encara no has dictat res avui."
+      },
       "shortcut": {
         "title": "Dreceres del Handy Flow",
         "description": "Configura les dreceres de teclat per iniciar l'enregistrament de veu per a la transcripció",

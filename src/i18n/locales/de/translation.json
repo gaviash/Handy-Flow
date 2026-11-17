@@ -331,6 +331,12 @@
     },
     "general": {
       "title": "Allgemein",
+      "today": {
+        "words": "Heute diktierte Wörter",
+        "saved": "Gespart gegenüber Tippen",
+        "savedHint": "Schätzung: Tippen mit {{typing}} Wörtern pro Minute, Sprechen mit {{speaking}}.",
+        "empty": "Heute noch nichts diktiert."
+      },
       "shortcut": {
         "title": "Handy Flow-Tastenkürzel",
         "description": "Tastenkürzel für die Sprachaufnahme konfigurieren",
