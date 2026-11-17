@@ -203,6 +203,19 @@ async fn transform_text(
     }
 }
 
+/// System prompt for the Handy Adaptive framing, or None for the legacy
+/// `${output}` substitution. A user prompt without `${output}` expects the
+/// dictation as a separate `<dictation>` message, so it gets the house framing too.
+fn house_framing(prompt_id: &str, prompt: &str) -> Option<String> {
+    if prompt_id == crate::adaptive::HOUSE_PROMPT_ID {
+        Some(crate::adaptive::HOUSE_PROMPT.to_string())
+    } else if !prompt.contains("${output}") {
+        Some(prompt.to_string())
+    } else {
+        None
+    }
+}
+
 /// Providers asked to skip reasoning: it adds seconds and rarely helps a rewrite.
 fn skips_reasoning(provider_id: &str) -> bool {
     matches!(provider_id, "custom" | "openrouter" | "cloudflare")
@@ -504,10 +517,10 @@ async fn post_process_transcription(
     // field the endpoint understands and retries without it if rejected.
     let disable_reasoning = skips_reasoning(&provider.id);
 
-    // Handy Adaptive house prompt: instructions in the system message, the
-    // dictation framed as data in the user message, plain-text reply.
-    if selected_prompt_id == crate::adaptive::HOUSE_PROMPT_ID
-        && provider.id != APPLE_INTELLIGENCE_PROVIDER_ID
+    // Handy Adaptive framing: instructions in the system message, the
+    // dictation (and context) framed as data in the user message, plain-text reply.
+    if let Some(system_prompt) = house_framing(&selected_prompt_id, &prompt)
+        .filter(|_| provider.id != APPLE_INTELLIGENCE_PROVIDER_ID)
     {
         let message = crate::adaptive::house_user_message(transcription, context);
         crate::context::record_sent(report, &message);
@@ -517,7 +530,7 @@ async fn post_process_transcription(
                 api_key.clone(),
                 &model,
                 message.clone(),
-                Some(crate::adaptive::HOUSE_PROMPT.to_string()),
+                Some(system_prompt.clone()),
                 None,
                 disable_reasoning,
             )
@@ -536,7 +549,7 @@ async fn post_process_transcription(
                     api_key,
                     crate::adaptive::GROQ_SPARE_MODEL,
                     message.clone(),
-                    Some(crate::adaptive::HOUSE_PROMPT.to_string()),
+                    Some(system_prompt.clone()),
                     None,
                     disable_reasoning,
                 )
@@ -556,13 +569,7 @@ async fn post_process_transcription(
                 provider.id,
                 reply.as_ref().err()
             );
-            if let Some(spare) = ask_fallback(
-                settings,
-                &provider.id,
-                message,
-                crate::adaptive::HOUSE_PROMPT,
-            )
-            .await
+            if let Some(spare) = ask_fallback(settings, &provider.id, message, &system_prompt).await
             {
                 reply = spare;
             }
@@ -1774,10 +1781,24 @@ pub static ACTION_MAP: Lazy<HashMap<String, Arc<dyn ShortcutAction>>> = Lazy::ne
 #[cfg(test)]
 mod tests {
     use super::{
-        complete_unless_cancelled, is_blank_transcription, non_blank_post_processed_text,
-        post_process_transcription, should_use_streaming_overlay, strip_invisible_chars,
-        strip_think_block, transform_text, PostProcessOutcome,
+        complete_unless_cancelled, house_framing, is_blank_transcription,
+        non_blank_post_processed_text, post_process_transcription, should_use_streaming_overlay,
+        strip_invisible_chars, strip_think_block, transform_text, PostProcessOutcome,
     };
+
+    #[test]
+    fn prompts_without_output_placeholder_get_house_framing() {
+        let house = crate::adaptive::HOUSE_PROMPT_ID;
+        assert_eq!(
+            house_framing(house, "ignored").as_deref(),
+            Some(crate::adaptive::HOUSE_PROMPT)
+        );
+        assert_eq!(
+            house_framing("mine", "Rewrite it.").as_deref(),
+            Some("Rewrite it.")
+        );
+        assert_eq!(house_framing("mine", "Fix: ${output}"), None);
+    }
     use crate::settings::{get_default_settings, AppSettings, OverlayStyle};
     use std::future;
     use std::io::{Read, Write};
