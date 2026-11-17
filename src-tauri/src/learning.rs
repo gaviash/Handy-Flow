@@ -1222,7 +1222,10 @@ pub fn observe(
             // misheard words the local layer couldn't tell).
             let settings = crate::settings::get_settings(&app);
             if let Some(fin) = last.as_ref().filter(|fin| *fin != &inserted) {
-                if settings.learning_enabled && settings.context_send_enabled {
+                if settings.learning_enabled
+                    && settings.learning_judge_enabled
+                    && settings.context_send_enabled
+                {
                     tauri::async_runtime::spawn(crate::judge::run(
                         app.clone(),
                         inserted.clone(),

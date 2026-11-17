@@ -567,6 +567,10 @@ pub struct AppSettings {
     /// The system notification sound when a word is learned.
     #[serde(default = "default_true")]
     pub learned_sound_enabled: bool,
+    /// The judge sends a correction (before and after) to an LLM to learn
+    /// style rules and technical words.
+    #[serde(default = "default_true")]
+    pub learning_judge_enabled: bool,
     /// Handy Adaptive (spec §7): what the ASR model is told before it listens.
     #[serde(default)]
     pub asr_context: crate::asr_context::AsrContextSettings,
@@ -1353,6 +1357,7 @@ pub fn get_default_settings() -> AppSettings {
         context_excluded_domains: default_context_excluded_domains(),
         learning_enabled: true,
         learned_sound_enabled: true,
+        learning_judge_enabled: true,
         asr_context: Default::default(),
         rewrite_context: Default::default(),
         transform_context: Default::default(),
