@@ -31,7 +31,7 @@ const Rescan: React.FC = () => {
         type="button"
         onClick={() => useModelStore.getState().rescanLocalModels()}
         disabled={rescanning}
-        aria-label={t("settings.models.rescan.tooltip")}
+        aria-label={t("settings.models.rescan.label")}
         className="ms-[6px] grid size-[22px] cursor-pointer place-items-center rounded-full text-ink-3 hover:bg-wash hover:text-text disabled:cursor-default focus:outline-none focus-visible:ring-1 focus-visible:ring-logo-primary"
       >
         <RefreshCw
