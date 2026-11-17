@@ -1158,6 +1158,12 @@
         "pill": "Pill",
         "wave": "Wave",
         "live": "Live"
+      },
+      "pillTone": {
+        "title": "Indikatorens udtryk",
+        "description": "Vælg udseendet af dikteringens tilbagemelding.",
+        "discreet": "Diskret",
+        "expressive": "Udtryksfuld"
       }
     },
     "transcription": {
@@ -1319,7 +1325,8 @@
     "transcribing": "Transskriberer...",
     "processing": "Behandler...",
     "loadingModel": "Indlæser model...",
-    "recording": "Listening"
+    "recording": "Listening",
+    "pasted": "Indsat"
   },
   "secureInput": {
     "blockedWithCulprit_one": "{{name}} blokerer muligvis 1 genvej",

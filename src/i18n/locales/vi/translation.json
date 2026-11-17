@@ -1158,6 +1158,12 @@
         "pill": "Pill",
         "wave": "Wave",
         "live": "Live"
+      },
+      "pillTone": {
+        "title": "Kiểu hiển thị",
+        "description": "Chọn cách hiển thị phản hồi khi đọc chính tả.",
+        "discreet": "Tinh tế",
+        "expressive": "Nổi bật"
       }
     },
     "transcription": {
@@ -1319,7 +1325,8 @@
     "transcribing": "Đang chuyển đổi...",
     "processing": "Đang xử lý...",
     "loadingModel": "Đang tải mô hình...",
-    "recording": "Listening"
+    "recording": "Listening",
+    "pasted": "Đã dán"
   },
   "secureInput": {
     "blockedWithCulprit_one": "{{name}} có thể đang chặn 1 phím tắt",

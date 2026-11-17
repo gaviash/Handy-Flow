@@ -1158,6 +1158,12 @@
         "pill": "Pill",
         "wave": "Wave",
         "live": "Live"
+      },
+      "pillTone": {
+        "title": "סגנון מחוון ההכתבה",
+        "description": "בחירת מראה המשוב על ההכתבה.",
+        "discreet": "עדין",
+        "expressive": "מוחצן"
       }
     },
     "transcription": {
@@ -1319,7 +1325,8 @@
     "transcribing": "מתמלל...",
     "processing": "מעבד...",
     "loadingModel": "טוען מודל...",
-    "recording": "Listening"
+    "recording": "Listening",
+    "pasted": "הודבק"
   },
   "secureInput": {
     "blockedWithCulprit_one": "ייתכן ש-{{name}} חוסם קיצור דרך אחד",

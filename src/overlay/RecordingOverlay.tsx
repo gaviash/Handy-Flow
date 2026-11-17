@@ -20,6 +20,7 @@ import type { ModelStateEvent } from "@/lib/types/events";
 import { getLanguageDirection } from "@/lib/utils/rtl";
 
 type OverlayState =
+  | "pasted"
   | "recording"
   | "streaming"
   | "transcribing"
@@ -444,6 +445,7 @@ const RecordingOverlay: React.FC = () => {
   // ---- Minimal overlay: exactly one row at a time — waveform (recording), or a
   // spinner + label (transcribing / processing). Never both. The pill animates its
   // width between them; the cancel button is in both rows so it stays put.
+  const pasted = state === "pasted";
   const working = state === "transcribing" || state === "processing";
   const workLabel =
     state === "processing" ? t("overlay.processing") : transcribingLabel;
@@ -455,22 +457,32 @@ const RecordingOverlay: React.FC = () => {
     >
       {noticeProbe}
       <div
-        className={`scard compact ${working && isVisible ? "cworking" : ""} ${noticeClass}`}
+        className={`scard compact ${working && isVisible ? "cworking" : ""} ${noticeClass} ${pasted ? "pasted" : ""}`}
+        aria-live={pasted ? "polite" : undefined}
         aria-label={
           shownNotice
             ? noticeTitle
-            : working
-              ? workLabel
-              : t("overlay.recording")
+            : pasted
+              ? t("overlay.pasted")
+              : working
+                ? workLabel
+                : t("overlay.recording")
         }
         style={shownNotice ? { width: noticeWidth } : undefined}
         onClick={dismissNotice}
       >
-        {shownNotice
-          ? noticeRow
-          : working
-            ? workingRow(workLabel, true)
-            : listeningRow(false, true)}
+        {shownNotice ? (
+          noticeRow
+        ) : pasted ? (
+          <div className="sbase spasted">
+            <span>{t("overlay.pasted")}</span>
+            <CheckBadgeIcon className="pasted-check" />
+          </div>
+        ) : working ? (
+          workingRow(workLabel, true)
+        ) : (
+          listeningRow(false, true)
+        )}
       </div>
     </div>
   );

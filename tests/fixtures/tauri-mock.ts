@@ -155,6 +155,7 @@ export async function mockTauri(page: Page, opts: MockOptions = {}) {
           }
           calls.push({ cmd, args });
           const appearanceCommands: Record<string, [string, string]> = {
+            change_pill_tone_setting: ["pill_tone", "tone"],
             change_palette_setting: ["palette", "palette"],
             change_theme_setting: ["theme", "theme"],
             change_heading_style_setting: ["heading_style", "style"],

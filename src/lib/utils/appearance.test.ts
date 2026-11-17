@@ -35,6 +35,7 @@ const fakeRoot = () => ({ dataset: {} as Record<string, string | undefined> });
       palette: "sauge",
       heading_style: "modern",
       ui_density: "compact",
+      pill_tone: "expressive",
       overlay_show_label: false,
     },
     root as unknown as HTMLElement,
@@ -43,6 +44,7 @@ const fakeRoot = () => ({ dataset: {} as Record<string, string | undefined> });
   assert.equal(root.dataset.theme, undefined);
   assert.equal(root.dataset.headings, "modern");
   assert.equal(root.dataset.density, "compact");
+  assert.equal(root.dataset.pillTone, "expressive");
   assert.equal(root.dataset.overlayLabel, "false");
   assert.equal(JSON.parse(store.get(APPEARANCE_STORAGE_KEY)!).palette, "sauge");
 }

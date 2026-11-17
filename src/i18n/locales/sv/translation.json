@@ -1158,6 +1158,12 @@
         "pill": "Pill",
         "wave": "Wave",
         "live": "Live"
+      },
+      "pillTone": {
+        "title": "Indikatorns stil",
+        "description": "Välj hur dikteringens återkoppling visas.",
+        "discreet": "Diskret",
+        "expressive": "Uttrycksfull"
       }
     },
     "transcription": {
@@ -1319,7 +1325,8 @@
     "transcribing": "Transkriberar...",
     "processing": "Bearbetar...",
     "loadingModel": "Laddar modell...",
-    "recording": "Listening"
+    "recording": "Listening",
+    "pasted": "Inklistrat"
   },
   "secureInput": {
     "blockedWithCulprit_one": "{{name}} kanske blockerar 1 kortkommando",

@@ -1158,6 +1158,12 @@
         "pill": "Pill",
         "wave": "Wave",
         "live": "Live"
+      },
+      "pillTone": {
+        "title": "Styl indikátoru",
+        "description": "Zvolte vzhled odezvy při diktování.",
+        "discreet": "Nenápadný",
+        "expressive": "Výrazný"
       }
     },
     "transcription": {
@@ -1319,7 +1325,8 @@
     "transcribing": "Přepisuji...",
     "processing": "Zpracovávám...",
     "loadingModel": "Načítání modelu...",
-    "recording": "Listening"
+    "recording": "Listening",
+    "pasted": "Vloženo"
   },
   "secureInput": {
     "blockedWithCulprit_one": "{{name}} může blokovat 1 zkratku",

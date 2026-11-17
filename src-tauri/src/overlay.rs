@@ -777,6 +777,30 @@ static OVERLAY_SESSION_SHOWING: AtomicBool = AtomicBool::new(false);
 /// can't say: a model that doesn't stream gets the compact pill under Live too.
 static OVERLAY_SESSION_LIVE: AtomicBool = AtomicBool::new(false);
 
+/// Confirms a successful paste, unless a newer session takes over.
+pub fn show_pasted_overlay(app_handle: &AppHandle) {
+    if !OVERLAY_SESSION_SHOWING.load(Ordering::SeqCst) {
+        return;
+    }
+    let generation = OVERLAY_SHOW_GENERATION.load(Ordering::SeqCst);
+    let duration = match settings::get_settings(app_handle).pill_tone {
+        settings::PillTone::Discreet => 400,
+        settings::PillTone::Expressive => 650,
+    };
+    if let Some(window) = app_handle.get_webview_window("recording_overlay") {
+        let _ = window.emit("show-overlay", "pasted");
+        let handle = app_handle.clone();
+        std::thread::spawn(move || {
+            std::thread::sleep(std::time::Duration::from_millis(duration));
+            if OVERLAY_SHOW_GENERATION.load(Ordering::SeqCst) == generation
+                && OVERLAY_SESSION_SHOWING.load(Ordering::SeqCst)
+            {
+                hide_recording_overlay(&handle);
+            }
+        });
+    }
+}
+
 /// Hides the recording overlay window with fade-out animation
 pub fn hide_recording_overlay(app_handle: &AppHandle) {
     OVERLAY_SESSION_SHOWING.store(false, Ordering::SeqCst);

@@ -372,6 +372,15 @@ impl Palette {
     }
 }
 
+/// Dictation pill visual tone.
+#[derive(Serialize, Deserialize, Debug, Clone, Copy, PartialEq, Eq, Type, Default)]
+#[serde(rename_all = "snake_case")]
+pub enum PillTone {
+    #[default]
+    Discreet,
+    Expressive,
+}
+
 /// Everything the windows need to paint themselves; sent with the
 /// `appearance-changed` event so the overlay follows the settings window.
 #[derive(Serialize, Debug, Clone, Copy, Type)]
@@ -380,6 +389,7 @@ pub struct Appearance {
     pub palette: Palette,
     pub heading_style: HeadingStyle,
     pub ui_density: UiDensity,
+    pub pill_tone: PillTone,
     pub overlay_show_label: bool,
 }
 
@@ -390,6 +400,7 @@ impl Appearance {
             palette: settings.palette,
             heading_style: settings.heading_style,
             ui_density: settings.ui_density,
+            pill_tone: settings.pill_tone,
             overlay_show_label: settings.overlay_show_label,
         }
     }
@@ -681,6 +692,8 @@ pub struct AppSettings {
     pub heading_style: HeadingStyle,
     #[serde(default)]
     pub ui_density: UiDensity,
+    #[serde(default = "PillTone::default")]
+    pub pill_tone: PillTone,
     /// The dictation pill shows its text label ("Pastille") or only the wave.
     #[serde(default = "default_true")]
     pub overlay_show_label: bool,
@@ -1397,6 +1410,7 @@ pub fn get_default_settings() -> AppSettings {
         palette: Palette::default(),
         heading_style: HeadingStyle::default(),
         ui_density: UiDensity::default(),
+        pill_tone: PillTone::default(),
         overlay_show_label: true,
         experimental_enabled: false,
         lazy_stream_close: false,
@@ -2082,6 +2096,7 @@ mod tests {
         assert_eq!(settings.palette, Palette::Rose);
         assert_eq!(settings.heading_style, HeadingStyle::Editorial);
         assert_eq!(settings.ui_density, UiDensity::Comfortable);
+        assert_eq!(settings.pill_tone, PillTone::Discreet);
         assert!(settings.overlay_show_label);
         assert_eq!(settings.log_level, LogLevel::Debug);
         assert_eq!(settings.sound_theme, SoundTheme::Pop);

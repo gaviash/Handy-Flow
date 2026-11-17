@@ -1158,6 +1158,12 @@
         "pill": "Pill",
         "wave": "Wave",
         "live": "Live"
+      },
+      "pillTone": {
+        "title": "Gösterge tarzı",
+        "description": "Dikte geri bildiriminin görünümünü seçin.",
+        "discreet": "Sade",
+        "expressive": "Canlı"
       }
     },
     "transcription": {
@@ -1319,7 +1325,8 @@
     "transcribing": "Transkribe ediliyor...",
     "processing": "İşleniyor...",
     "loadingModel": "Model yükleniyor...",
-    "recording": "Listening"
+    "recording": "Listening",
+    "pasted": "Yapıştırıldı"
   },
   "secureInput": {
     "blockedWithCulprit_one": "{{name}} 1 kısayolu engelliyor olabilir",

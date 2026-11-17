@@ -86,3 +86,51 @@ for (const palette of ["rose", "sauge", "contraste"])
       await expect(page).toHaveScreenshot(`overlay-${state}-${palette}.png`);
     });
   }
+
+test("pill tone follows appearance and confirms a successful paste without motion", async ({
+  page,
+}) => {
+  const backend = await mockTauri(page, {
+    label: "recording_overlay",
+    settings: { pill_tone: "expressive" },
+  });
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  await page.goto("/src/overlay/index.html");
+  await expect(page.locator("html")).toHaveAttribute(
+    "data-pill-tone",
+    "expressive",
+  );
+  await backend.emit("show-overlay", "transcribing");
+  await expect(page.locator(".swork-label")).toBeVisible();
+  await backend.emit("show-overlay", "pasted");
+  await expect(page.getByText("Pasted", { exact: true })).toBeVisible();
+  await expect(page.locator(".scard")).toHaveCSS("animation-name", "none");
+  await backend.emit("appearance-changed", {
+    ...DEFAULT_APPEARANCE,
+    pill_tone: "discreet",
+  });
+  await expect(page.locator("html")).toHaveAttribute(
+    "data-pill-tone",
+    "discreet",
+  );
+});
+
+test("a hidden or interrupted dictation does not confirm a paste", async ({
+  page,
+}) => {
+  const backend = await mockTauri(page, { label: "recording_overlay" });
+  await page.goto("/src/overlay/index.html");
+  await backend.emit("show-overlay", "transcribing");
+  await expect(page.locator(".swork-label")).toBeVisible();
+  await backend.emit("hide-overlay", null);
+  await expect(page.getByText("Pasted", { exact: true })).toHaveCount(0);
+  await backend.emit("overlay-notice", {
+    code: "PasteFailed",
+    level: "error",
+    source: "dictation",
+    detail: null,
+  });
+  await backend.emit("show-overlay", "notice");
+  await expect(page.locator(".snotice .nlabel")).toBeVisible();
+  await expect(page.getByText("Pasted", { exact: true })).toHaveCount(0);
+});

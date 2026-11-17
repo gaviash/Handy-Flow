@@ -1158,6 +1158,12 @@
         "pill": "Pill",
         "wave": "Wave",
         "live": "Live"
+      },
+      "pillTone": {
+        "title": "طابع كبسولة الإملاء",
+        "description": "اختر مظهر تنبيهات الإملاء.",
+        "discreet": "هادئ",
+        "expressive": "معبر"
       }
     },
     "transcription": {
@@ -1319,7 +1325,8 @@
     "transcribing": "جاري التفريغ...",
     "processing": "جاري المعالجة...",
     "loadingModel": "جارٍ تحميل النموذج...",
-    "recording": "Listening"
+    "recording": "Listening",
+    "pasted": "تم اللصق"
   },
   "secureInput": {
     "blockedWithCulprit_one": "قد يحظر {{name}} اختصارًا واحدًا",

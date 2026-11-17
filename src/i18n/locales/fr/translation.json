@@ -1158,6 +1158,12 @@
         "pill": "Pastille",
         "wave": "Onde",
         "live": "Live"
+      },
+      "pillTone": {
+        "title": "Ton de la pastille",
+        "description": "Choisissez l’apparence du retour de dictée.",
+        "discreet": "Discret",
+        "expressive": "Expressif"
       }
     },
     "transcription": {
@@ -1319,7 +1325,8 @@
     "transcribing": "Transcription...",
     "processing": "Traitement...",
     "loadingModel": "Chargement du modèle...",
-    "recording": "À l’écoute"
+    "recording": "À l’écoute",
+    "pasted": "Collé"
   },
   "secureInput": {
     "blockedWithCulprit_one": "{{name}} bloque peut-être 1 raccourci",

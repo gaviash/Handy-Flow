@@ -1158,6 +1158,12 @@
         "pill": "Pill",
         "wave": "Wave",
         "live": "Live"
+      },
+      "pillTone": {
+        "title": "표시 톤",
+        "description": "받아쓰기 피드백의 모양을 선택합니다.",
+        "discreet": "차분하게",
+        "expressive": "생동감 있게"
       }
     },
     "transcription": {
@@ -1319,7 +1325,8 @@
     "transcribing": "텍스트로 변환 중...",
     "processing": "처리 중...",
     "loadingModel": "모델 로딩 중...",
-    "recording": "Listening"
+    "recording": "Listening",
+    "pasted": "붙여넣음"
   },
   "secureInput": {
     "blockedWithCulprit_one": "{{name}}이(가) 단축키 1개를 차단하고 있을 수 있습니다",

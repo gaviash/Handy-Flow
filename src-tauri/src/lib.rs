@@ -717,6 +717,7 @@ pub fn run(cli_args: CliArgs) {
             shortcut::change_sound_theme_setting,
             shortcut::change_theme_setting,
             shortcut::change_palette_setting,
+            shortcut::change_pill_tone_setting,
             shortcut::change_heading_style_setting,
             shortcut::change_ui_density_setting,
             shortcut::change_overlay_show_label_setting,
