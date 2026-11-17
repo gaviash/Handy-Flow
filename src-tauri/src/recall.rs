@@ -2,7 +2,7 @@
 //! sound like it and the past dictations that look like it. Pure functions:
 //! the rewrite gets a few relevant lines, not the whole memory.
 
-use crate::learning::{distance, key, Learned};
+use crate::learning::{distance, key, Learned, WordKind};
 use crate::managers::history::PastDictation;
 
 const DAY: i64 = 86_400;
@@ -20,8 +20,9 @@ const STOPWORDS: &[&str] = &[
     "you", "that", "this", "with", "are", "not", "but", "have", "was",
 ];
 
-/// Learned words for the rewrite, as `term (heard as "a", "b")`: first those
-/// a dictated word sounds like, then the most used. Pending words never.
+/// Learned words a dictated word sounds like, for the rewrite: a name as
+/// `term (heard as "a")`, a common word as `term (maybe heard as "a")`.
+/// Pending words never.
 pub fn relevant_terms(words: &[Learned], transcription: &str, max: usize) -> Vec<String> {
     let said: Vec<String> = transcription.split_whitespace().map(key).collect();
     // "cloud code" also matches a heard "Cloudcode".
@@ -33,19 +34,21 @@ pub fn relevant_terms(words: &[Learned], transcription: &str, max: usize) -> Vec
             said.iter().any(|s| distance(&h, s) <= HEARD_DISTANCE)
         })
     };
-    let mut active: Vec<&Learned> = words.iter().filter(|l| l.active).collect();
-    active.sort_by(|a, b| {
-        heard_now(b)
-            .cmp(&heard_now(a))
-            .then(b.count.cmp(&a.count))
-            .then(b.last_seen.cmp(&a.last_seen))
-    });
-    active
+    // Only words heard in this dictation: an unrelated learned word in the
+    // prompt only invites a wrong substitution.
+    let mut heard: Vec<&Learned> = words.iter().filter(|l| l.active && heard_now(l)).collect();
+    heard.sort_by(|a, b| b.count.cmp(&a.count).then(b.last_seen.cmp(&a.last_seen)));
+    heard
         .into_iter()
         .take(max)
         .map(|l| {
-            let heard: Vec<String> = l.heard.iter().map(|h| format!("\"{h}\"")).collect();
-            format!("{} (heard as {})", l.term, heard.join(", "))
+            let forms: Vec<String> = l.heard.iter().map(|h| format!("\"{h}\"")).collect();
+            // A name is forced; a common word only when nothing else fits.
+            let label = match l.kind {
+                WordKind::Term => "heard as",
+                WordKind::Misheard => "maybe heard as",
+            };
+            format!("{} ({label} {})", l.term, forms.join(", "))
         })
         .collect()
 }
@@ -182,7 +185,6 @@ fn cut(text: &str, max: usize) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::learning::WordKind;
 
     #[test]
     fn a_term_heard_in_the_dictation_comes_first() {
@@ -197,21 +199,34 @@ mod tests {
         let words = vec![w("Postgres", "PostGer", 9), w("Claude", "Cloud", 1)];
         let out = relevant_terms(&words, "ouvre cloud code", 1);
         assert_eq!(out, vec![r#"Claude (heard as "Cloud")"#]);
-        // Without a match, the most used come first; pending words never.
-        let mut pending = w("log", "gag", 5);
-        pending.active = false;
-        let words = vec![
-            w("Claude", "Cloud", 1),
-            w("Postgres", "PostGer", 9),
-            pending,
+        // Without a match, nothing is sent: no "most used" filler.
+        assert!(relevant_terms(&words, "bonjour", 5).is_empty());
+    }
+
+    #[test]
+    fn misheard_words_are_hints_terms_are_forced() {
+        let w = |term: &str, heard: &str, kind| Learned {
+            term: term.into(),
+            heard: vec![heard.into()],
+            count: 3,
+            last_seen: 0,
+            kind,
+            active: true,
+        };
+        let words = [
+            w("Qwen", "Quen", WordKind::Term),
+            w("config", "conflig", WordKind::Misheard),
+            w("Kubernetes", "cube", WordKind::Term),
         ];
+        let got = relevant_terms(&words, "on teste quen sur le conflig", 40);
         assert_eq!(
-            relevant_terms(&words, "bonjour", 5),
-            vec![
-                r#"Postgres (heard as "PostGer")"#,
-                r#"Claude (heard as "Cloud")"#
+            got,
+            [
+                r#"Qwen (heard as "Quen")"#,
+                r#"config (maybe heard as "conflig")"#
             ]
         );
+        assert!(relevant_terms(&words, "bonjour à tous", 40).is_empty());
     }
 
     #[test]
