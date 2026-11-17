@@ -134,3 +134,64 @@ test("a hidden or interrupted dictation does not confirm a paste", async ({
   await expect(page.locator(".snotice .nlabel")).toBeVisible();
   await expect(page.getByText("Pasted", { exact: true })).toHaveCount(0);
 });
+
+test("live success keeps the same panel and transcript", async ({ page }) => {
+  const backend = await mockTauri(page, {
+    label: "recording_overlay",
+    settings: { pill_tone: "expressive" },
+  });
+  await page.goto("/src/overlay/index.html");
+  await backend.emit("show-overlay", "streaming");
+  await expect(page.locator(".scard")).toBeVisible();
+  await backend.emit("stream-text-event", {
+    committed: "Hello there",
+    tentative: "",
+  });
+  await expect(page.locator(".scard")).toHaveClass(/open/);
+  await page
+    .locator(".scard")
+    .evaluate((el) => ((el as HTMLElement).dataset.original = "yes"));
+  await backend.emit("show-overlay", "pasted");
+  await expect(page.getByText("Pasted", { exact: true })).toBeVisible();
+  await expect(page.locator(".scard")).toHaveAttribute("data-original", "yes");
+  await expect(page.getByText("Hello there")).toBeVisible();
+});
+
+test("confirmation animates and reduced motion disables expressive transitions", async ({
+  page,
+}) => {
+  const backend = await mockTauri(page, {
+    label: "recording_overlay",
+    settings: { pill_tone: "discreet" },
+  });
+  await page.goto("/src/overlay/index.html");
+  await backend.emit("show-overlay", "pasted");
+  await expect(page.locator(".pasted-check")).toHaveCSS(
+    "animation-name",
+    "check-pop",
+  );
+  await backend.emit("appearance-changed", {
+    ...DEFAULT_APPEARANCE,
+    pill_tone: "expressive",
+  });
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  await expect(page.locator(".scard")).toHaveCSS("transition-duration", "0s");
+  await expect(page.locator(".pasted-check")).toHaveCSS(
+    "animation-name",
+    "none",
+  );
+});
+
+test("a compact processing state after live stays compact on success", async ({
+  page,
+}) => {
+  const backend = await mockTauri(page, { label: "recording_overlay" });
+  await page.goto("/src/overlay/index.html");
+  await backend.emit("show-overlay", "streaming");
+  await expect(page.locator(".scard")).toBeVisible();
+  await backend.emit("show-overlay", "processing");
+  await expect(page.locator(".scard")).toHaveClass(/compact/);
+  await backend.emit("show-overlay", "pasted");
+  await expect(page.getByText("Pasted", { exact: true })).toBeVisible();
+  await expect(page.locator(".scard")).toHaveClass(/compact/);
+});

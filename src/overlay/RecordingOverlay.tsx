@@ -51,6 +51,7 @@ const RecordingOverlay: React.FC = () => {
   const { t } = useTranslation();
   const [isVisible, setIsVisible] = useState(false);
   const [state, setState] = useState<OverlayState>("recording");
+  const [liveSession, setLiveSession] = useState(false);
   // `Stream::play()` returning does not mean hardware callbacks are flowing.
   // Stay visually in an arming state until the backend processes the first
   // actual microphone sample chunk.
@@ -111,6 +112,7 @@ const RecordingOverlay: React.FC = () => {
         // recording-ready while the awaits below are in flight; resetting after
         // them would overwrite that event and leave the overlay stuck arming.
         if (overlayState === "recording" || overlayState === "streaming") {
+          setLiveSession(overlayState === "streaming");
           setCaptureReady(false);
           smoothedLevelsRef.current = Array(16).fill(0);
           setLevels(Array(WAVE_BARS).fill(0));
@@ -129,6 +131,9 @@ const RecordingOverlay: React.FC = () => {
           }
         } catch {
           // Keep the previous/default placement if settings can't be read.
+        }
+        if (overlayState === "transcribing" || overlayState === "processing") {
+          setLiveSession(false);
         }
         setState(overlayState);
         if (overlayState === "streaming") {
@@ -366,12 +371,37 @@ const RecordingOverlay: React.FC = () => {
     ? () => commands.dismissOverlayNotice()
     : undefined;
 
+  const pasted = state === "pasted";
+  const pastedRow = (
+    <div className="sbase spasted" aria-live="polite">
+      <span>{t("overlay.pasted")}</span>
+      <CheckBadgeIcon className="pasted-check" />
+    </div>
+  );
+  const stateRows = (working: boolean, label: string, showTimer: boolean) => (
+    <div className="srows">
+      <div
+        className={`srow ${!working && !pasted ? "active" : ""}`}
+        aria-hidden={working || pasted}
+      >
+        {listeningRow(showTimer, !working && !pasted)}
+      </div>
+      <div
+        className={`srow ${working && !pasted ? "active" : ""}`}
+        aria-hidden={!working || pasted}
+      >
+        {workingRow(label, working && !pasted)}
+      </div>
+      {pasted && <div className="srow active entering">{pastedRow}</div>}
+    </div>
+  );
+
   // ---- Live overlay: a pill that sculpts open into a panel ----
   const liveNotice = state === "live_notice" ? shownNotice : null;
-  if (state === "streaming" || liveNotice) {
+  if (state === "streaming" || liveNotice || (pasted && liveSession)) {
     const hasText =
       streamText.committed.length > 0 || streamText.tentative.length > 0;
-    const working = !liveNotice && phase === "working";
+    const working = !liveNotice && !pasted && phase === "working";
     // A notice keeps the transcript; with none, the panel explains the notice.
     const noticeText =
       liveNotice && !hasText
@@ -379,7 +409,8 @@ const RecordingOverlay: React.FC = () => {
         : null;
     // While listening, a slow model load opens the panel with a notice where the
     // text would be, so speech that isn't transcribing yet doesn't look ignored.
-    const loadingNotice = !liveNotice && modelLoadSlow && !working && !hasText;
+    const loadingNotice =
+      !liveNotice && !pasted && modelLoadSlow && !working && !hasText;
     // Keep the panel open whenever there's text — even while finalizing — so the
     // transcript stays put under a working spinner instead of collapsing and
     // squishing the text mid-stream. Only fall back to the small working pill
@@ -420,7 +451,7 @@ const RecordingOverlay: React.FC = () => {
                   <span className="tentative">{streamText.tentative}</span>
                   {/* Drop the blinking caret once finalizing — it's no longer
                       capturing, and a static spinner conveys the work. */}
-                  {!working && !loadingNotice && !liveNotice && (
+                  {!working && !loadingNotice && !liveNotice && !pasted && (
                     <span className="scaret" />
                   )}
                 </p>
@@ -429,14 +460,13 @@ const RecordingOverlay: React.FC = () => {
           </div>
           {liveNotice
             ? noticeRow
-            : working
-              ? workingRow(
-                  workKind === "polishing"
-                    ? t("overlay.processing")
-                    : transcribingLabel,
-                  true,
-                )
-              : listeningRow(open, true)}
+            : stateRows(
+                working,
+                workKind === "polishing"
+                  ? t("overlay.processing")
+                  : transcribingLabel,
+                open,
+              )}
         </div>
       </div>
     );
@@ -445,7 +475,6 @@ const RecordingOverlay: React.FC = () => {
   // ---- Minimal overlay: exactly one row at a time — waveform (recording), or a
   // spinner + label (transcribing / processing). Never both. The pill animates its
   // width between them; the cancel button is in both rows so it stays put.
-  const pasted = state === "pasted";
   const working = state === "transcribing" || state === "processing";
   const workLabel =
     state === "processing" ? t("overlay.processing") : transcribingLabel;
@@ -471,18 +500,7 @@ const RecordingOverlay: React.FC = () => {
         style={shownNotice ? { width: noticeWidth } : undefined}
         onClick={dismissNotice}
       >
-        {shownNotice ? (
-          noticeRow
-        ) : pasted ? (
-          <div className="sbase spasted">
-            <span>{t("overlay.pasted")}</span>
-            <CheckBadgeIcon className="pasted-check" />
-          </div>
-        ) : working ? (
-          workingRow(workLabel, true)
-        ) : (
-          listeningRow(false, true)
-        )}
+        {shownNotice ? noticeRow : stateRows(working, workLabel, false)}
       </div>
     </div>
   );
