@@ -1508,6 +1508,7 @@ impl ShortcutAction for TranscribeAction {
                                 // Taken before the paste thread exists, and so
                                 // before the next session can start.
                                 let session = RECORDING_SESSION.load(Ordering::SeqCst);
+                                let dictated = final_text.clone();
                                 // Off the main thread: paste sleeps between steps, and a
                                 // paste into Handy's own windows needs the main thread free.
                                 std::thread::Builder::new()
@@ -1551,6 +1552,7 @@ impl ShortcutAction for TranscribeAction {
                                                     "Text pasted successfully in {:?}",
                                                     paste_time.elapsed()
                                                 );
+                                                crate::learning::touch_used(&ah_clone, &dictated);
                                                 if let Some((f, text, id, app)) = &observed {
                                                     crate::learning::observe(
                                                         &ah_clone,
