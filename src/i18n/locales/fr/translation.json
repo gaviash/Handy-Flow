@@ -822,7 +822,8 @@
           "delete": "Supprimer",
           "clear": "Tout effacer",
           "export": "Exporter",
-          "confirmClear": "Effacer tous les mots appris ?"
+          "confirmClear": "Effacer tous les mots appris ?",
+          "expires": "Oublié le {{date}} si vous ne le dictez pas d'ici là"
         },
         "notice": "Appris : {{terms}}",
         "undo": "Annuler",
@@ -870,6 +871,14 @@
           "very_casual": "Très décontracté",
           "excited": "Enthousiaste",
           "default": "Par défaut"
+        },
+        "exampleLabel": "Exemple pour {{category}} · {{tone}}",
+        "examples": {
+          "formal": "Bonjour Marie, je vous confirme notre rendez-vous demain à 10 h. Merci pour votre patience.",
+          "casual": "Salut Marie, c'est bon pour demain 10 h, merci d'avoir attendu",
+          "very_casual": "salut marie c'est bon pour demain 10h, merci",
+          "excited": "Salut Marie, c'est calé pour demain 10 h, trop hâte !",
+          "default": "Bonjour Marie, je confirme notre rendez-vous demain à 10 h. Merci d'avoir attendu."
         }
       },
       "snippets": {
@@ -877,7 +886,9 @@
         "description": "Dites le déclencheur seul pour insérer son texte tel quel, par exemple votre adresse. Un déclencheur dans une phrase reste une dictée normale.",
         "trigger": "Déclencheur",
         "text": "Texte à insérer",
-        "add": "Ajouter un snippet"
+        "add": "Ajouter un snippet",
+        "preview": "Aperçu",
+        "previewSay": "Dites « {{trigger}} » seul, et Handy Flow écrit :"
       },
       "transforms": {
         "title": "Transformer le texte sélectionné",

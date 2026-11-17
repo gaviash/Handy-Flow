@@ -822,7 +822,8 @@
           "delete": "Delete",
           "clear": "Clear All",
           "export": "Export",
-          "confirmClear": "Clear all learned words?"
+          "confirmClear": "Clear all learned words?",
+          "expires": "Forgotten on {{date}} unless you dictate it again"
         },
         "notice": "Learned: {{terms}}",
         "undo": "Undo",
@@ -870,6 +871,14 @@
           "very_casual": "Very Casual",
           "excited": "Excited",
           "default": "Default"
+        },
+        "exampleLabel": "Example for {{category}} · {{tone}}",
+        "examples": {
+          "formal": "Hello Marie, I confirm our meeting tomorrow at 10 a.m. Thank you for your patience.",
+          "casual": "Hi Marie, all good for tomorrow at 10, thanks for waiting",
+          "very_casual": "hey marie all good for tomorrow at 10, thanks",
+          "excited": "Hi Marie, all set for tomorrow at 10, can't wait!",
+          "default": "Hi Marie, I confirm our meeting tomorrow at 10. Thanks for waiting."
         }
       },
       "snippets": {
@@ -877,7 +886,9 @@
         "description": "Say the trigger on its own to insert its text as is, for example your address. A trigger inside a sentence stays a normal dictation.",
         "trigger": "Trigger",
         "text": "Text to insert",
-        "add": "Add Snippet"
+        "add": "Add Snippet",
+        "preview": "Preview",
+        "previewSay": "Say “{{trigger}}” on its own and Handy Flow types:"
       },
       "transforms": {
         "title": "Transform Selected Text",

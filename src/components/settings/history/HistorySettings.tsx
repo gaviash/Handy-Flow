@@ -5,6 +5,7 @@ import React, {
   useRef,
   useState,
 } from "react";
+import { EmptyMascot } from "../../shared/Mascot";
 import { convertFileSrc } from "@tauri-apps/api/core";
 import { readFile } from "@tauri-apps/plugin-fs";
 import {
@@ -152,6 +153,9 @@ export const HistorySettings: React.FC = () => {
   const jobs = useTranscriptionJobsStore((state) => state.jobs);
   const reads = useFileReadsStore((state) => state.reads);
   const [entries, setEntries] = useState<HistoryEntry[]>([]);
+  // Dictations that landed while the page was open: they unfold into place.
+  // Cleared once unfolded: the clipping it needs would cut the row's menus.
+  const [arrived, setArrived] = useState<ReadonlySet<number>>(new Set());
   const [loading, setLoading] = useState(true);
   const [hasMore, setHasMore] = useState(true);
   const sentinelRef = useRef<HTMLDivElement>(null);
@@ -229,6 +233,7 @@ export const HistorySettings: React.FC = () => {
     const unlisten = events.historyUpdatePayload.listen((event) => {
       const payload: HistoryUpdatePayload = event.payload;
       if (payload.action === "added") {
+        setArrived((a) => new Set(a).add(payload.entry.id));
         setEntries((prev) => [
           payload.entry,
           ...prev.filter((entry) => entry.id !== payload.entry.id),
@@ -335,7 +340,8 @@ export const HistorySettings: React.FC = () => {
     );
   } else if (entries.length === 0 && reads.length === 0) {
     content = (
-      <div className="px-4 py-3 text-center text-ink-2">
+      <div className="px-4 pt-6 pb-5 text-center text-ink-2">
+        <EmptyMascot page="history" />
         <p className="font-medium text-text">
           {t("settings.history.emptyTitle")}
         </p>
@@ -359,17 +365,29 @@ export const HistorySettings: React.FC = () => {
               <FileReadRow key={`read-${read.id}`} read={read} />
             ))}
             {entries.map((entry) => (
-              <HistoryEntryComponent
+              <div
                 key={entry.id}
-                entry={entry}
-                job={jobs[entry.id]}
-                onToggleSaved={() => toggleSaved(entry.id)}
-                onCopyText={copyToClipboard}
-                getAudioUrl={getAudioUrl}
-                deleteAudio={deleteAudioEntry}
-                retryTranscription={commands.retryHistoryEntryTranscription}
-                cancelTranscription={commands.cancelHistoryEntryTranscription}
-              />
+                className={arrived.has(entry.id) ? "history-arrive" : undefined}
+                onAnimationEnd={(e) => {
+                  if (e.target !== e.currentTarget) return;
+                  setArrived((a) => {
+                    const next = new Set(a);
+                    next.delete(entry.id);
+                    return next;
+                  });
+                }}
+              >
+                <HistoryEntryComponent
+                  entry={entry}
+                  job={jobs[entry.id]}
+                  onToggleSaved={() => toggleSaved(entry.id)}
+                  onCopyText={copyToClipboard}
+                  getAudioUrl={getAudioUrl}
+                  deleteAudio={deleteAudioEntry}
+                  retryTranscription={commands.retryHistoryEntryTranscription}
+                  cancelTranscription={commands.cancelHistoryEntryTranscription}
+                />
+              </div>
             ))}
           </div>
         </AudioPlayerGroup>
@@ -410,9 +428,18 @@ const DictationStatsLine: React.FC = () => {
   const { t } = useTranslation();
   const [stats, setStats] = useState<DictationStats | null>(null);
   useEffect(() => {
-    commands.getDictationStats().then((r) => {
-      if (r.status === "ok") setStats(r.data);
+    const load = () =>
+      commands.getDictationStats().then((r) => {
+        if (r.status === "ok") setStats(r.data);
+      });
+    load();
+    // Keep the summary in step with dictations made while the page is open.
+    const unlisten = events.historyUpdatePayload.listen((e) => {
+      if (e.payload.action !== "toggled") load();
     });
+    return () => {
+      unlisten.then((f) => f());
+    };
   }, []);
   if (!stats || stats.dictations === 0) return null;
   return (
