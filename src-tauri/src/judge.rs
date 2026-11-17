@@ -145,7 +145,7 @@ fn schema() -> serde_json::Value {
 /// no retry, 15 s at most: a failure just learns nothing.
 /// Who judges: Groq with its small model when it has a key, else the active
 /// rewrite provider with its own model and key (a custom endpoint may be
-/// keyless). `None` when neither can be called.
+/// keyless) while rewriting is on. `None` when neither can be called.
 pub fn judge_target(
     s: &crate::settings::AppSettings,
 ) -> Option<(crate::settings::PostProcessProvider, String, String)> {
@@ -164,6 +164,11 @@ pub fn judge_target(
             key("groq"),
             crate::adaptive::GROQ_SPARE_MODEL.to_string(),
         ));
+    }
+    // Rewriting off: the user chose no LLM traffic; only a Groq key, set for
+    // learning, still calls one.
+    if !s.post_process_enabled {
+        return None;
     }
     let p = s.active_post_process_provider()?;
     let model = s
@@ -251,6 +256,11 @@ mod tests {
         // Groq first when it has a key.
         s.post_process_api_keys.insert("groq".into(), "gsk".into());
         assert_eq!(judge_target(&s).unwrap().0.id, "groq");
+        // Rewriting off: a non-Groq provider is never called for the judge.
+        s.post_process_api_keys.remove("groq");
+        s.post_process_enabled = false;
+        assert!(judge_target(&s).is_none());
+        s.post_process_enabled = true;
         // No key anywhere: no judge.
         s.post_process_api_keys.clear();
         assert!(judge_target(&s).is_none());
