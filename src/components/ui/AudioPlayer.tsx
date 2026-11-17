@@ -308,40 +308,46 @@ export const AudioPlayer: React.FC<AudioPlayerProps> = ({
         onClick={togglePlay}
         disabled={isLoading}
         className="transition-colors cursor-pointer text-text hover:text-logo-primary disabled:opacity-50"
-        aria-label={isPlaying ? "Pause" : "Play"}
+        aria-label={t(
+          isPlaying
+            ? "settings.history.pauseAudio"
+            : "settings.history.playAudio",
+        )}
       >
         {isPlaying ? (
-          <Pause width={20} height={20} fill="currentColor" />
+          <Pause width={16} height={16} fill="currentColor" />
         ) : (
-          <Play width={20} height={20} fill="currentColor" />
+          <Play width={16} height={16} fill="currentColor" />
         )}
       </button>
 
-      <div className="flex-1 flex items-center gap-2">
-        <span className="text-xs text-ink-2 min-w-[30px] tabular-nums">
-          {formatTime(currentTime)}
-        </span>
+      {loadedSrc && (
+        <div className="flex w-48 max-w-full items-center gap-2">
+          <span className="text-xs text-ink-2 min-w-[30px] tabular-nums">
+            {formatTime(currentTime)}
+          </span>
 
-        <input
-          type="range"
-          aria-label={t("common.playbackPosition")}
-          min="0"
-          max={duration || 0}
-          step="0.01"
-          value={currentTime}
-          onChange={handleSeek}
-          onMouseDown={handleSliderMouseDown}
-          onTouchStart={handleSliderTouchStart}
-          className={`flex-1 h-1 rounded-lg appearance-none cursor-pointer focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent-text ${progressPercent >= 99.5 ? "[&::-webkit-slider-thumb]:translate-x-0.5 [&::-moz-range-thumb]:translate-x-0.5" : ""}`}
-          style={{
-            background: `linear-gradient(to right, var(--color-logo-primary) 0%, var(--color-logo-primary) ${progressPercent}%, var(--line-strong) ${progressPercent}%, var(--line-strong) 100%)`,
-          }}
-        />
+          <input
+            type="range"
+            aria-label={t("common.playbackPosition")}
+            min="0"
+            max={duration || 0}
+            step="0.01"
+            value={currentTime}
+            onChange={handleSeek}
+            onMouseDown={handleSliderMouseDown}
+            onTouchStart={handleSliderTouchStart}
+            className={`flex-1 h-1 rounded-lg appearance-none cursor-pointer focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent-text ${progressPercent >= 99.5 ? "[&::-webkit-slider-thumb]:translate-x-0.5 [&::-moz-range-thumb]:translate-x-0.5" : ""}`}
+            style={{
+              background: `linear-gradient(to right, var(--color-logo-primary) 0%, var(--color-logo-primary) ${progressPercent}%, var(--line-strong) ${progressPercent}%, var(--line-strong) 100%)`,
+            }}
+          />
 
-        <span className="text-xs text-ink-2 min-w-[30px] tabular-nums">
-          {formatTime(duration)}
-        </span>
-      </div>
+          <span className="text-xs text-ink-2 min-w-[30px] tabular-nums">
+            {formatTime(duration)}
+          </span>
+        </div>
+      )}
     </div>
   );
 };

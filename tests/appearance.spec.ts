@@ -66,6 +66,148 @@ test("history actions appear on keyboard focus and hover", async ({ page }) => {
   await expect(actions).toHaveCSS("opacity", "1");
 });
 
+test("saved and rewritten history shows its state and switches text", async ({
+  page,
+}) => {
+  await mockTauri(page, {
+    results: {
+      get_history_entries: {
+        entries: [
+          {
+            id: 1,
+            file_name: "test.wav",
+            timestamp: 1700000000,
+            saved: true,
+            title: "Test",
+            transcription_text: "Original words",
+            post_processed_text: "Rewritten words",
+            post_process_prompt: null,
+            post_process_requested: true,
+            source_name: null,
+            language: "en",
+            language_source: null,
+            app: null,
+          },
+        ],
+        has_more: false,
+      },
+    },
+  });
+  await page.addInitScript(() => {
+    Object.defineProperty(navigator, "clipboard", {
+      value: {
+        writeText: (text: string) => {
+          sessionStorage.setItem("copied", text);
+          return Promise.resolve();
+        },
+      },
+    });
+  });
+  await page.goto("/");
+  await page.getByRole("button", { name: "History", exact: true }).click();
+  const star = page.getByRole("button", { name: "Remove from saved" });
+  await expect(star).toHaveAttribute("aria-pressed", "true");
+  await expect(star).toHaveCSS("opacity", "1");
+  await expect(page.getByText("Rewritten", { exact: true })).toBeVisible();
+  await expect(page.getByText("Rewritten words")).toBeVisible();
+  await page
+    .getByRole("button", { name: "Copy transcription to clipboard" })
+    .click();
+  expect(await page.evaluate(() => sessionStorage.getItem("copied"))).toBe(
+    "Rewritten words",
+  );
+  await page.getByRole("button", { name: "View original" }).click();
+  await expect(page.getByText("Original words")).toBeVisible();
+  await page
+    .getByRole("button", { name: "Copy transcription to clipboard" })
+    .click();
+  expect(await page.evaluate(() => sessionStorage.getItem("copied"))).toBe(
+    "Original words",
+  );
+  await page.getByRole("button", { name: "View rewritten version" }).click();
+  await expect(page.getByText("Rewritten words")).toBeVisible();
+});
+
+test("empty history shows the configured shortcut", async ({ page }) => {
+  await mockTauri(page, {
+    settings: {
+      bindings: {
+        transcribe: {
+          id: "transcribe",
+          name: "Dictate",
+          description: "",
+          default_binding: "ctrl+shift+k",
+          current_binding: "ctrl+shift+k",
+        },
+      },
+    },
+  });
+  await page.goto("/");
+  await page.getByRole("button", { name: "History", exact: true }).click();
+  await expect(
+    page.getByText("No transcriptions yet", { exact: true }),
+  ).toBeVisible();
+  await expect(
+    page.getByText("Start dictating with Ctrl + Shift + K"),
+  ).toBeVisible();
+});
+
+test("history audio retains playback and keyboard seeking", async ({
+  page,
+}) => {
+  await mockTauri(page, {
+    results: {
+      get_audio_file_path: "test.wav",
+      get_history_entries: {
+        entries: [
+          {
+            id: 1,
+            file_name: "test.wav",
+            timestamp: 1700000000,
+            saved: false,
+            title: "Test",
+            transcription_text: "Audio test",
+            post_processed_text: null,
+            post_process_prompt: null,
+            post_process_requested: false,
+            source_name: null,
+            language: null,
+            language_source: null,
+            app: null,
+          },
+        ],
+        has_more: false,
+      },
+    },
+  });
+  await page.addInitScript(() => {
+    Object.defineProperty(HTMLMediaElement.prototype, "duration", {
+      get: () => 60,
+    });
+    HTMLMediaElement.prototype.play = function () {
+      this.dispatchEvent(new Event("loadedmetadata"));
+      this.dispatchEvent(new Event("play"));
+      return Promise.resolve();
+    };
+    HTMLMediaElement.prototype.pause = function () {
+      this.dispatchEvent(new Event("pause"));
+    };
+  });
+  await page.goto("/");
+  await page.getByRole("button", { name: "History", exact: true }).click();
+  await expect(
+    page.getByRole("slider", { name: "Playback position" }),
+  ).toHaveCount(0);
+  await page.getByRole("button", { name: "Play audio" }).click();
+  const position = page.getByRole("slider", { name: "Playback position" });
+  await expect(position).toBeVisible();
+  await expect(page.getByText("1:00")).toBeVisible();
+  await page.getByRole("button", { name: "Pause audio" }).click();
+  await position.focus();
+  await page.keyboard.press("ArrowRight");
+  await expect(position).not.toHaveValue("0");
+});
+
 test("French appearance controls fit the minimum window", async ({ page }) => {
   await mockTauri(page, { settings: { app_language: "fr" } });
   await page.setViewportSize({ width: 720, height: 600 });
