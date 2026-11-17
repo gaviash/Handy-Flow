@@ -20,3 +20,22 @@ export const Mascot: React.FC<MascotProps> = ({ size, animation = null }) => (
     <HandyMascot className="absolute start-[12.6%] top-[7.25%] h-[85.25%] w-auto" />
   </span>
 );
+
+// Each empty page greets once per launch: a wave every visit would grow old.
+const greeted = new Set<string>();
+
+/** The mascot for an empty page: it waves the first time that page is seen. */
+export const EmptyMascot: React.FC<{ page: string; size?: number }> = ({
+  page,
+  size = 44,
+}) => {
+  const [wave] = React.useState(() => !greeted.has(page));
+  React.useEffect(() => {
+    greeted.add(page);
+  }, [page]);
+  return (
+    <span aria-hidden className="mx-auto mb-2 block w-fit">
+      <Mascot size={size} animation={wave ? "wave" : null} />
+    </span>
+  );
+};

@@ -136,6 +136,8 @@
   --animate-fade: fade 180ms ease-out;
   /* A figure that just grew lights up in the accent, then cools */
   --animate-glow: glow 1200ms var(--ease-glide);
+  /* A freshly learned word lights up in the accent, then settles */
+  --animate-learned: learned 1800ms var(--ease-glide) 200ms both;
   /* A shortcut being captured: the empty slot's dashed edge breathes */
   --animate-key-slot: key-slot 1.2s ease-in-out infinite;
 
@@ -201,6 +203,16 @@
     from {
       color: var(--accent);
       scale: 1.06;
+    }
+  }
+  @keyframes learned {
+    0% {
+      color: var(--accent);
+      scale: 1.12;
+    }
+    40% {
+      color: var(--accent);
+      scale: 1;
     }
   }
   @keyframes rise {
@@ -336,6 +348,47 @@
 ::view-transition-new(root) {
   animation-duration: 450ms;
   animation-timing-function: var(--ease-glide);
+}
+/* A dictation that lands while History is open unfolds at the top: the rows
+   below slide down instead of jumping. */
+@media (prefers-reduced-motion: no-preference) {
+  .history-arrive {
+    display: grid;
+    animation: history-arrive 420ms var(--ease-glide);
+  }
+  .history-arrive > * {
+    min-height: 0;
+    overflow: hidden;
+  }
+}
+@keyframes history-arrive {
+  from {
+    grid-template-rows: 0fr;
+    opacity: 0;
+  }
+  to {
+    grid-template-rows: 1fr;
+  }
+}
+/* A snippet's text writes itself out, left to right, as if just dictated. */
+.snippet-reveal {
+  animation: snippet-reveal 700ms var(--ease-glide) 250ms both;
+}
+[dir="rtl"] .snippet-reveal {
+  animation-name: snippet-reveal-rtl;
+}
+@keyframes snippet-reveal-rtl {
+  from {
+    clip-path: inset(0 0 0 100%);
+  }
+}
+@keyframes snippet-reveal {
+  from {
+    clip-path: inset(0 100% 0 0);
+  }
+  to {
+    clip-path: inset(0 0 0 0);
+  }
 }
 .today-figure {
   font-family: var(--heading-font);

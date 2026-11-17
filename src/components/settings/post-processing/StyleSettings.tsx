@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import { useTranslation } from "react-i18next";
 import type { Styles, Tone } from "@/bindings";
 import { Dropdown } from "../../ui/Dropdown";
@@ -19,6 +19,8 @@ export const StyleSettings: React.FC = () => {
   const { t } = useTranslation();
   const { getSetting, updateSetting } = useSettings();
   const styles = getSetting("styles") ?? DEFAULTS;
+  // The category last changed: its example sentence shows below the list.
+  const [shown, setShown] = useState<keyof Styles>("email");
   const options = TONES.map((tone) => ({
     value: tone,
     label: t(`settings.postProcessing.styles.tones.${tone}`),
@@ -37,12 +39,27 @@ export const StyleSettings: React.FC = () => {
           <Dropdown
             options={options}
             selectedValue={styles[category]}
-            onSelect={(value) =>
-              updateSetting("styles", { ...styles, [category]: value as Tone })
-            }
+            onSelect={(value) => {
+              setShown(category);
+              updateSetting("styles", { ...styles, [category]: value as Tone });
+            }}
           />
         </SettingContainer>
       ))}
+      <div className="row-setting px-4 py-3" aria-live="polite">
+        <p className="text-xs text-ink-3">
+          {t("settings.postProcessing.styles.exampleLabel", {
+            category: t(`settings.postProcessing.styles.categories.${shown}`),
+            tone: t(`settings.postProcessing.styles.tones.${styles[shown]}`),
+          })}
+        </p>
+        <p
+          key={`${shown}-${styles[shown]}`}
+          className="mt-1 text-sm animate-rise"
+        >
+          {t(`settings.postProcessing.styles.examples.${styles[shown]}`)}
+        </p>
+      </div>
     </>
   );
 };

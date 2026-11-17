@@ -1,16 +1,29 @@
 import React, { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { ask, save } from "@tauri-apps/plugin-dialog";
+import { listen } from "@tauri-apps/api/event";
 import { commands, type Learned, type StyleRule } from "@/bindings";
 import { ToggleSwitch } from "../../ui/ToggleSwitch";
 import { SettingContainer } from "../../ui/SettingContainer";
 import { Button } from "../../ui/Button";
 import { useSettings } from "../../../hooks/useSettings";
 import { AsrContextSettings } from "./AsrContextSettings";
+import { EmptyMascot } from "../../shared/Mascot";
+
+// Mirrors learning.rs: a word unused for 30 days is forgotten.
+const FORGET_AFTER_S = 30 * 86_400;
+const now = () => Date.now() / 1000;
+/** Learned or used in the last day: it glows once on arrival. */
+const isFresh = (lastSeen: number) => now() - lastSeen < 86_400;
+/** Full ink until the last week, then fading like drying ink, down to 45%. */
+const inkLeft = (lastSeen: number) => {
+  const daysLeft = (lastSeen + FORGET_AFTER_S - now()) / 86_400;
+  return daysLeft >= 7 ? 1 : 0.45 + (0.55 * Math.max(daysLeft, 0)) / 7;
+};
 
 /** Handy Adaptive (F96, F97, F113): learned spellings, delete, clear, export. */
 export const LearningSettings: React.FC = () => {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const { getSetting, updateSetting, isUpdating } = useSettings();
   const [words, setWords] = useState<Learned[]>([]);
   const [rules, setRules] = useState<StyleRule[]>([]);
@@ -27,6 +40,11 @@ export const LearningSettings: React.FC = () => {
   );
   useEffect(() => {
     refresh();
+    // A word learned while the page is open shows up at once, glowing.
+    const unlisten = listen("learned-words", () => refresh());
+    return () => {
+      unlisten.then((f) => f());
+    };
   }, []);
 
   const exportWords = async () => {
@@ -62,18 +80,35 @@ export const LearningSettings: React.FC = () => {
       >
         <div className="w-full space-y-2">
           {words.length === 0 ? (
-            <p className="text-sm text-mid-gray">
-              {t("settings.postProcessing.learning.words.empty")}
-            </p>
+            <div className="py-2 text-center">
+              <EmptyMascot page="learned-words" size={36} />
+              <p className="text-sm text-mid-gray">
+                {t("settings.postProcessing.learning.words.empty")}
+              </p>
+            </div>
           ) : (
             <ul className="space-y-1">
               {words.map((w) => (
                 <li
                   key={w.term}
                   className="flex items-center justify-between gap-2 text-sm"
+                  title={t("settings.postProcessing.learning.words.expires", {
+                    date: new Date(
+                      (w.last_seen + FORGET_AFTER_S) * 1000,
+                    ).toLocaleDateString(i18n.language, {
+                      day: "numeric",
+                      month: "long",
+                    }),
+                  })}
                 >
-                  <span>
-                    <span className="font-semibold">{w.term}</span>
+                  <span style={{ opacity: inkLeft(w.last_seen) }}>
+                    <span
+                      className={`font-semibold inline-block ${
+                        isFresh(w.last_seen) ? "animate-learned" : ""
+                      }`}
+                    >
+                      {w.term}
+                    </span>
                     {!w.active && pending}{" "}
                     <span className="text-mid-gray">
                       {t("settings.postProcessing.learning.words.heard", {
