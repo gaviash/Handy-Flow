@@ -2,6 +2,20 @@ import { test, expect } from "@playwright/test";
 import { mockTauri } from "./fixtures/tauri-mock";
 import { PALETTE_IDS } from "../src/lib/themes";
 
+test("finding added models has an accessible name and description", async ({
+  page,
+}) => {
+  await mockTauri(page);
+  await page.goto("/");
+  await page.getByRole("button", { name: "Models", exact: true }).click();
+  await page.getByText("Choose or download a local model").click();
+  const button = page.getByRole("button", { name: "Find added models" });
+  await button.hover();
+  await expect(button).toHaveAccessibleDescription(
+    "Rescan for models added to the models folder or Hugging Face cache outside Handy Flow",
+  );
+});
+
 test("dictation pill settings are grouped in appearance and linked from advanced", async ({
   page,
 }) => {
