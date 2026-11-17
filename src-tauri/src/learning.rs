@@ -573,20 +573,27 @@ fn close_pair(heard: &str, term: &str, max: f64) -> bool {
         && distance(&h, &t) <= max
 }
 
-/// Restarts the 30 days of every active word that `text` contains as a whole
-/// word (any case). Pending words still need a second correction. `true` when
-/// one was found.
-pub(crate) fn mark_used(m: &mut Memory, text: &str, now: i64) -> bool {
-    let text = unify(text).to_lowercase();
+/// Whether `text` holds `word` as a whole word; both already lowercased.
+pub(crate) fn contains_word(text: &str, word: &str) -> bool {
+    !word.is_empty()
+        && text.match_indices(word).any(|(i, _)| {
+            let before = text[..i].chars().next_back();
+            let after = text[i + word.len()..].chars().next();
+            !before.is_some_and(char::is_alphanumeric) && !after.is_some_and(char::is_alphanumeric)
+        })
+}
+
+/// Restarts the 30 days of every active word the user said: its term or one
+/// of its heard forms, as a whole word in `spoken` (the raw transcription).
+/// Pending words still need a second correction. `true` when one was found.
+pub(crate) fn mark_used(m: &mut Memory, spoken: &str, now: i64) -> bool {
+    let text = unify(spoken).to_lowercase();
     let mut found = false;
     for w in m.words.iter_mut().filter(|w| w.active) {
-        let term = unify(&w.term).to_lowercase();
-        let whole = |(i, _): &(usize, &str)| {
-            let before = text[..*i].chars().next_back();
-            let after = text[i + term.len()..].chars().next();
-            !before.is_some_and(char::is_alphanumeric) && !after.is_some_and(char::is_alphanumeric)
-        };
-        if !term.is_empty() && text.match_indices(term.as_str()).any(|hit| whole(&hit)) {
+        let said = std::iter::once(&w.term)
+            .chain(&w.heard)
+            .any(|f| contains_word(&text, &unify(f).to_lowercase()));
+        if said {
             w.last_seen = now;
             found = true;
         }
@@ -594,10 +601,12 @@ pub(crate) fn mark_used(m: &mut Memory, text: &str, now: i64) -> bool {
     found
 }
 
-/// After a dictation: keeps the learned words it contains for 30 more days.
-pub fn touch_used(app: &AppHandle, text: &str) {
+/// After a dictation: keeps the learned words the user said for 30 more
+/// days. `spoken` is the raw transcription, never the rewrite: a word the
+/// rewrite writes on its own must not keep itself alive.
+pub fn touch_used(app: &AppHandle, spoken: &str) {
     with_memory(app, |m| {
-        if mark_used(m, text, chrono::Utc::now().timestamp()) {
+        if mark_used(m, spoken, chrono::Utc::now().timestamp()) {
             save(app, m);
         }
     });
@@ -1445,6 +1454,23 @@ mod tests {
         prune(&mut m, now);
         let terms: Vec<&str> = m.words.iter().map(|w| w.term.as_str()).collect();
         assert_eq!(terms, ["Qwen"]);
+    }
+
+    #[test]
+    fn saying_a_heard_form_keeps_the_word() {
+        let mut m = Memory::default();
+        m.words.push(Learned {
+            term: "Qwen".into(),
+            heard: vec!["Quen".into()],
+            count: 1,
+            last_seen: 0,
+            kind: WordKind::Term,
+            active: true,
+        });
+        assert!(mark_used(&mut m, "on compare quen et gemma", 500));
+        assert_eq!(m.words[0].last_seen, 500);
+        assert!(!mark_used(&mut m, "on compare queneau", 900)); // not a whole word
+        assert_eq!(m.words[0].last_seen, 500);
     }
 
     #[test]

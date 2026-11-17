@@ -1455,6 +1455,9 @@ impl ShortcutAction for TranscribeAction {
 
                             // Handy Adaptive: the observation records what the user kept.
                             let observed_app = app_label.clone();
+                            // What the user said, before any rewrite: it keeps the
+                            // learned words they used alive (A3).
+                            let spoken = transcription.clone();
                             let mut history_id = None;
                             // Save to history if WAV was saved
                             if wav_saved && !sensitive {
@@ -1517,7 +1520,6 @@ impl ShortcutAction for TranscribeAction {
                                 // Taken before the paste thread exists, and so
                                 // before the next session can start.
                                 let session = RECORDING_SESSION.load(Ordering::SeqCst);
-                                let dictated = final_text.clone();
                                 // Off the main thread: paste sleeps between steps, and a
                                 // paste into Handy's own windows needs the main thread free.
                                 std::thread::Builder::new()
@@ -1561,7 +1563,7 @@ impl ShortcutAction for TranscribeAction {
                                                     "Text pasted successfully in {:?}",
                                                     paste_time.elapsed()
                                                 );
-                                                crate::learning::touch_used(&ah_clone, &dictated);
+                                                crate::learning::touch_used(&ah_clone, &spoken);
                                                 if let Some((f, text, id, app)) = &observed {
                                                     crate::learning::observe(
                                                         &ah_clone,
