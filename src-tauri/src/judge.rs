@@ -230,7 +230,7 @@ pub async fn run(
     };
     let verdicts = parse_verdicts(&reply);
     log::debug!("Learning: judge returned {} item(s)", verdicts.len());
-    crate::learning::record_verdicts(&app, &verdicts, &rules, &already, &app_name);
+    crate::learning::record_verdicts(&app, &verdicts, &rules, &already, &inserted, &kept);
 }
 
 #[cfg(test)]

@@ -8,6 +8,7 @@ import { SettingContainer } from "../../ui/SettingContainer";
 import { Button } from "../../ui/Button";
 import { useSettings } from "../../../hooks/useSettings";
 import { AsrContextSettings } from "./AsrContextSettings";
+import { notify } from "@/stores/noticeStore";
 import { EmptyMascot } from "../../shared/Mascot";
 
 // Mirrors learning.rs: a word unused for 30 days is forgotten.
@@ -49,8 +50,21 @@ export const LearningSettings: React.FC = () => {
 
   const exportWords = async () => {
     const path = await save({ defaultPath: "handy-learned-words.json" });
-    if (path) await commands.exportLearnedWords(path);
+    if (!path) return;
+    const result = await commands
+      .exportLearnedWords(path)
+      .catch(() => ({ status: "error" as const }));
+    if (result.status === "error")
+      notify({
+        title: t("settings.postProcessing.learning.words.exportError"),
+      });
   };
+  // Which provider the correction judge calls; null = it can't run.
+  const [judge, setJudge] = useState<string | null>(null);
+  const judgeOn = getSetting("learning_judge_enabled") ?? true;
+  useEffect(() => {
+    commands.getJudgeProvider().then(setJudge);
+  }, [judgeOn]);
 
   return (
     <>
@@ -72,6 +86,24 @@ export const LearningSettings: React.FC = () => {
         descriptionMode="tooltip"
         grouped={true}
       />
+      <ToggleSwitch
+        checked={judgeOn}
+        onChange={(v) => updateSetting("learning_judge_enabled", v)}
+        isUpdating={isUpdating("learning_judge_enabled")}
+        label={t("settings.postProcessing.learning.judge.label")}
+        description={t("settings.postProcessing.learning.judge.description")}
+        descriptionMode="tooltip"
+        grouped={true}
+      />
+      {judgeOn && (
+        <p className="row-setting px-4 pb-3 -mt-2 text-xs text-ink-3">
+          {judge
+            ? t("settings.postProcessing.learning.judge.status", {
+                provider: judge,
+              })
+            : t("settings.postProcessing.learning.judge.none")}
+        </p>
+      )}
       <SettingContainer
         title={t("settings.postProcessing.learning.words.label")}
         description={t("settings.postProcessing.learning.words.description")}
@@ -165,26 +197,44 @@ export const LearningSettings: React.FC = () => {
             {t("settings.postProcessing.learning.rules.empty")}
           </p>
         ) : (
-          <ul className="w-full space-y-1">
-            {rules.map((r) => (
-              <li
-                key={r.rule}
-                className="flex items-center justify-between gap-2 text-sm"
-              >
-                <span>
-                  {r.rule}
-                  {!r.active && pending}
-                </span>
-                <Button
-                  variant="secondary"
-                  size="sm"
-                  onClick={() => commands.deleteStyleRule(r.rule).then(refresh)}
+          <div className="w-full space-y-2">
+            <ul className="w-full space-y-1">
+              {rules.map((r) => (
+                <li
+                  key={r.rule}
+                  className="flex items-center justify-between gap-2 text-sm"
                 >
-                  {t("settings.postProcessing.learning.words.delete")}
-                </Button>
-              </li>
-            ))}
-          </ul>
+                  <span>
+                    {r.rule}
+                    {!r.active && pending}
+                  </span>
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    onClick={() =>
+                      commands.deleteStyleRule(r.rule).then(refresh)
+                    }
+                  >
+                    {t("settings.postProcessing.learning.words.delete")}
+                  </Button>
+                </li>
+              ))}
+            </ul>
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={async () => {
+                if (
+                  await ask(
+                    t("settings.postProcessing.learning.rules.confirmClear"),
+                  )
+                )
+                  commands.clearStyleRules().then(refresh);
+              }}
+            >
+              {t("settings.postProcessing.learning.rules.clear")}
+            </Button>
+          </div>
         )}
       </SettingContainer>
       <AsrContextSettings />

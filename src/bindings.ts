@@ -326,6 +326,18 @@ async clearLearnedWords() : Promise<void> {
     await TAURI_INVOKE("clear_learned_words");
 },
 /**
+ * Clears the style rules only; the learned words stay.
+ */
+async clearStyleRules() : Promise<void> {
+    await TAURI_INVOKE("clear_style_rules");
+},
+/**
+ * Undoes one heard form of a learned word (the notification's Undo).
+ */
+async removeHeardForm(term: string, heard: string) : Promise<void> {
+    await TAURI_INVOKE("remove_heard_form", { term, heard });
+},
+/**
  * Readable export to move to another machine (F113).
  */
 async exportLearnedWords(path: string) : Promise<Result<null, string>> {
@@ -1791,6 +1803,12 @@ export type LanguageStatus =
  * A learned spelling: `term` is what the user wrote, `heard` every form that
  * was inserted for it ("Quen", "Quinn" → "Qwen"), most recent last.
  */
+/**
+ * What just became usable, as announced to the user and undone exactly by
+ * the notification's Undo: a new word, a new heard form of a known word, or
+ * a style rule.
+ */
+export type LearnedNews = { kind: "word"; term: string } | { kind: "form"; term: string; heard: string } | { kind: "rule"; rule: string }
 export type Learned = { term: string; heard: string[]; count: number; 
 /**
  * Unix seconds.

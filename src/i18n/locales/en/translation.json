@@ -823,7 +823,8 @@
           "clear": "Clear All",
           "export": "Export",
           "confirmClear": "Clear all learned words?",
-          "expires": "Forgotten on {{date}} unless you dictate it again"
+          "expires": "Forgotten on {{date}} unless you dictate it again",
+          "exportError": "Couldn't export what Handy Flow learned."
         },
         "notice": "Learned: {{terms}}",
         "undo": "Undo",
@@ -835,7 +836,9 @@
         "rules": {
           "label": "Style Rules",
           "description": "Phrasing preferences Handy Flow drew from your corrections and applies to your next dictations.",
-          "empty": "No rule yet."
+          "empty": "No rule yet.",
+          "clear": "Clear All",
+          "confirmClear": "Clear all style rules?"
         },
         "asr": {
           "label": "Transcription Context",
@@ -854,6 +857,12 @@
             "description": "Phrases of 2 to 4 words said in at least 3 dictations over 30 days: what the speech model gets.",
             "count": "{{count}} expressions"
           }
+        },
+        "judge": {
+          "label": "Correction Judge",
+          "description": "Sends your correction (before and after) to an AI to learn style rules and technical words.",
+          "status": "Uses {{provider}}",
+          "none": "Inactive: no API key for Groq or your rewrite provider."
         }
       },
       "styles": {

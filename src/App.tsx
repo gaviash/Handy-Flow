@@ -38,7 +38,7 @@ import { Sidebar, SidebarSection, SECTIONS_CONFIG } from "./components/Sidebar";
 import { WhatsNewGate } from "./components/whats-new";
 import { useSettings } from "./hooks/useSettings";
 import { useSettingsStore } from "./stores/settingsStore";
-import { commands } from "@/bindings";
+import { commands, type LearnedNews } from "@/bindings";
 import { listen } from "@tauri-apps/api/event";
 import { notify } from "@/stores/noticeStore";
 import { deleteRetiredModel } from "@/lib/models/retired";
@@ -147,16 +147,26 @@ function App() {
 
   // Handy Adaptive (F95): learned words, grouped, with an undo.
   useEffect(() => {
-    const unlisten = listen<string[]>("learned-words", ({ payload }) =>
+    const unlisten = listen<LearnedNews[]>("learned-words", ({ payload }) =>
       notify({
         title: t("settings.postProcessing.learning.notice", {
-          terms: payload.join(", "),
+          terms: payload
+            .map((n) => (n.kind === "rule" ? n.rule : n.term))
+            .join(", "),
         }),
         level: "info",
         key: "learned-words",
         action: {
           label: t("settings.postProcessing.learning.undo"),
-          onClick: () => payload.forEach((w) => commands.deleteLearnedWord(w)),
+          // Undo exactly what was announced: a form, not its whole word.
+          onClick: () =>
+            payload.forEach((n) =>
+              n.kind === "word"
+                ? commands.deleteLearnedWord(n.term)
+                : n.kind === "form"
+                  ? commands.removeHeardForm(n.term, n.heard)
+                  : commands.deleteStyleRule(n.rule),
+            ),
         },
       }),
     );
