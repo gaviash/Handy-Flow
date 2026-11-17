@@ -25,7 +25,7 @@ use std::future::Future;
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::Arc;
 use std::time::{Duration, Instant};
-use tauri::{AppHandle, Manager};
+use tauri::{AppHandle, Emitter, Manager};
 use tauri_specta::Event;
 
 /// How a dictation ended.
@@ -1360,6 +1360,15 @@ impl ShortcutAction for TranscribeAction {
                                 });
 
                             if post_process {
+                                // The pill names the register it writes in
+                                // (kind of app and tone, never any text).
+                                if let Some(c) = llm_context.as_ref() {
+                                    let _ = ah.emit_to(
+                                        "recording_overlay",
+                                        "rewrite-register",
+                                        (c.content, c.tone),
+                                    );
+                                }
                                 if use_streaming_overlay {
                                     tm.emit_stream_working(StreamWorkKind::Polishing);
                                 } else {

@@ -390,6 +390,41 @@
     clip-path: inset(0 0 0 0);
   }
 }
+/* "See the edits": what the rewrite cut is struck through, what it added is
+   highlighted; both draw in one after the other. */
+.diff-removed {
+  margin-inline-end: 0.2em;
+  color: var(--color-ink-3);
+  text-decoration: line-through;
+  text-decoration-color: var(--color-error);
+  animation: diff-strike 360ms var(--ease-glide) both;
+}
+.diff-added {
+  background: var(--accent-wash);
+  color: var(--accent-text);
+  border-radius: 3px;
+  animation: diff-mark 360ms var(--ease-glide) both;
+}
+@keyframes diff-strike {
+  from {
+    text-decoration-color: transparent;
+  }
+}
+@keyframes diff-mark {
+  from {
+    background: transparent;
+  }
+}
+/* A recording's waveform rises bar by bar once decoded. */
+.wave-bar {
+  transform-origin: center;
+  animation: wave-bar 380ms var(--ease-glide) both;
+}
+@keyframes wave-bar {
+  from {
+    scale: 1 0;
+  }
+}
 .today-figure {
   font-family: var(--heading-font);
   font-weight: var(--heading-weight);

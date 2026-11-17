@@ -74,6 +74,8 @@ const RecordingOverlay: React.FC = () => {
   });
   const [phase, setPhase] = useState<StreamPhase>("listening");
   const [workKind, setWorkKind] = useState<StreamWorkKind>("transcribing");
+  // Where the rewrite is headed, e.g. ["email", "formal"], once Rust knows.
+  const [register, setRegister] = useState<[string, string] | null>(null);
   const [elapsed, setElapsed] = useState(0);
   // Bumped on each new streaming session so the Live card remounts fresh (replays
   // the pop-in, and never animates in from the previous panel's open size).
@@ -112,6 +114,7 @@ const RecordingOverlay: React.FC = () => {
         // recording-ready while the awaits below are in flight; resetting after
         // them would overwrite that event and leave the overlay stuck arming.
         if (overlayState === "recording" || overlayState === "streaming") {
+          setRegister(null);
           setLiveSession(overlayState === "streaming");
           setCaptureReady(false);
           smoothedLevelsRef.current = Array(16).fill(0);
@@ -175,6 +178,11 @@ const RecordingOverlay: React.FC = () => {
         setLevels(smoothed.slice(0, WAVE_BARS));
       });
 
+      const unlistenRegister = await listen<[string, string]>(
+        "rewrite-register",
+        (event) => setRegister(event.payload),
+      );
+
       const unlistenStream = await events.streamTextEvent.listen((event) => {
         setStreamText(event.payload);
       });
@@ -219,6 +227,7 @@ const RecordingOverlay: React.FC = () => {
         unlistenReady();
         unlistenLevel();
         unlistenStream();
+        unlistenRegister();
         unlistenPhase();
         unlistenModel();
         clearTimeout(modelLoadTimerRef.current);
@@ -396,6 +405,18 @@ const RecordingOverlay: React.FC = () => {
     </div>
   );
 
+  // "Email · Formal" while the rewrite runs; the plain label when the
+  // register says nothing (other apps, default tone).
+  const processingLabel = (() => {
+    if (!register) return t("overlay.processing");
+    const [content, tone] = register;
+    const parts = [
+      content !== "other" && t(`overlay.register.${content}`),
+      tone !== "default" && t(`overlay.tone.${tone}`),
+    ].filter(Boolean);
+    return parts.length ? parts.join(" · ") : t("overlay.processing");
+  })();
+
   // ---- Live overlay: a pill that sculpts open into a panel ----
   const liveNotice = state === "live_notice" ? shownNotice : null;
   if (state === "streaming" || liveNotice || (pasted && liveSession)) {
@@ -462,9 +483,7 @@ const RecordingOverlay: React.FC = () => {
             ? noticeRow
             : stateRows(
                 working,
-                workKind === "polishing"
-                  ? t("overlay.processing")
-                  : transcribingLabel,
+                workKind === "polishing" ? processingLabel : transcribingLabel,
                 open,
               )}
         </div>
@@ -477,7 +496,7 @@ const RecordingOverlay: React.FC = () => {
   // width between them; the cancel button is in both rows so it stays put.
   const working = state === "transcribing" || state === "processing";
   const workLabel =
-    state === "processing" ? t("overlay.processing") : transcribingLabel;
+    state === "processing" ? processingLabel : transcribingLabel;
 
   return (
     <div

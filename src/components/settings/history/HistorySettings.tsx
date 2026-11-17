@@ -1,10 +1,12 @@
 import React, {
   useCallback,
+  useMemo,
   useEffect,
   useLayoutEffect,
   useRef,
   useState,
 } from "react";
+import { wordDiff } from "@/lib/utils/wordDiff";
 import { EmptyMascot } from "../../shared/Mascot";
 import { convertFileSrc } from "@tauri-apps/api/core";
 import { readFile } from "@tauri-apps/plugin-fs";
@@ -489,6 +491,7 @@ const HistoryEntryComponent: React.FC<HistoryEntryProps> = ({
   const [cancelling, setCancelling] = useState(false);
   const [expanded, setExpanded] = useState(false);
   const [showOriginal, setShowOriginal] = useState(false);
+  const [showChanges, setShowChanges] = useState(false);
   const [overflows, setOverflows] = useState(false);
   const textRef = useRef<HTMLParagraphElement>(null);
 
@@ -502,6 +505,14 @@ const HistoryEntryComponent: React.FC<HistoryEntryProps> = ({
       ? entry.post_processed_text
       : entry.transcription_text;
   const hasTranscription = displayedText.trim().length > 0;
+  // What the rewrite removed and added; null when too reworded to compare.
+  const changes = useMemo(
+    () =>
+      showChanges && entry.post_processed_text !== null
+        ? wordDiff(entry.transcription_text, entry.post_processed_text)
+        : null,
+    [showChanges, entry.transcription_text, entry.post_processed_text],
+  );
   const folded = hasTranscription && !retrying && !expanded;
 
   // Offer "Show more" only when the folded text is actually cut off.
@@ -583,11 +594,28 @@ const HistoryEntryComponent: React.FC<HistoryEntryProps> = ({
           {retrying && <TranscribePulseKeyframes />}
           {retrying
             ? progressText
-            : hasTranscription
-              ? displayedText
-              : entry.source_name
-                ? t("settings.history.notTranscribed")
-                : t("settings.history.transcriptionFailed")}
+            : changes
+              ? changes.map((part, k) =>
+                  part.kind === "same" ? (
+                    part.text
+                  ) : (
+                    // Spaces stay unmarked, so only words are struck or lit.
+                    <React.Fragment key={k}>
+                      {part.text.match(/^\s*/)![0]}
+                      <span
+                        className={`diff-${part.kind}`}
+                        style={{ animationDelay: `${Math.min(k * 40, 600)}ms` }}
+                      >
+                        {part.text.trimStart()}
+                      </span>
+                    </React.Fragment>
+                  ),
+                )
+              : hasTranscription
+                ? displayedText
+                : entry.source_name
+                  ? t("settings.history.notTranscribed")
+                  : t("settings.history.transcriptionFailed")}
         </p>
         {entry.post_processed_text !== null && !retrying && (
           <div className="flex flex-wrap items-center gap-2 text-xs">
@@ -599,6 +627,7 @@ const HistoryEntryComponent: React.FC<HistoryEntryProps> = ({
               className="text-ink-2 underline hover:text-accent-text"
               onClick={() => {
                 setShowOriginal(!showOriginal);
+                setShowChanges(false);
                 setExpanded(false);
               }}
             >
@@ -608,6 +637,26 @@ const HistoryEntryComponent: React.FC<HistoryEntryProps> = ({
                   : "settings.history.viewOriginal",
               )}
             </button>
+            <button
+              type="button"
+              aria-pressed={showChanges}
+              className="text-ink-2 underline hover:text-accent-text"
+              onClick={() => {
+                setShowChanges(!showChanges);
+                setShowOriginal(false);
+              }}
+            >
+              {t(
+                showChanges
+                  ? "settings.history.hideChanges"
+                  : "settings.history.viewChanges",
+              )}
+            </button>
+            {showChanges && !changes && (
+              <span className="text-ink-3">
+                {t("settings.history.changesTooDifferent")}
+              </span>
+            )}
           </div>
         )}
         {hasTranscription && !retrying && (expanded || overflows) && (

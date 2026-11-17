@@ -14,7 +14,7 @@ Les copies portables de Handy Flow (0.2.1 et suivantes) regardent au démarrage 
 3. Signe le ZIP :
 
    ```powershell
-   bun tauri signer sign -f "$env:USERPROFILE\.handy-flow\updater.key" -p "" Handy-Flow-portable-win-x64.zip
+   node node_modules/@tauri-apps/cli/tauri.js signer sign -f "$env:USERPROFILE\.handy-flow\updater.key" -p "" Handy-Flow-portable-win-x64.zip
    ```
 
    La commande crée `Handy-Flow-portable-win-x64.zip.sig`.

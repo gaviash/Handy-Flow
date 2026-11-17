@@ -10,6 +10,41 @@ import React, {
 import { Play, Pause } from "lucide-react";
 import { useTranslation } from "react-i18next";
 
+const BARS = 40;
+// shortcut: decodes the whole file in memory; past this size the plain track
+// is kept. Upgrade to a streamed decoder if long recordings need a waveform.
+const MAX_WAVEFORM_BYTES = 40 * 1024 * 1024;
+
+/** The recording's loudness in BARS buckets, 0..1, or null until decoded or
+ * when it can't be (the plain track is shown then). */
+function useWaveform(src: string | null): number[] | null {
+  const [peaks, setPeaks] = useState<number[] | null>(null);
+  useEffect(() => {
+    setPeaks(null);
+    if (!src) return;
+    let alive = true;
+    (async () => {
+      const bytes = await (await fetch(src)).arrayBuffer();
+      if (bytes.byteLength > MAX_WAVEFORM_BYTES) return;
+      const ctx = new OfflineAudioContext(1, 1, 16_000);
+      const data = (await ctx.decodeAudioData(bytes)).getChannelData(0);
+      const size = Math.max(1, Math.floor(data.length / BARS));
+      const rms = Array.from({ length: BARS }, (_, b) => {
+        let sum = 0;
+        for (let i = b * size; i < (b + 1) * size && i < data.length; i++)
+          sum += data[i] * data[i];
+        return Math.sqrt(sum / size);
+      });
+      const max = Math.max(...rms, 1e-6);
+      if (alive) setPeaks(rms.map((r) => Math.max(0.08, r / max)));
+    })().catch(() => {});
+    return () => {
+      alive = false;
+    };
+  }, [src]);
+  return peaks;
+}
+
 const revokeBlobSource = (src: string | null) => {
   if (src?.startsWith("blob:")) URL.revokeObjectURL(src);
 };
@@ -299,6 +334,7 @@ export const AudioPlayer: React.FC<AudioPlayerProps> = ({
   };
 
   const progressPercent = getProgressPercent();
+  const peaks = useWaveform(loadedSrc);
 
   return (
     <div className={`flex items-center gap-3 ${className}`}>
@@ -327,21 +363,46 @@ export const AudioPlayer: React.FC<AudioPlayerProps> = ({
             {formatTime(currentTime)}
           </span>
 
-          <input
-            type="range"
-            aria-label={t("common.playbackPosition")}
-            min="0"
-            max={duration || 0}
-            step="0.01"
-            value={currentTime}
-            onChange={handleSeek}
-            onMouseDown={handleSliderMouseDown}
-            onTouchStart={handleSliderTouchStart}
-            className={`flex-1 h-1 rounded-lg appearance-none cursor-pointer focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent-text ${progressPercent >= 99.5 ? "[&::-webkit-slider-thumb]:translate-x-0.5 [&::-moz-range-thumb]:translate-x-0.5" : ""}`}
-            style={{
-              background: `linear-gradient(to right, var(--color-logo-primary) 0%, var(--color-logo-primary) ${progressPercent}%, var(--line-strong) ${progressPercent}%, var(--line-strong) 100%)`,
-            }}
-          />
+          <div className="relative flex-1 flex items-center h-5 rounded-sm has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-accent-text">
+            {peaks && (
+              // The sentence's own shape; the played part takes the accent.
+              <div
+                aria-hidden
+                data-testid="waveform"
+                className="absolute inset-0 flex items-center gap-px"
+              >
+                {peaks.map((p, i) => (
+                  <i
+                    key={i}
+                    className="wave-bar flex-1 rounded-full"
+                    style={{
+                      height: `${p * 100}%`,
+                      animationDelay: `${i * 12}ms`,
+                      background:
+                        ((i + 0.5) / peaks.length) * 100 <= progressPercent
+                          ? "var(--color-logo-primary)"
+                          : "var(--line-strong)",
+                    }}
+                  />
+                ))}
+              </div>
+            )}
+            <input
+              type="range"
+              aria-label={t("common.playbackPosition")}
+              min="0"
+              max={duration || 0}
+              step="0.01"
+              value={currentTime}
+              onChange={handleSeek}
+              onMouseDown={handleSliderMouseDown}
+              onTouchStart={handleSliderTouchStart}
+              className={`relative w-full h-1 rounded-lg appearance-none cursor-pointer focus-visible:outline-none ${peaks ? "opacity-0" : ""} ${progressPercent >= 99.5 ? "[&::-webkit-slider-thumb]:translate-x-0.5 [&::-moz-range-thumb]:translate-x-0.5" : ""}`}
+              style={{
+                background: `linear-gradient(to right, var(--color-logo-primary) 0%, var(--color-logo-primary) ${progressPercent}%, var(--line-strong) ${progressPercent}%, var(--line-strong) 100%)`,
+              }}
+            />
+          </div>
 
           <span className="text-xs text-ink-2 min-w-[30px] tabular-nums">
             {formatTime(duration)}
