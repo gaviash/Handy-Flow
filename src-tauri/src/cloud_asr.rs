@@ -195,7 +195,7 @@ pub async fn transcribe(
         .post(&url)
         .header(
             reqwest::header::USER_AGENT,
-            "Handy/1.0 (+https://github.com/cjpais/Handy)",
+            "Handy-Flow (+https://github.com/gaviash/Handy-Flow)",
         )
         .timeout(asr.timeout)
         .multipart(form);

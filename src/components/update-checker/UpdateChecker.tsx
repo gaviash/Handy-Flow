@@ -1,17 +1,9 @@
 import React, { useState, useEffect, useRef } from "react";
 import { useTranslation } from "react-i18next";
-import { check } from "@tauri-apps/plugin-updater";
-import { relaunch } from "@tauri-apps/plugin-process";
 import { listen } from "@tauri-apps/api/event";
-import { openUrl } from "@tauri-apps/plugin-opener";
-import { arch, platform } from "@tauri-apps/plugin-os";
 import { ProgressBar } from "../shared";
 import { useSettings } from "../../hooks/useSettings";
 import { commands } from "../../bindings";
-import {
-  resolvePortableInstallerUrl,
-  PORTABLE_RELEASES_URL,
-} from "./portableInstaller";
 
 interface UpdateCheckerProps {
   className?: string;
@@ -25,27 +17,20 @@ const UpdateChecker: React.FC<UpdateCheckerProps> = ({ className = "" }) => {
   const [isInstalling, setIsInstalling] = useState(false);
   const [downloadProgress, setDownloadProgress] = useState(0);
   const [showUpToDate, setShowUpToDate] = useState(false);
-  const [showPortableUpdateDialog, setShowPortableUpdateDialog] =
-    useState(false);
-  const [portableInstallerUrl, setPortableInstallerUrl] = useState<string>(
-    PORTABLE_RELEASES_URL,
-  );
 
   const { settings, isLoading, updateChecksLocked } = useSettings();
   // Wait for the lock state too (null = not loaded yet), otherwise the first
   // render could fire an update check before HANDY_DISABLE_UPDATER is known.
   const settingsLoaded =
     !isLoading && settings !== null && updateChecksLocked !== null;
-  // Forced-off by system configuration (HANDY_DISABLE_UPDATER) overrides the
-  // stored preference without persisting it, mirroring the backend's effective
-  // updater state.
+  // Forced-off by system configuration (HANDY_DISABLE_UPDATER, non-portable
+  // build) overrides the stored preference without persisting it, mirroring
+  // the backend's effective updater state.
   const updateChecksEnabled =
     (settings?.update_checks_enabled ?? false) && updateChecksLocked === false;
 
   const upToDateTimeoutRef = useRef<ReturnType<typeof setTimeout>>();
   const isManualCheckRef = useRef(false);
-  const downloadedBytesRef = useRef(0);
-  const contentLengthRef = useRef(0);
 
   useEffect(() => {
     // Wait for settings to load before doing anything
@@ -82,16 +67,12 @@ const UpdateChecker: React.FC<UpdateCheckerProps> = ({ className = "" }) => {
 
     try {
       setIsChecking(true);
-      const update = await check();
+      const result = await commands.checkForUpdate();
+      if (result.status === "error") throw new Error(result.error);
 
-      if (update) {
+      if (result.data) {
         setUpdateAvailable(true);
         setShowUpToDate(false);
-        // Portable installs can't self-update in place — the manual dialog links
-        // straight at the matching installer from this manifest instead.
-        setPortableInstallerUrl(
-          resolvePortableInstallerUrl(update.rawJson, platform(), arch()),
-        );
       } else {
         setUpdateAvailable(false);
 
@@ -122,51 +103,22 @@ const UpdateChecker: React.FC<UpdateCheckerProps> = ({ className = "" }) => {
   const installUpdate = async () => {
     if (!updateChecksEnabled) return;
 
-    const portable = await commands.isPortable();
-    if (portable) {
-      setShowPortableUpdateDialog(true);
-      return;
-    }
-
+    setIsInstalling(true);
+    setDownloadProgress(0);
+    const progressUnlisten = listen<number>(
+      "update-download-progress",
+      (event) => setDownloadProgress(Math.min(event.payload, 100)),
+    );
     try {
-      setIsInstalling(true);
-      setDownloadProgress(0);
-      downloadedBytesRef.current = 0;
-      contentLengthRef.current = 0;
-      const update = await check();
-
-      if (!update) {
-        console.log("No update available during install attempt");
-        return;
-      }
-
-      await update.downloadAndInstall((event) => {
-        switch (event.event) {
-          case "Started":
-            downloadedBytesRef.current = 0;
-            contentLengthRef.current = event.data.contentLength ?? 0;
-            break;
-          case "Progress":
-            downloadedBytesRef.current += event.data.chunkLength;
-            const progress =
-              contentLengthRef.current > 0
-                ? Math.round(
-                    (downloadedBytesRef.current / contentLengthRef.current) *
-                      100,
-                  )
-                : 0;
-            setDownloadProgress(Math.min(progress, 100));
-            break;
-        }
-      });
-      await relaunch();
+      // On success the backend restarts the app, so this never returns.
+      const result = await commands.installUpdate();
+      if (result.status === "error") throw new Error(result.error);
     } catch (error) {
       console.error("Failed to install update:", error);
     } finally {
+      progressUnlisten.then((fn) => fn());
       setIsInstalling(false);
       setDownloadProgress(0);
-      downloadedBytesRef.current = 0;
-      contentLengthRef.current = 0;
     }
   };
 
@@ -202,77 +154,36 @@ const UpdateChecker: React.FC<UpdateCheckerProps> = ({ className = "" }) => {
   const isUpdateClickable =
     !isUpdateDisabled && (updateAvailable || (!isChecking && !showUpToDate));
 
-  // When no installer could be resolved for this target the button falls back to
-  // the releases index, so the dialog has to say "browse" rather than "download".
-  const hasDirectInstaller = portableInstallerUrl !== PORTABLE_RELEASES_URL;
-
   return (
-    <>
-      {showPortableUpdateDialog && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-          <div className="bg-background border border-line rounded-lg p-6 max-w-md w-full mx-4 space-y-4">
-            <h2 className="text-base font-semibold">
-              {t("footer.portableUpdateTitle")}
-            </h2>
-            <p className="text-sm text-ink-2">
-              {hasDirectInstaller
-                ? t("footer.portableUpdateMessage")
-                : t("footer.portableUpdateBrowseMessage")}
-            </p>
-            <div className="flex gap-2 justify-end">
-              <button
-                className="px-3 py-1.5 text-sm rounded border border-line hover:bg-wash transition-colors"
-                onClick={() => setShowPortableUpdateDialog(false)}
-              >
-                {t("common.close")}
-              </button>
-              <button
-                className="px-3 py-1.5 text-sm rounded bg-logo-primary text-white hover:bg-logo-primary/80 transition-colors"
-                onClick={() => {
-                  openUrl(portableInstallerUrl);
-                  setShowPortableUpdateDialog(false);
-                }}
-              >
-                {hasDirectInstaller
-                  ? t("footer.portableUpdateButton")
-                  : t("footer.portableUpdateBrowseButton")}
-              </button>
-            </div>
-          </div>
-        </div>
+    <div className={`flex items-center gap-3 ${className}`}>
+      {isUpdateClickable ? (
+        <button
+          onClick={getUpdateStatusAction()}
+          disabled={isUpdateDisabled}
+          className={`transition-colors disabled:opacity-50 tabular-nums ${
+            updateAvailable
+              ? "text-logo-primary hover:text-logo-primary font-medium"
+              : "text-ink-2 hover:text-text"
+          }`}
+        >
+          {getUpdateStatusText()}
+        </button>
+      ) : (
+        <span className="text-ink-2 tabular-nums">{getUpdateStatusText()}</span>
       )}
-      <div className={`flex items-center gap-3 ${className}`}>
-        {isUpdateClickable ? (
-          <button
-            onClick={getUpdateStatusAction()}
-            disabled={isUpdateDisabled}
-            className={`transition-colors disabled:opacity-50 tabular-nums ${
-              updateAvailable
-                ? "text-logo-primary hover:text-logo-primary font-medium"
-                : "text-ink-2 hover:text-text"
-            }`}
-          >
-            {getUpdateStatusText()}
-          </button>
-        ) : (
-          <span className="text-ink-2 tabular-nums">
-            {getUpdateStatusText()}
-          </span>
-        )}
 
-        {isInstalling && downloadProgress > 0 && downloadProgress < 100 && (
-          <ProgressBar
-            progress={[
-              {
-                id: "update",
-                percentage: downloadProgress,
-              },
-            ]}
-            size="large"
-          />
-        )}
-      </div>
-    </>
+      {isInstalling && downloadProgress > 0 && downloadProgress < 100 && (
+        <ProgressBar
+          progress={[
+            {
+              id: "update",
+              percentage: downloadProgress,
+            },
+          ]}
+          size="large"
+        />
+      )}
+    </div>
   );
 };
 

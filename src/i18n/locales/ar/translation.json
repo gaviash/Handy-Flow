@@ -1088,11 +1088,6 @@
         "description": "عرض كود المصدر والمساهمة",
         "button": "عرض على GitHub"
       },
-      "supportDevelopment": {
-        "title": "دعم التطوير",
-        "description": "ساعدنا في مواصلة بناء Handy",
-        "button": "تبرع"
-      },
       "acknowledgments": {
         "title": "شكر وتقدير",
         "ggml": {
@@ -1246,12 +1241,7 @@
     "downloading": "جاري التنزيل {{progress}}%...",
     "installing": "جاري التثبيت...",
     "preparing": "جاري التحضير...",
-    "checkForUpdates": "التحقق من وجود تحديثات",
-    "portableUpdateTitle": "التحديث اليدوي مطلوب",
-    "portableUpdateMessage": "لا يمكن تحديث التثبيتات المحمولة تلقائيًا. نزّل المثبّت المناسب لنظامك من الزر أدناه، شغّله، وثبّته في المجلد نفسه — يبقى مجلد Data/ (الإعدادات والنماذج والتسجيلات) في مكانه.",
-    "portableUpdateButton": "تنزيل المثبّت",
-    "portableUpdateBrowseMessage": "لا يمكن تحديث التثبيتات المحمولة تلقائيًا. نزّل أحدث إصدار مناسب لنظامك من GitHub Releases وثبّته في المجلد نفسه — يبقى مجلد Data/ (الإعدادات والنماذج والتسجيلات) في مكانه.",
-    "portableUpdateBrowseButton": "فتح GitHub Releases"
+    "checkForUpdates": "التحقق من وجود تحديثات"
   },
   "whatsNew": {
     "title": "الجديد في Handy Flow v{{version}}"

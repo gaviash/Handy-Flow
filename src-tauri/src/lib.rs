@@ -32,6 +32,7 @@ pub mod portable;
 mod primary_selection;
 mod recall;
 mod secure_input;
+mod self_update;
 mod settings;
 mod shortcut;
 mod signal_handle;
@@ -701,6 +702,7 @@ pub fn run(cli_args: CliArgs) {
 
     // Detect portable mode before anything else
     portable::init();
+    self_update::cleanup_previous_update();
 
     // Parse console logging directives from RUST_LOG, falling back to info-level logging
     // when the variable is unset
@@ -808,6 +810,8 @@ pub fn run(cli_args: CliArgs) {
             secure_input::get_secure_input_status,
             secure_input::run_keyboard_diagnostic,
             trigger_update_check,
+            self_update::check_for_update,
+            self_update::install_update,
             show_main_window_command,
             commands::cancel_operation,
             commands::is_portable,

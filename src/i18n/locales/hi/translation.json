@@ -1088,11 +1088,6 @@
         "description": "सोर्स कोड देखें और योगदान दें",
         "button": "GitHub पर देखें"
       },
-      "supportDevelopment": {
-        "title": "डेवलपमेंट में सहयोग करें",
-        "description": "Handy को आगे बढ़ाने में हमारी मदद करें",
-        "button": "दान करें"
-      },
       "acknowledgments": {
         "title": "आभार",
         "ggml": {
@@ -1246,12 +1241,7 @@
     "downloading": "डाउनलोड हो रहा है... {{progress}}%",
     "installing": "इंस्टॉल हो रहा है...",
     "preparing": "तैयारी हो रही है...",
-    "checkForUpdates": "अपडेट जांचें",
-    "portableUpdateTitle": "मैन्युअल अपडेट ज़रूरी है",
-    "portableUpdateMessage": "पोर्टेबल इंस्टॉल अपने आप अपडेट नहीं हो सकते. नीचे से अपने सिस्टम के लिए इंस्टॉलर डाउनलोड करें, उसे चलाएँ और उसी फ़ोल्डर में इंस्टॉल करें — आपका Data/ फ़ोल्डर (सेटिंग, मॉडल, रिकॉर्डिंग) जहाँ है वहीं बना रहता है.",
-    "portableUpdateButton": "इंस्टॉलर डाउनलोड करें",
-    "portableUpdateBrowseMessage": "पोर्टेबल इंस्टॉल अपने आप अपडेट नहीं हो सकते. GitHub Releases से अपने सिस्टम के लिए नया वर्शन डाउनलोड करें और उसे उसी फ़ोल्डर में इंस्टॉल करें — आपका Data/ फ़ोल्डर (सेटिंग, मॉडल, रिकॉर्डिंग) जहाँ है वहीं बना रहता है.",
-    "portableUpdateBrowseButton": "GitHub Releases खोलें"
+    "checkForUpdates": "अपडेट जांचें"
   },
   "whatsNew": {
     "title": "Handy Flow v{{version}} में नया क्या है"
