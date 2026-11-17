@@ -546,7 +546,7 @@ async fn http_cancel_during_stalled_body_keeps_partial() {
         let (mut sock, _) = listener.accept().await.unwrap();
         let _ = read_request_head(&mut sock).await;
         let _ = sock
-            .write_all(b"HTTP/1.1 200 OK\r\nContent-Length: 100\r\n\r\nabc")
+            .write_all(b"HTTP/1.1 200 OK\r\nTransfer-Encoding: chunked\r\n\r\n3\r\nabc\r\n")
             .await;
         tokio::time::sleep(Duration::from_secs(600)).await;
     });
@@ -555,8 +555,16 @@ async fn http_cancel_during_stalled_body_keeps_partial() {
 
     let cancel = CancellationToken::new();
     let trigger = cancel.clone();
+    let received = partial.clone();
     tokio::spawn(async move {
-        tokio::time::sleep(Duration::from_millis(300)).await;
+        // Cancel after the body arrives, regardless of disk or socket latency.
+        tokio::time::timeout(Duration::from_secs(5), async {
+            while fs::metadata(&received).map_or(true, |m| m.len() < 3) {
+                tokio::time::sleep(Duration::from_millis(10)).await;
+            }
+        })
+        .await
+        .expect("the first body bytes must arrive before cancellation");
         trigger.cancel();
     });
 
