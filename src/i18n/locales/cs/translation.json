@@ -340,7 +340,7 @@
         "pressKeys": "Stiskněte klávesy...",
         "bindings": {
           "transcribe": {
-            "name": "Zkratka přepisu",
+            "name": "Zkratka pro diktování",
             "description": "Klávesová zkratka pro nahrávání a přepis vašeho hlasu."
           },
           "cancel": {
@@ -381,14 +381,14 @@
         "description": "Vyberte jazyk rozpoznávání řeči. Auto jazyk určí automaticky, zatímco výběr konkrétního jazyka může zlepšit přesnost.",
         "searchPlaceholder": "Hledat jazyky...",
         "noResults": "Žádné jazyky nenalezeny",
-        "auto": "Automaticky",
+        "auto": "Rozpoznat jazyk automaticky",
         "autoUnavailable": {
-          "title": "Automaticky je vypnuto",
+          "title": "Automatické rozpoznání jazyka není dostupné",
           "oneLanguage": "S tímto modelem funguje jen jeden z vašich jazyků",
           "undetectable": "Není k dispozici pro {{languages}}",
           "noMatch": "Žádný z vašich jazyků s tímto modelem nefunguje"
         },
-        "detectorMissingTitle": "Automaticky vyžaduje samostatné stažení",
+        "detectorMissingTitle": "Rozpoznání jazyka vyžaduje stažení",
         "detectorMissing": "Tento model nepozná, jakým jazykem mluvíte. Režim Automaticky potřebuje malý detektor jazyka, který to zjistí",
         "stopDetectorDownload": "Zastavit stahování detektoru jazyka"
       },
@@ -399,7 +399,7 @@
         "weak": "Zatím žádný model dobře nerozpoznává: {{languages}}."
       },
       "shortcutActivation": {
-        "title": "Chování zkratky",
+        "title": "Jak zkratka funguje",
         "description": "Zvolte, jak má zkratka přepisu spouštět a zastavovat nahrávání.",
         "options": {
           "holdOrToggle": "Automaticky",
@@ -407,7 +407,7 @@
           "toggle": "Přepínat"
         },
         "descriptions": {
-          "hold_or_toggle": "Podržte pro nahrávání nebo klepněte pro přepnutí",
+          "hold_or_toggle": "Podržte pro nahrávání; stisknutím spusťte nebo zastavte",
           "push_to_talk": "Nahrává, dokud držíte zkratku",
           "toggle": "Klepněte na zkratku pro zahájení nahrávání, klepněte znovu pro zastavení"
         }
@@ -452,7 +452,7 @@
         "deleteFailed": "Některé staré modely se nepodařilo smazat. Podrobnosti najdete v protokolu."
       },
       "rescan": {
-        "label": "Znovu prohledat",
+        "label": "Najít přidané modely",
         "tooltip": "Znovu prohledat modely přidané do složky modelů nebo mezipaměti Hugging Face mimo Handy Flow"
       }
     },
@@ -534,13 +534,13 @@
           "title": "Překryv",
           "description": "Vyberte překryv při nahrávání: „Žádné“ jej skryje, „Minimální“ zobrazí kompaktní indikátor, „Živě“ zobrazuje přepis v reálném čase, když mluvíte (pouze modely podporující streaming — hledejte odznak „Streaming“ ve výběru modelů). Na Linuxu se doporučuje „Žádné“.",
           "options": {
-            "none": "Žádné",
+            "none": "Skrytý",
             "minimal": "Minimální",
             "live": "Živě"
           }
         },
         "position": {
-          "title": "Pozice překryvu",
+          "title": "Umístění indikátoru",
           "description": "Zobrazovat vizuální překryv během nahrávání a přepisu. Na Linuxu je doporučeno 'Žádné'.",
           "options": {
             "bottom": "Dole",
@@ -549,7 +549,7 @@
         }
       },
       "pasteMethod": {
-        "title": "Způsob vložení",
+        "title": "Vložit text",
         "description": "Vyberte, jak se text vkládá. Přímé: simuluje psaní přes systémový vstup. Žádné: přeskočí vložení a aktualizuje pouze historii/schránku.",
         "options": {
           "clipboard": "Schránka ({{modifier}}+V)",
@@ -569,7 +569,7 @@
         }
       },
       "clipboardHandling": {
-        "title": "Práce se schránkou",
+        "title": "Schránka po diktování",
         "description": "'Neměnit schránku' zachová po přepisu aktuální obsah schránky. 'Kopírovat do schránky' ponechá po vložení výsledek přepisu ve schránce.",
         "options": {
           "dontModify": "Neměnit schránku",
@@ -577,7 +577,7 @@
         }
       },
       "autoSubmit": {
-        "title": "Automatické odeslání",
+        "title": "Odeslat po diktování",
         "description": "Automaticky odešle vybranou kombinaci kláves po vložení textu. Cmd+Enter platí pro macOS, zatímco Windows/Linux používají Super+Enter.",
         "options": {
           "off": "Vypnuto",
@@ -614,11 +614,11 @@
         "duplicate": "\"{{word}}\" již existuje"
       },
       "voiceActivityDetection": {
-        "title": "Detekce hlasové aktivity",
+        "title": "Filtrovat ticho",
         "description": "Odfiltruje ticho z nahrávek. Modely podporující streaming používají delší doběh VAD; vypnutí VAD nahrává surový zvuk."
       },
       "longFormChunking": {
-        "title": "Dělení dlouhého zvuku",
+        "title": "Rozdělit dlouhé nahrávky",
         "description": "Před přepisem rozdělí dlouhé nahrávky v pauzách, což obvykle zlepšuje kvalitu přepisu. Přepisované soubory a dlouhé opakované přepisy se rozdělují vždy."
       },
       "languageDetection": {
@@ -628,7 +628,7 @@
         "downloadingHint": "Stahuje se detektor jazyka. Vypnutím stahování zrušíte"
       },
       "vadBackend": {
-        "title": "Backend detekce hlasu",
+        "title": "Detektor ticha",
         "description": "Vyberte detektor používaný k filtrování ticha. Earshot je experimentální; pokud je řeč ořezávána nebo zůstává šum, přepněte zpět na Silero.",
         "options": {
           "silero": "Silero",
@@ -1153,7 +1153,7 @@
         "compact": "Compact"
       },
       "overlay": {
-        "title": "Dictation overlay",
+        "title": "Indikátor diktování",
         "description": "The overlay shown during dictation. Hidden remains available in Advanced.",
         "pill": "Pill",
         "wave": "Wave",
@@ -1172,24 +1172,24 @@
       "reformulationLink": "Open Reformulation settings",
       "modeTitle": "Where should transcription run?",
       "localMode": "On this computer",
-      "localDescription": "Audio is transcribed locally, without a transcription API.",
-      "apiMode": "By API",
+      "localDescription": "Zvuk zůstává v tomto počítači.",
+      "apiMode": "Přes poskytovatele",
       "apiDescription": "Send audio to a provider. Keep a local model as backup.",
       "apiSummary": "Transcription: {{provider}} · {{model}}",
       "localSummary": "Transcription on this computer: {{model}}",
       "configured": "API configured. Availability will be checked when you dictate.",
       "localSummaryHelp": "Uses the local model below. Text cleanup is configured separately.",
       "loading": "Loading configuration…",
-      "modelMissing": "No API model selected",
+      "modelMissing": "Není vybrán model poskytovatele",
       "localMissing": "No local model available",
       "missingProvider": "Choose a supported transcription provider.",
-      "missingModel": "Choose an API transcription model.",
+      "missingModel": "Vyberte model poskytovatele.",
       "missingKey": "Add an API key to use this provider.",
       "usingLocal": "Until then, the local model is used.",
       "noFallback": "No local backup is available. Download and select a model below to cover API failures and sessions that must stay local.",
       "sharedKey": "This key is also used for Reformulation with this provider. Changing it affects both uses.",
       "customKeyHelp": "A local server may not need a key. If provided, this key is shared with Reformulation.",
-      "advanced": "Advanced API settings",
+      "advanced": "Pokročilá nastavení poskytovatele",
       "timeoutTitle": "Wait before local backup (seconds)",
       "serverUrl": "Server base URL (OpenAI compatible)",
       "sharedUrl": "This base URL is shared with Reformulation for the custom provider. Handy Flow adds /audio/transcriptions or /audio/translations.",
@@ -1209,7 +1209,7 @@
       "downloadFallback": "Download and use as local backup",
       "selectLocal": "Use for local transcription",
       "downloadLocal": "Download and use for local transcription",
-      "footerIncomplete": "Transcription API: setup incomplete",
+      "footerIncomplete": "Nastavení poskytovatele není dokončeno",
       "footerApi": "API: {{provider}} · {{model}}",
       "footerLocal": "Local: {{model}}",
       "saveError": "This change could not be confirmed. Check the displayed values and try again.",

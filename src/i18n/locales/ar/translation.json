@@ -340,7 +340,7 @@
         "pressKeys": "اضغط على المفاتيح...",
         "bindings": {
           "transcribe": {
-            "name": "اختصار التفريغ الصوتي",
+            "name": "اختصار الإملاء",
             "description": ".اختصار لوحة المفاتيح لتسجيل وتفريغ صوتك"
           },
           "cancel": {
@@ -381,14 +381,14 @@
         "description": ".اختر لغة التعرف على الكلام. سيحدد 'تلقائي' اللغة تلقائياً، بينما يؤدي اختيار لغة معينة إلى تحسين الدقة لتلك اللغة",
         "searchPlaceholder": "البحث عن اللغات...",
         "noResults": "لم يتم العثور على لغات",
-        "auto": "تلقائي",
+        "auto": "اكتشاف اللغة تلقائياً",
         "autoUnavailable": {
-          "title": "الوضع التلقائي معطّل",
+          "title": "اكتشاف اللغة تلقائياً غير متاح",
           "oneLanguage": "لغة واحدة فقط من لغاتك تعمل مع هذا النموذج",
           "undetectable": "غير متاح مع {{languages}}",
           "noMatch": "لا تعمل أي من لغاتك مع هذا النموذج"
         },
-        "detectorMissingTitle": "يحتاج الوضع التلقائي إلى تنزيل منفصل",
+        "detectorMissingTitle": "يتطلب اكتشاف اللغة تنزيلًا",
         "detectorMissing": "لا يستطيع هذا النموذج معرفة اللغة التي تتحدث بها. يحتاج الوضع التلقائي إلى أداة صغيرة لاكتشاف اللغة لمعرفتها",
         "stopDetectorDownload": "إيقاف تنزيل أداة اكتشاف اللغة"
       },
@@ -399,7 +399,7 @@
         "weak": "لا يوجد نموذج يتعرف على {{languages}} جيدًا بعد."
       },
       "shortcutActivation": {
-        "title": "سلوك الاختصار",
+        "title": "طريقة عمل الاختصار",
         "description": "اختر كيفية بدء التسجيل وإيقافه باستخدام اختصار التفريغ الصوتي.",
         "options": {
           "holdOrToggle": "تلقائي",
@@ -407,7 +407,7 @@
           "toggle": "تبديل"
         },
         "descriptions": {
-          "hold_or_toggle": "اضغط مطوّلًا للتسجيل أو انقر للتبديل",
+          "hold_or_toggle": "اضغط مطولاً للتسجيل؛ اضغط لبدء التسجيل أو إيقافه",
           "push_to_talk": "يسجّل أثناء الضغط على الاختصار",
           "toggle": "انقر على الاختصار لبدء التسجيل، وانقر مرة أخرى للإيقاف"
         }
@@ -452,7 +452,7 @@
         "deleteFailed": "تعذّر حذف بعض النماذج القديمة. تحقق من السجل لمزيد من التفاصيل."
       },
       "rescan": {
-        "label": "إعادة الفحص",
+        "label": "البحث عن النماذج المضافة",
         "tooltip": "إعادة الفحص بحثًا عن النماذج المضافة إلى مجلد النماذج أو ذاكرة Hugging Face التخزينية المؤقتة خارج Handy Flow"
       }
     },
@@ -534,13 +534,13 @@
           "title": "التراكب",
           "description": "اختر تراكب التسجيل: «بلا» يخفيه، و«مبسط» يعرض شارة صغيرة، و«مباشر» يعرض النص المكتوب فوريًا أثناء التحدث (النماذج التي تدعم البث فقط — ابحث عن شارة «البث» في منتقي النماذج). على Linux يُنصح باختيار «بلا».",
           "options": {
-            "none": "بلا",
+            "none": "مخفي",
             "minimal": "مبسط",
             "live": "مباشر"
           }
         },
         "position": {
-          "title": "موقع التراكب",
+          "title": "موضع المؤشر",
           "description": "عرض تراكب الملاحظات المرئية أثناء التسجيل والتفريغ. على نظام Linux يوصى بـ 'بلا'.",
           "options": {
             "bottom": "أسفل",
@@ -549,7 +549,7 @@
         }
       },
       "pasteMethod": {
-        "title": "طريقة اللصق",
+        "title": "إدراج النص",
         "description": ".اختر كيفية إدراج النص. مباشر: يحاكي الكتابة عبر إدخال النظام. بلا: يتخطى اللصق، ويحدث السجل/الحافظة فقط",
         "options": {
           "clipboard": "الحافظة ({{modifier}}+V)",
@@ -569,7 +569,7 @@
         }
       },
       "clipboardHandling": {
-        "title": "التعامل مع الحافظة",
+        "title": "الحافظة بعد الإملاء",
         "description": ".'عدم تعديل الحافظة' يحافظ على محتويات حافظتك الحالية بعد التفريغ. 'نسخ إلى الحافظة' يترك نتيجة التفريغ في حافظتك بعد اللصق",
         "options": {
           "dontModify": "عدم تعديل الحافظة",
@@ -577,7 +577,7 @@
         }
       },
       "autoSubmit": {
-        "title": "إرسال تلقائي",
+        "title": "الإرسال بعد الإملاء",
         "description": "إرسال مجموعة المفاتيح المحددة تلقائياً بعد إدراج النص. Cmd+Enter ينطبق على macOS، بينما يستخدم Windows/Linux مفتاح Super+Enter.",
         "options": {
           "off": "إيقاف",
@@ -614,11 +614,11 @@
         "duplicate": "\"{{word}}\" موجود بالفعل"
       },
       "voiceActivityDetection": {
-        "title": "كشف النشاط الصوتي",
+        "title": "تصفية الصمت",
         "description": "تصفية الصمت من التسجيلات. النماذج التي تدعم البث تستخدم فترة VAD أطول؛ وتعطيل VAD يسجّل الصوت الخام."
       },
       "longFormChunking": {
-        "title": "تقسيم الصوت الطويل",
+        "title": "تقسيم التسجيلات الطويلة",
         "description": "يقسّم التسجيلات الطويلة عند فترات التوقف قبل نسخها، مما يحسّن أداء النسخ عادةً. تُقسَّم الملفات المنسوخة وعمليات إعادة النسخ الطويلة دائمًا."
       },
       "languageDetection": {
@@ -628,7 +628,7 @@
         "downloadingHint": "جارٍ تنزيل أداة اكتشاف اللغة. أوقف هذا الخيار للإلغاء"
       },
       "vadBackend": {
-        "title": "محرك كشف النشاط الصوتي",
+        "title": "كاشف الصمت",
         "description": "اختر الكاشف المستخدم لتصفية الصمت. Earshot تجريبي؛ ارجع إلى Silero إذا تم اقتطاع الكلام أو الاحتفاظ بالضوضاء.",
         "options": {
           "silero": "Silero",
@@ -1153,7 +1153,7 @@
         "compact": "Compact"
       },
       "overlay": {
-        "title": "Dictation overlay",
+        "title": "مؤشر الإملاء",
         "description": "The overlay shown during dictation. Hidden remains available in Advanced.",
         "pill": "Pill",
         "wave": "Wave",
@@ -1172,24 +1172,24 @@
       "reformulationLink": "Open Reformulation settings",
       "modeTitle": "Where should transcription run?",
       "localMode": "On this computer",
-      "localDescription": "Audio is transcribed locally, without a transcription API.",
-      "apiMode": "By API",
+      "localDescription": "يبقى الصوت على هذا الجهاز.",
+      "apiMode": "عبر مزود",
       "apiDescription": "Send audio to a provider. Keep a local model as backup.",
       "apiSummary": "Transcription: {{provider}} · {{model}}",
       "localSummary": "Transcription on this computer: {{model}}",
       "configured": "API configured. Availability will be checked when you dictate.",
       "localSummaryHelp": "Uses the local model below. Text cleanup is configured separately.",
       "loading": "Loading configuration…",
-      "modelMissing": "No API model selected",
+      "modelMissing": "لم يُحدد نموذج المزود",
       "localMissing": "No local model available",
       "missingProvider": "Choose a supported transcription provider.",
-      "missingModel": "Choose an API transcription model.",
+      "missingModel": "اختر نموذجاً من المزود.",
       "missingKey": "Add an API key to use this provider.",
       "usingLocal": "Until then, the local model is used.",
       "noFallback": "No local backup is available. Download and select a model below to cover API failures and sessions that must stay local.",
       "sharedKey": "This key is also used for Reformulation with this provider. Changing it affects both uses.",
       "customKeyHelp": "A local server may not need a key. If provided, this key is shared with Reformulation.",
-      "advanced": "Advanced API settings",
+      "advanced": "إعدادات المزود المتقدمة",
       "timeoutTitle": "Wait before local backup (seconds)",
       "serverUrl": "Server base URL (OpenAI compatible)",
       "sharedUrl": "This base URL is shared with Reformulation for the custom provider. Handy Flow adds /audio/transcriptions or /audio/translations.",
@@ -1209,7 +1209,7 @@
       "downloadFallback": "Download and use as local backup",
       "selectLocal": "Use for local transcription",
       "downloadLocal": "Download and use for local transcription",
-      "footerIncomplete": "Transcription API: setup incomplete",
+      "footerIncomplete": "إعداد المزود غير مكتمل",
       "footerApi": "API: {{provider}} · {{model}}",
       "footerLocal": "Local: {{model}}",
       "saveError": "This change could not be confirmed. Check the displayed values and try again.",

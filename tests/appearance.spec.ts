@@ -2,17 +2,68 @@ import { test, expect } from "@playwright/test";
 import { mockTauri } from "./fixtures/tauri-mock";
 import { PALETTE_IDS } from "../src/lib/themes";
 
+test("dictation pill settings are grouped in appearance and linked from advanced", async ({
+  page,
+}) => {
+  const backend = await mockTauri(page);
+  await page.goto("/");
+  await page.getByRole("button", { name: "Advanced", exact: true }).click();
+  await expect(
+    page.getByRole("radio", { name: "Live", exact: true }),
+  ).toHaveCount(0);
+  await page
+    .getByRole("button", { name: "Dictation pill → Appearance" })
+    .click();
+  const group = page.locator("#dictation-pill");
+  await expect(group.getByRole("radio", { name: "Expressive" })).toBeVisible();
+  await expect(group.getByRole("radio", { name: "Live" })).toBeVisible();
+  await group.getByRole("radio", { name: "Hidden" }).click();
+  await expect(group.getByRole("button", { name: "Bottom" })).toBeVisible();
+  await expect
+    .poll(async () =>
+      (await backend.calls()).some(
+        (call) =>
+          call.cmd === "change_overlay_style_setting" &&
+          (call.args as { style: string }).style === "none",
+      ),
+    )
+    .toBe(true);
+});
+
 test("a hidden overlay can be changed using the keyboard", async ({ page }) => {
   await mockTauri(page, { settings: { overlay_style: "none" } });
   await page.goto("/");
   await page.getByRole("button", { name: "Appearance", exact: true }).click();
   const pill = page.getByRole("radio", { name: "Pill", exact: true });
-  await expect(pill).toHaveAttribute("tabindex", "0");
-  await pill.focus();
+  await page.getByRole("radio", { name: "Hidden", exact: true }).focus();
+  await page.keyboard.press("ArrowRight");
+  await expect(pill).toBeFocused();
   await page.keyboard.press("ArrowRight");
   await expect(
     page.getByRole("radio", { name: "Wave", exact: true }),
   ).toHaveAttribute("aria-checked", "true");
+});
+
+test("French shortcut choices explain how recording starts and stops", async ({
+  page,
+}) => {
+  await mockTauri(page, { settings: { app_language: "fr" } });
+  await page.goto("/");
+  await page
+    .getByRole("button", {
+      name: "Maintenez pour enregistrer ; appuyez pour démarrer ou arrêter",
+    })
+    .click();
+  await expect(
+    page.getByRole("button", {
+      name: "Enregistre tant que le raccourci est maintenu",
+    }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("button", {
+      name: "Appuyez sur le raccourci pour démarrer l'enregistrement, appuyez à nouveau pour arrêter",
+    }),
+  ).toBeVisible();
 });
 
 test("palette previews paint their own surface", async ({ page }) => {

@@ -340,7 +340,7 @@
         "pressKeys": "Натисніть клавіші...",
         "bindings": {
           "transcribe": {
-            "name": "Гаряча клавіша транскрипції",
+            "name": "Сполучення клавіш для диктування",
             "description": "Комбінація клавіш для запису та транскрибування вашого голосу."
           },
           "cancel": {
@@ -381,14 +381,14 @@
         "description": "Оберіть мову для розпізнавання мовлення. Режим «Авто» визначить мову автоматично, а вибір конкретної мови може покращити точність.",
         "searchPlaceholder": "Пошук мов...",
         "noResults": "Мов не знайдено",
-        "auto": "Авто",
+        "auto": "Визначати мову автоматично",
         "autoUnavailable": {
-          "title": "Авто вимкнено",
+          "title": "Автоматичне визначення мови недоступне",
           "oneLanguage": "З цією моделлю працює лише одна з ваших мов",
           "undetectable": "Недоступно для: {{languages}}",
           "noMatch": "Жодна з ваших мов не працює з цією моделлю"
         },
-        "detectorMissingTitle": "Для режиму «Авто» потрібне окреме завантаження",
+        "detectorMissingTitle": "Для визначення мови потрібне завантаження",
         "detectorMissing": "Ця модель не може визначити, якою мовою ви говорите. Режиму «Авто» потрібен невеликий визначник мови",
         "stopDetectorDownload": "Зупинити завантаження визначника мови"
       },
@@ -399,7 +399,7 @@
         "weak": "Жодна модель поки що не розпізнає добре: {{languages}}."
       },
       "shortcutActivation": {
-        "title": "Поведінка комбінації клавіш",
+        "title": "Як працює сполучення",
         "description": "Виберіть, як гаряча клавіша транскрипції запускає та зупиняє запис.",
         "options": {
           "holdOrToggle": "Автоматично",
@@ -407,7 +407,7 @@
           "toggle": "Перемикання"
         },
         "descriptions": {
-          "hold_or_toggle": "Утримуйте для запису або натисніть коротко для перемикання",
+          "hold_or_toggle": "Утримуйте для запису; натисніть для початку чи зупинки",
           "push_to_talk": "Записує, поки комбінація клавіш утримується",
           "toggle": "Натисніть комбінацію клавіш, щоб почати запис, натисніть ще раз, щоб зупинити"
         }
@@ -452,7 +452,7 @@
         "deleteFailed": "Не вдалося видалити деякі старі моделі. Подробиці дивіться в журналі."
       },
       "rescan": {
-        "label": "Пересканувати",
+        "label": "Знайти додані моделі",
         "tooltip": "Пересканувати моделі, додані до папки моделей або кешу Hugging Face поза межами Handy Flow"
       }
     },
@@ -534,13 +534,13 @@
           "title": "Накладка",
           "description": "Виберіть накладку під час запису: «Немає» приховує її, «Мінімальна» показує компактний індикатор, «У реальному часі» показує транскрипцію під час мовлення (лише моделі з підтримкою потокової обробки — шукайте позначку «Потокове» у списку моделей). У Linux рекомендовано «Немає».",
           "options": {
-            "none": "Немає",
+            "none": "Приховано",
             "minimal": "Мінімальна",
             "live": "У реальному часі"
           }
         },
         "position": {
-          "title": "Позиція оверлею",
+          "title": "Розташування індикатора",
           "description": "Показувати візуальний оверлей під час запису та транскрипції. На Linux рекомендовано «Немає»",
           "options": {
             "bottom": "Внизу",
@@ -549,7 +549,7 @@
         }
       },
       "pasteMethod": {
-        "title": "Метод вставки",
+        "title": "Вставити текст",
         "description": "Оберіть спосіб вставки тексту. Прямий: емулює набір тексту. Немає: пропускає вставку, оновлює лише історію/буфер обміну.",
         "options": {
           "clipboard": "Буфер обміну ({{modifier}}+V)",
@@ -569,7 +569,7 @@
         }
       },
       "clipboardHandling": {
-        "title": "Робота з буфером обміну",
+        "title": "Буфер обміну після диктування",
         "description": "Не змінювати буфер обміну зберігає поточний вміст буфера після транскрипції. Копіювати в буфер обміну залишає результат транскрипції в буфері після вставки.",
         "options": {
           "dontModify": "Не змінювати буфер обміну",
@@ -577,7 +577,7 @@
         }
       },
       "autoSubmit": {
-        "title": "Автоматичне надсилання",
+        "title": "Надсилати після диктування",
         "description": "Автоматично надсилає вибрану комбінацію клавіш після вставки тексту. Cmd+Enter застосовується на macOS, тоді як Windows/Linux використовують Super+Enter.",
         "options": {
           "off": "Вимк.",
@@ -614,11 +614,11 @@
         "duplicate": "\"{{word}}\" вже існує"
       },
       "voiceActivityDetection": {
-        "title": "Виявлення голосової активності",
+        "title": "Прибирати тишу",
         "description": "Відфільтровує тишу із записів. Моделі з підтримкою потокової обробки використовують довший «хвіст» VAD; вимкнення VAD записує необроблений звук."
       },
       "longFormChunking": {
-        "title": "Поділ довгого аудіо",
+        "title": "Розділяти довгі записи",
         "description": "Розділяє довгі записи за паузами перед розпізнаванням, що зазвичай покращує якість розпізнавання. Розшифровувані файли та довгі повторні розшифрування завжди розділяються."
       },
       "languageDetection": {
@@ -628,7 +628,7 @@
         "downloadingHint": "Завантажується визначник мови. Вимкніть, щоб скасувати"
       },
       "vadBackend": {
-        "title": "Рушій виявлення голосу",
+        "title": "Виявлення тиші",
         "description": "Виберіть детектор для фільтрації тиші. Earshot — експериментальний; поверніться до Silero, якщо мовлення обрізається або шум зберігається.",
         "options": {
           "silero": "Silero",
@@ -1153,7 +1153,7 @@
         "compact": "Compact"
       },
       "overlay": {
-        "title": "Dictation overlay",
+        "title": "Індикатор диктування",
         "description": "The overlay shown during dictation. Hidden remains available in Advanced.",
         "pill": "Pill",
         "wave": "Wave",
@@ -1172,24 +1172,24 @@
       "reformulationLink": "Open Reformulation settings",
       "modeTitle": "Where should transcription run?",
       "localMode": "On this computer",
-      "localDescription": "Audio is transcribed locally, without a transcription API.",
-      "apiMode": "By API",
+      "localDescription": "Аудіо залишається на цьому комп’ютері.",
+      "apiMode": "Через постачальника",
       "apiDescription": "Send audio to a provider. Keep a local model as backup.",
       "apiSummary": "Transcription: {{provider}} · {{model}}",
       "localSummary": "Transcription on this computer: {{model}}",
       "configured": "API configured. Availability will be checked when you dictate.",
       "localSummaryHelp": "Uses the local model below. Text cleanup is configured separately.",
       "loading": "Loading configuration…",
-      "modelMissing": "No API model selected",
+      "modelMissing": "Модель постачальника не вибрано",
       "localMissing": "No local model available",
       "missingProvider": "Choose a supported transcription provider.",
-      "missingModel": "Choose an API transcription model.",
+      "missingModel": "Виберіть модель постачальника.",
       "missingKey": "Add an API key to use this provider.",
       "usingLocal": "Until then, the local model is used.",
       "noFallback": "No local backup is available. Download and select a model below to cover API failures and sessions that must stay local.",
       "sharedKey": "This key is also used for Reformulation with this provider. Changing it affects both uses.",
       "customKeyHelp": "A local server may not need a key. If provided, this key is shared with Reformulation.",
-      "advanced": "Advanced API settings",
+      "advanced": "Додаткові налаштування постачальника",
       "timeoutTitle": "Wait before local backup (seconds)",
       "serverUrl": "Server base URL (OpenAI compatible)",
       "sharedUrl": "This base URL is shared with Reformulation for the custom provider. Handy Flow adds /audio/transcriptions or /audio/translations.",
@@ -1209,7 +1209,7 @@
       "downloadFallback": "Download and use as local backup",
       "selectLocal": "Use for local transcription",
       "downloadLocal": "Download and use for local transcription",
-      "footerIncomplete": "Transcription API: setup incomplete",
+      "footerIncomplete": "Налаштування постачальника не завершено",
       "footerApi": "API: {{provider}} · {{model}}",
       "footerLocal": "Local: {{model}}",
       "saveError": "This change could not be confirmed. Check the displayed values and try again.",

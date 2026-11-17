@@ -340,7 +340,7 @@
         "pressKeys": "Appuyez sur les touches...",
         "bindings": {
           "transcribe": {
-            "name": "Raccourci de Transcription",
+            "name": "Raccourci de dictée",
             "description": "Le raccourci clavier pour enregistrer et transcrire votre voix."
           },
           "cancel": {
@@ -381,14 +381,14 @@
         "description": "Sélectionnez la langue pour la reconnaissance vocale. Auto déterminera automatiquement la langue, tandis que sélectionner une langue spécifique peut améliorer la précision pour cette langue.",
         "searchPlaceholder": "Rechercher des langues...",
         "noResults": "Aucune langue trouvée",
-        "auto": "Automatique",
+        "auto": "Détecter la langue automatiquement",
         "autoUnavailable": {
-          "title": "Automatique est désactivé",
+          "title": "Détection automatique de la langue indisponible",
           "oneLanguage": "Une seule de vos langues fonctionne avec ce modèle",
           "undetectable": "Indisponible avec {{languages}}",
           "noMatch": "Aucune de vos langues ne fonctionne avec ce modèle"
         },
-        "detectorMissingTitle": "Automatique nécessite un téléchargement séparé",
+        "detectorMissingTitle": "La détection de langue nécessite un téléchargement",
         "detectorMissing": "Ce modèle ne peut pas savoir quelle langue vous parlez. Automatique a besoin d'un petit détecteur de langue pour le déterminer",
         "stopDetectorDownload": "Arrêter le téléchargement du détecteur de langue"
       },
@@ -399,7 +399,7 @@
         "weak": "Aucun modèle ne reconnaît bien {{languages}} pour l'instant."
       },
       "shortcutActivation": {
-        "title": "Comportement du raccourci",
+        "title": "Fonctionnement du raccourci",
         "description": "Choisissez comment le raccourci de transcription démarre et arrête l’enregistrement.",
         "options": {
           "holdOrToggle": "Auto",
@@ -407,7 +407,7 @@
           "toggle": "Basculer"
         },
         "descriptions": {
-          "hold_or_toggle": "Maintenez pour enregistrer ou appuyez brièvement pour basculer",
+          "hold_or_toggle": "Maintenez pour enregistrer ; appuyez pour démarrer ou arrêter",
           "push_to_talk": "Enregistre tant que le raccourci est maintenu",
           "toggle": "Appuyez sur le raccourci pour démarrer l'enregistrement, appuyez à nouveau pour arrêter"
         }
@@ -452,7 +452,7 @@
         "deleteFailed": "Certains anciens modèles n'ont pas pu être supprimés. Consultez le journal pour plus de détails."
       },
       "rescan": {
-        "label": "Réanalyser",
+        "label": "Rechercher les modèles ajoutés",
         "tooltip": "Réanalyser pour détecter les modèles ajoutés au dossier des modèles ou au cache Hugging Face en dehors de Handy Flow"
       }
     },
@@ -534,13 +534,13 @@
           "title": "Overlay",
           "description": "Choisissez l'overlay d'enregistrement : « Aucun » le masque, « Minimal » affiche une pilule compacte, « Live » affiche la transcription en temps réel pendant que vous parlez (uniquement pour les modèles compatibles avec le streaming — recherchez le badge Streaming dans le sélecteur de modèle). Sur Linux, « Aucun » est recommandé.",
           "options": {
-            "none": "Aucune",
+            "none": "Masquée",
             "minimal": "Minimal",
             "live": "Live"
           }
         },
         "position": {
-          "title": "Position de la fenêtre d'enregistrement",
+          "title": "Position de la pastille",
           "description": "Afficher un retour visuel pendant l'enregistrement et la transcription. Sur Linux, 'Aucune' est recommandé.",
           "options": {
             "bottom": "Bas",
@@ -549,7 +549,7 @@
         }
       },
       "pasteMethod": {
-        "title": "Méthode de collage",
+        "title": "Insérer le texte",
         "description": "Choisissez comment le texte est inséré. Direct : simule la frappe via l'entrée système. Aucun : ignore le collage, met uniquement à jour l'historique/presse-papiers.",
         "options": {
           "clipboard": "Presse-papiers ({{modifier}}+V)",
@@ -569,7 +569,7 @@
         }
       },
       "clipboardHandling": {
-        "title": "Gestion du presse-papiers",
+        "title": "Presse-papiers après la dictée",
         "description": "Ne pas modifier le presse-papiers préserve le contenu actuel de votre presse-papiers après la transcription. Copier dans le presse-papiers laisse le résultat de la transcription dans votre presse-papiers après le collage.",
         "options": {
           "dontModify": "Ne pas modifier le presse-papiers",
@@ -577,7 +577,7 @@
         }
       },
       "autoSubmit": {
-        "title": "Envoi automatique",
+        "title": "Envoyer après la dictée",
         "description": "Envoie automatiquement la combinaison de touches sélectionnée après l'insertion du texte. Cmd+Enter s'applique sur macOS, tandis que Windows/Linux utilisent Super+Enter.",
         "options": {
           "off": "Désactivé",
@@ -614,11 +614,11 @@
         "duplicate": "\"{{word}}\" existe déjà"
       },
       "voiceActivityDetection": {
-        "title": "Détection d'activité vocale (VAD)",
+        "title": "Filtrer les silences",
         "description": "Filtre le silence des enregistrements. Les modèles compatibles avec le streaming utilisent une marge de détection VAD plus longue ; désactiver le VAD enregistre l'audio brut."
       },
       "longFormChunking": {
-        "title": "Découpage des longs enregistrements",
+        "title": "Découper les longs enregistrements",
         "description": "Découpe les longs enregistrements aux pauses avant la transcription, ce qui améliore généralement la qualité de la transcription. Les fichiers transcrits et les longues re-transcriptions sont toujours découpés."
       },
       "languageDetection": {
@@ -628,7 +628,7 @@
         "downloadingHint": "Téléchargement du détecteur de langue. Désactivez pour annuler"
       },
       "vadBackend": {
-        "title": "Backend de détection vocale",
+        "title": "Détecteur de silence",
         "description": "Choisissez le détecteur utilisé pour filtrer le silence. Earshot est expérimental ; revenez à Silero si la parole est coupée ou si le bruit est conservé.",
         "options": {
           "silero": "Silero",
@@ -1172,24 +1172,24 @@
       "reformulationLink": "Ouvrir les réglages de reformulation",
       "modeTitle": "Où effectuer la transcription ?",
       "localMode": "Sur cet ordinateur",
-      "localDescription": "L’audio est transcrit localement, sans API de transcription.",
-      "apiMode": "Par API",
+      "localDescription": "Le son reste sur cet ordinateur.",
+      "apiMode": "Via un fournisseur",
       "apiDescription": "L’audio est envoyé à un fournisseur. Gardez un modèle local en secours.",
       "apiSummary": "Transcription : {{provider}} · {{model}}",
       "localSummary": "Transcription sur cet ordinateur : {{model}}",
       "configured": "API configurée. Sa disponibilité sera vérifiée lors de votre prochaine dictée.",
       "localSummaryHelp": "Le modèle local ci-dessous est utilisé. La reformulation se configure séparément.",
       "loading": "Chargement de la configuration…",
-      "modelMissing": "Aucun modèle API choisi",
+      "modelMissing": "Aucun modèle de fournisseur sélectionné",
       "localMissing": "Aucun modèle local disponible",
       "missingProvider": "Choisissez un fournisseur de transcription compatible.",
-      "missingModel": "Choisissez un modèle de transcription API.",
+      "missingModel": "Choisissez un modèle du fournisseur.",
       "missingKey": "Ajoutez une clé API pour utiliser ce fournisseur.",
       "usingLocal": "En attendant, le modèle local est utilisé.",
       "noFallback": "Aucun secours local disponible. Téléchargez et sélectionnez un modèle ci-dessous pour couvrir les erreurs API et les dictées qui doivent rester locales.",
       "sharedKey": "Cette clé sert aussi à la reformulation chez ce fournisseur. La modifier affecte les deux usages.",
       "customKeyHelp": "Un serveur local peut fonctionner sans clé. Si vous en renseignez une, elle sera partagée avec la reformulation.",
-      "advanced": "Réglages API avancés",
+      "advanced": "Réglages avancés du fournisseur",
       "timeoutTitle": "Attente avant le secours local (secondes)",
       "serverUrl": "URL de base du serveur (compatible OpenAI)",
       "sharedUrl": "Cette URL est partagée avec la reformulation pour le fournisseur personnalisé. Handy Flow ajoute /audio/transcriptions ou /audio/translations.",
@@ -1209,7 +1209,7 @@
       "downloadFallback": "Télécharger et utiliser comme secours local",
       "selectLocal": "Utiliser pour la transcription locale",
       "downloadLocal": "Télécharger et utiliser pour la transcription locale",
-      "footerIncomplete": "API de transcription : configuration incomplète",
+      "footerIncomplete": "Configuration du fournisseur incomplète",
       "footerApi": "API : {{provider}} · {{model}}",
       "footerLocal": "Local : {{model}}",
       "saveError": "Impossible de confirmer l’enregistrement de cette modification. Vérifiez les valeurs affichées et réessayez.",

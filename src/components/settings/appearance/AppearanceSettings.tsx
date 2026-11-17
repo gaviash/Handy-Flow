@@ -2,6 +2,7 @@ import React from "react";
 import { useTranslation } from "react-i18next";
 import { SettingsGroup } from "../../ui/SettingsGroup";
 import { ThemeSelector } from "../ThemeSelector";
+import { ShowOverlay } from "../ShowOverlay";
 import { SettingContainer } from "../../ui/SettingContainer";
 import { Segmented } from "../../ui/Segmented";
 import { PalettePicker } from "./PalettePicker";
@@ -11,7 +12,12 @@ import {
   normalizeAppearance,
 } from "@/lib/utils/appearance";
 
-export const AppearanceSettings: React.FC = () => {
+export const AppearanceSettings: React.FC<{ focusPill?: boolean }> = ({
+  focusPill = false,
+}) => {
+  React.useEffect(() => {
+    if (focusPill) document.getElementById("dictation-pill")?.scrollIntoView();
+  }, [focusPill]);
   const { t } = useTranslation();
   const { settings, updateSetting } = useSettings();
   if (!settings) return null;
@@ -77,46 +83,58 @@ export const AppearanceSettings: React.FC = () => {
             }
           />
         </SettingContainer>
-        <SettingContainer
-          title={label("pillTone.title")}
-          description={label("pillTone.description")}
-          grouped
-        >
-          <Segmented<"discreet" | "expressive">
-            ariaLabel={label("pillTone.title")}
-            value={appearance.pill_tone}
-            options={(["discreet", "expressive"] as const).map((value) => ({
-              value,
-              label: label(`pillTone.${value}`),
-            }))}
-            onChange={(value) => void updateSetting("pill_tone", value)}
-          />
-        </SettingContainer>
-        <SettingContainer
-          title={label("overlay.title")}
-          description={label("overlay.description")}
-          grouped
-        >
-          <Segmented
-            ariaLabel={label("overlay.title")}
-            value={overlay ?? "none"}
-            options={["pill", "wave", "live"].map((value) => ({
-              value,
-              label: label(`overlay.${value}`),
-            }))}
-            onChange={(value) =>
-              withThemeTransition(() => {
-                void updateSetting(
-                  "overlay_style",
-                  value === "live" ? "live" : "minimal",
-                );
-                if (value !== "live")
-                  void updateSetting("overlay_show_label", value === "pill");
-              })
-            }
-          />
-        </SettingContainer>
       </SettingsGroup>
+      <div id="dictation-pill">
+        <SettingsGroup title={label("overlay.title")}>
+          <SettingContainer
+            title={label("pillTone.title")}
+            description={label("pillTone.description")}
+            grouped
+          >
+            <Segmented<"discreet" | "expressive">
+              ariaLabel={label("pillTone.title")}
+              value={appearance.pill_tone}
+              options={(["discreet", "expressive"] as const).map((value) => ({
+                value,
+                label: label(`pillTone.${value}`),
+              }))}
+              onChange={(value) => void updateSetting("pill_tone", value)}
+            />
+          </SettingContainer>
+          <SettingContainer
+            title={label("overlay.title")}
+          description={label("pillTone.description")}
+            grouped
+          >
+            <Segmented
+              ariaLabel={label("overlay.title")}
+              value={overlay ?? "none"}
+              options={["pill", "wave", "live", "none"].map((value) => ({
+                value,
+                label:
+                  value === "none"
+                    ? t("settings.advanced.overlay.style.options.none")
+                    : label(`overlay.${value}`),
+              }))}
+              onChange={(value) =>
+                withThemeTransition(() => {
+                  void updateSetting(
+                    "overlay_style",
+                    value === "none"
+                      ? "none"
+                      : value === "live"
+                        ? "live"
+                        : "minimal",
+                  );
+                  if (value === "pill" || value === "wave")
+                    void updateSetting("overlay_show_label", value === "pill");
+                })
+              }
+            />
+          </SettingContainer>
+          <ShowOverlay grouped />
+        </SettingsGroup>
+      </div>
     </div>
   );
 };

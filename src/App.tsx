@@ -25,7 +25,12 @@ import {
   clearOnboardingProgress,
   type OnboardingStep as OnboardingPreviewStep,
 } from "./components/onboarding/onboardingStore";
-import { DebugSettings, ModelsSettings } from "./components/settings";
+import {
+  AdvancedSettings,
+  AppearanceSettings,
+  DebugSettings,
+  ModelsSettings,
+} from "./components/settings";
 import { ErrorBoundary } from "./components/ErrorBoundary";
 import { FileDropOverlay } from "./components/FileDropOverlay";
 import { Sidebar, SidebarSection, SECTIONS_CONFIG } from "./components/Sidebar";
@@ -53,6 +58,7 @@ const renderSettingsContent = (
   onRunOnboarding: () => void,
   onRunModelMigration: () => void,
   onSectionChange: (section: SidebarSection) => void,
+  focusPill: boolean,
 ) => {
   if (section === "models") {
     return (
@@ -62,6 +68,15 @@ const renderSettingsContent = (
       />
     );
   }
+  if (section === "advanced") {
+    return (
+      <AdvancedSettings
+        onShowAppearance={() => onSectionChange("appearance")}
+      />
+    );
+  }
+  if (section === "appearance")
+    return <AppearanceSettings focusPill={focusPill} />;
   if (section === "debug") {
     return (
       <DebugSettings
@@ -89,6 +104,7 @@ function App() {
   const [migrationModelId, setMigrationModelId] = useState<string | null>(null);
   const [currentSection, setCurrentSection] =
     useState<SidebarSection>("general");
+  const [focusPill, setFocusPill] = useState(false);
   const showHistory = useCallback(() => setCurrentSection("history"), []);
   const { settings, updateSetting } = useSettings();
   const direction = getLanguageDirection(i18n.language);
@@ -353,7 +369,10 @@ function App() {
         <div className="flex-1 flex overflow-hidden">
           <Sidebar
             activeSection={currentSection}
-            onSectionChange={setCurrentSection}
+            onSectionChange={(section) => {
+              setFocusPill(false);
+              setCurrentSection(section);
+            }}
           />
           {/* Scrollable content area */}
           <div className="flex-1 flex flex-col overflow-hidden">
@@ -375,7 +394,11 @@ function App() {
                   setOnboardingPreview,
                   runOnboarding,
                   runModelMigration,
-                  setCurrentSection,
+                  (section) => {
+                    setFocusPill(section === "appearance");
+                    setCurrentSection(section);
+                  },
+                  focusPill,
                 )}
               </div>
             </div>

@@ -340,7 +340,7 @@
         "pressKeys": "किहरू थिच्नुहोस्...",
         "bindings": {
           "transcribe": {
-            "name": "ट्रान्सक्राइब सर्टकट",
+            "name": "डिक्टेसन सर्टकट",
             "description": "तपाईंको आवाज रेकर्ड गरी ट्रान्सक्राइब गर्ने किबोर्ड सर्टकट।"
           },
           "cancel": {
@@ -381,14 +381,14 @@
         "description": "वाक् पहिचानका लागि भाषा चयन गर्नुहोस्। Auto ले भाषा स्वतः निर्धारण गर्छ, भने कुनै निश्चित भाषा चयन गर्दा त्यस भाषाको शुद्धता सुधार हुन सक्छ।",
         "searchPlaceholder": "भाषाहरू खोज्नुहोस्...",
         "noResults": "कुनै भाषा भेटिएन",
-        "auto": "स्वतः",
+        "auto": "भाषा स्वतः पहिचान गर्नुहोस्",
         "autoUnavailable": {
-          "title": "स्वतः बन्द छ",
+          "title": "स्वतः भाषा पहिचान उपलब्ध छैन",
           "oneLanguage": "तपाईंका भाषाहरूमध्ये एउटा मात्र यो मोडेलसँग काम गर्छ",
           "undetectable": "{{languages}} सँग उपलब्ध छैन",
           "noMatch": "तपाईंका कुनै पनि भाषा यो मोडेलसँग काम गर्दैनन्"
         },
-        "detectorMissingTitle": "स्वतःका लागि छुट्टै डाउनलोड चाहिन्छ",
+        "detectorMissingTitle": "भाषा पहिचान गर्न डाउनलोड आवश्यक छ",
         "detectorMissing": "यो मोडेलले तपाईं कुन भाषा बोल्दै हुनुहुन्छ भनेर चिन्न सक्दैन। स्वतःलाई त्यो पत्ता लगाउन एउटा सानो भाषा पहिचानकर्ता चाहिन्छ",
         "stopDetectorDownload": "भाषा पहिचानकर्ताको डाउनलोड रोक्नुहोस्"
       },
@@ -399,7 +399,7 @@
         "weak": "कुनै मोडेलले अहिलेसम्म {{languages}} राम्ररी चिन्दैन।"
       },
       "shortcutActivation": {
-        "title": "सर्टकटको व्यवहार",
+        "title": "सर्टकटले कसरी काम गर्छ",
         "description": "ट्रान्सक्राइब सर्टकटले रेकर्डिङ सुरु र बन्द गर्ने तरिका छान्नुहोस्।",
         "options": {
           "holdOrToggle": "स्वचालित",
@@ -407,7 +407,7 @@
           "toggle": "टगल"
         },
         "descriptions": {
-          "hold_or_toggle": "रेकर्ड गर्न थिचिराख्नुहोस् वा टगल गर्न ट्याप गर्नुहोस्",
+          "hold_or_toggle": "रेकर्ड गर्न थिचिराख्नुहोस्; सुरु वा रोक्न थिच्नुहोस्",
           "push_to_talk": "सर्टकट थिचिराखेसम्म रेकर्ड गर्छ",
           "toggle": "रेकर्डिङ सुरु गर्न सर्टकट ट्याप गर्नुहोस्, रोक्न फेरि ट्याप गर्नुहोस्"
         }
@@ -452,7 +452,7 @@
         "deleteFailed": "केही पुराना मोडेलहरू मेटाउन सकिएन। विवरणका लागि लग हेर्नुहोस्।"
       },
       "rescan": {
-        "label": "फेरि स्क्यान गर्नुहोस्",
+        "label": "थपिएका मोडेल खोज्नुहोस्",
         "tooltip": "Handy Flow बाहिरबाट मोडेल फोल्डर वा Hugging Face क्यासमा थपिएका मोडेलहरू फेरि स्क्यान गर्नुहोस्"
       }
     },
@@ -534,13 +534,13 @@
           "title": "ओभरले",
           "description": "रेकर्डिङ ओभरले छान्नुहोस्: 'कुनै होइन' ले लुकाउँछ, 'मिनिमल' ले सानो पिल देखाउँछ, 'लाइभ' ले बोल्दै गर्दा वास्तविक समयमा ट्रान्सक्रिप्सन देखाउँछ (स्ट्रिमिङ-सक्षम मोडेलहरूमा मात्र — मोडेल पिकरमा स्ट्रिमिङ ब्याज हेर्नुहोस्)। Linux मा 'कुनै होइन' सिफारिस गरिन्छ।",
           "options": {
-            "none": "कुनै होइन",
+            "none": "लुकाइएको",
             "minimal": "मिनिमल",
             "live": "लाइभ"
           }
         },
         "position": {
-          "title": "ओभरले स्थिति",
+          "title": "सूचकको स्थान",
           "description": "रेकर्डिङ र ट्रान्सक्रिप्सनका बेला ओभरले स्क्रिनमा कहाँ देखिन्छ।",
           "options": {
             "bottom": "तल",
@@ -549,7 +549,7 @@
         }
       },
       "pasteMethod": {
-        "title": "पेस्ट विधि",
+        "title": "पाठ राख्नुहोस्",
         "description": "टेक्स्ट कसरी घुसाइन्छ छान्नुहोस्। डाइरेक्ट: सिस्टम इनपुटमार्फत टाइपिङ अनुकरण गर्छ। कुनै होइन: पेस्ट नगरी हिस्ट्री/क्लिपबोर्ड मात्र अपडेट गर्छ।",
         "options": {
           "clipboard": "क्लिपबोर्ड ({{modifier}}+V)",
@@ -569,7 +569,7 @@
         }
       },
       "clipboardHandling": {
-        "title": "क्लिपबोर्ड व्यवस्थापन",
+        "title": "डिक्टेसनपछिको क्लिपबोर्ड",
         "description": "'क्लिपबोर्ड परिवर्तन नगर्नुहोस्' ले ट्रान्सक्रिप्सनपछि तपाईंको हालको क्लिपबोर्ड सामग्री जोगाउँछ। 'क्लिपबोर्डमा कपी गर्नुहोस्' ले पेस्ट गरेपछि ट्रान्सक्रिप्सन नतिजा क्लिपबोर्डमा छोड्छ।",
         "options": {
           "dontModify": "क्लिपबोर्ड परिवर्तन नगर्नुहोस्",
@@ -577,7 +577,7 @@
         }
       },
       "autoSubmit": {
-        "title": "स्वतः सबमिट",
+        "title": "डिक्टेसनपछि पठाउनुहोस्",
         "description": "टेक्स्ट घुसाएपछि चयन गरिएको कि संयोजन स्वतः पठाउनुहोस्। Cmd+Enter macOS मा लागू हुन्छ, भने Windows/Linux ले Super+Enter प्रयोग गर्छ।",
         "options": {
           "off": "अफ",
@@ -614,11 +614,11 @@
         "duplicate": "\"{{word}}\" पहिले नै छ"
       },
       "voiceActivityDetection": {
-        "title": "भ्वाइस एक्टिभिटी डिटेक्सन",
+        "title": "मौनता हटाउनुहोस्",
         "description": "रेकर्डिङबाट मौनता हटाउँछ। स्ट्रिमिङ-सक्षम मोडेलहरूले लामो VAD टेल प्रयोग गर्छन्; VAD अफ गर्दा कच्चा अडियो रेकर्ड हुन्छ।"
       },
       "longFormChunking": {
-        "title": "लामो अडियो विभाजन",
+        "title": "लामा रेकर्डिङ विभाजन गर्नुहोस्",
         "description": "ट्रान्सक्राइब गर्नुअघि लामो रेकर्डिङलाई विरामहरूमा विभाजन गर्छ, जसले सामान्यतया ट्रान्सक्रिप्सन सुधार गर्छ। ट्रान्सक्राइब गरिएका फाइलहरू र लामो पुनः ट्रान्सक्रिप्सनहरू सधैं विभाजन गरिन्छन्।"
       },
       "languageDetection": {
@@ -628,7 +628,7 @@
         "downloadingHint": "भाषा पहिचानकर्ता डाउनलोड हुँदैछ। रद्द गर्न यो बन्द गर्नुहोस्"
       },
       "vadBackend": {
-        "title": "भ्वाइस एक्टिभिटी ब्याकएन्ड",
+        "title": "मौनता पहिचान गर्ने साधन",
         "description": "मौनता फिल्टर गर्न प्रयोग हुने डिटेक्टर छान्नुहोस्। Earshot प्रयोगात्मक हो; बोली काटिएमा वा आवाज रहिरहेमा Silero मा फर्कनुहोस्।",
         "options": {
           "silero": "Silero",
@@ -1153,7 +1153,7 @@
         "compact": "Compact"
       },
       "overlay": {
-        "title": "Dictation overlay",
+        "title": "डिक्टेसन सूचक",
         "description": "The overlay shown during dictation. Hidden remains available in Advanced.",
         "pill": "Pill",
         "wave": "Wave",
@@ -1172,24 +1172,24 @@
       "reformulationLink": "Open Reformulation settings",
       "modeTitle": "Where should transcription run?",
       "localMode": "On this computer",
-      "localDescription": "Audio is transcribed locally, without a transcription API.",
-      "apiMode": "By API",
+      "localDescription": "अडियो यही कम्प्युटरमा रहन्छ।",
+      "apiMode": "प्रदायक मार्फत",
       "apiDescription": "Send audio to a provider. Keep a local model as backup.",
       "apiSummary": "Transcription: {{provider}} · {{model}}",
       "localSummary": "Transcription on this computer: {{model}}",
       "configured": "API configured. Availability will be checked when you dictate.",
       "localSummaryHelp": "Uses the local model below. Text cleanup is configured separately.",
       "loading": "Loading configuration…",
-      "modelMissing": "No API model selected",
+      "modelMissing": "प्रदायकको मोडेल छानिएको छैन",
       "localMissing": "No local model available",
       "missingProvider": "Choose a supported transcription provider.",
-      "missingModel": "Choose an API transcription model.",
+      "missingModel": "प्रदायकको मोडेल छान्नुहोस्।",
       "missingKey": "Add an API key to use this provider.",
       "usingLocal": "Until then, the local model is used.",
       "noFallback": "No local backup is available. Download and select a model below to cover API failures and sessions that must stay local.",
       "sharedKey": "This key is also used for Reformulation with this provider. Changing it affects both uses.",
       "customKeyHelp": "A local server may not need a key. If provided, this key is shared with Reformulation.",
-      "advanced": "Advanced API settings",
+      "advanced": "प्रदायकका उन्नत सेटिङ",
       "timeoutTitle": "Wait before local backup (seconds)",
       "serverUrl": "Server base URL (OpenAI compatible)",
       "sharedUrl": "This base URL is shared with Reformulation for the custom provider. Handy Flow adds /audio/transcriptions or /audio/translations.",
@@ -1209,7 +1209,7 @@
       "downloadFallback": "Download and use as local backup",
       "selectLocal": "Use for local transcription",
       "downloadLocal": "Download and use for local transcription",
-      "footerIncomplete": "Transcription API: setup incomplete",
+      "footerIncomplete": "प्रदायकको सेटअप अपूरो छ",
       "footerApi": "API: {{provider}} · {{model}}",
       "footerLocal": "Local: {{model}}",
       "saveError": "This change could not be confirmed. Check the displayed values and try again.",

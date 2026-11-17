@@ -340,7 +340,7 @@
         "pressKeys": "Tryk på ønskede taster...",
         "bindings": {
           "transcribe": {
-            "name": "Transskriptionsgenvej",
+            "name": "Dikteringsgenvej",
             "description": "Tastaturgenvejen til at optage og transskribere din stemme."
           },
           "cancel": {
@@ -381,14 +381,14 @@
         "description": "Vælg sproget til talegenkendelse. Auto tyder automatisk sproget, mens valg af et specifikt sprog kan forbedre nøjagtigheden for det pågældende sprog.",
         "searchPlaceholder": "Søg efter sprog...",
         "noResults": "Ingen sprog fundet",
-        "auto": "Automatisk",
+        "auto": "Registrer sprog automatisk",
         "autoUnavailable": {
-          "title": "Automatisk er slået fra",
+          "title": "Automatisk sprogregistrering er ikke tilgængelig",
           "oneLanguage": "Kun ét af dine sprog virker med denne model",
           "undetectable": "Ikke tilgængelig med {{languages}}",
           "noMatch": "Ingen af dine sprog virker med denne model"
         },
-        "detectorMissingTitle": "Automatisk kræver en separat download",
+        "detectorMissingTitle": "Sprogregistrering kræver en download",
         "detectorMissing": "Denne model kan ikke afgøre, hvilket sprog du taler. Automatisk har brug for en lille sprogregistrering til at finde ud af det",
         "stopDetectorDownload": "Stop download af sprogregistreringen"
       },
@@ -399,7 +399,7 @@
         "weak": "Ingen model genkender {{languages}} godt endnu."
       },
       "shortcutActivation": {
-        "title": "Genvejens adfærd",
+        "title": "Sådan virker genvejen",
         "description": "Vælg, hvordan transskriptionsgenvejen starter og stopper optagelsen.",
         "options": {
           "holdOrToggle": "Automatisk",
@@ -407,7 +407,7 @@
           "toggle": "Skift"
         },
         "descriptions": {
-          "hold_or_toggle": "Hold nede for at optage, eller tryk kort for at slå til/fra",
+          "hold_or_toggle": "Hold nede for at optage; tryk for at starte eller stoppe",
           "push_to_talk": "Optager, mens du holder genvejen nede",
           "toggle": "Tryk på genvejen for at starte optagelsen, tryk igen for at stoppe"
         }
@@ -452,7 +452,7 @@
         "deleteFailed": "Nogle gamle modeller kunne ikke slettes. Se loggen for detaljer."
       },
       "rescan": {
-        "label": "Søg igen",
+        "label": "Find tilføjede modeller",
         "tooltip": "Søg igen efter modeller, der er tilføjet til modelmappen eller Hugging Face-cachen uden for Handy Flow"
       }
     },
@@ -534,13 +534,13 @@
           "title": "Overlay",
           "description": "Vælg optagelses-overlay: Ingen skjuler det, Minimal viser en kompakt pille, Live viser transskription i realtid, mens du taler (kun modeller med streaming-understøttelse — se efter Streaming-mærket i modelvælgeren). På Linux anbefales 'Ingen'.",
           "options": {
-            "none": "Ingen",
+            "none": "Skjult",
             "minimal": "Minimal",
             "live": "Live"
           }
         },
         "position": {
-          "title": "Overlay-placering",
+          "title": "Indikatorens placering",
           "description": "Hvor overlayet vises på skærmen under optagelse og transskription.",
           "options": {
             "bottom": "Bund",
@@ -549,7 +549,7 @@
         }
       },
       "pasteMethod": {
-        "title": "Indsætningsmetode",
+        "title": "Indsæt tekst",
         "description": "Vælg, hvordan tekst indsættes. Direkte: simulerer tastetryk via systeminput. Ingen: springer indsætning over, opdaterer kun historik/udklipsholder.",
         "options": {
           "clipboard": "Udklipsholder ({{modifier}}+V)",
@@ -569,7 +569,7 @@
         }
       },
       "clipboardHandling": {
-        "title": "Håndtering af udklipsholder",
+        "title": "Udklipsholder efter diktering",
         "description": "Rør ikke ved udklipsholder bevarer dit nuværende udklipsholderindhold efter transskription. Kopiér til udklipsholder efterlader transskriptionsresultatet i din udklipsholder efter indsætning.",
         "options": {
           "dontModify": "Rør ikke ved udklipsholder",
@@ -577,7 +577,7 @@
         }
       },
       "autoSubmit": {
-        "title": "Automatisk indsendelse",
+        "title": "Send efter diktering",
         "description": "Send automatisk den valgte tastekombination efter tekstindsættelse. Cmd+Enter gælder på macOS, mens Windows/Linux bruger Super+Enter.",
         "options": {
           "off": "Fra",
@@ -614,11 +614,11 @@
         "duplicate": "\"{{word}}\" findes allerede"
       },
       "voiceActivityDetection": {
-        "title": "Stemmeaktivitetsdetektion",
+        "title": "Filtrer stilhed",
         "description": "Filtrer stilhed fra optagelser. Streaming-modeller bruger en længere VAD-hale; deaktivering af VAD optager rå lyd."
       },
       "longFormChunking": {
-        "title": "Opdeling af lang lyd",
+        "title": "Opdel lange optagelser",
         "description": "Deler lange optagelser ved pauser før transskribering, hvilket typisk forbedrer transskriptionen. Transskriberede filer og lange gentransskriberinger deles altid."
       },
       "languageDetection": {
@@ -628,7 +628,7 @@
         "downloadingHint": "Sprogregistreringen downloades. Slå det fra for at annullere"
       },
       "vadBackend": {
-        "title": "Stemmedetektions-backend",
+        "title": "Stilhedsregistrering",
         "description": "Vælg den detektor, der bruges til at filtrere stilhed. Earshot er eksperimentel; skift tilbage til Silero, hvis tale klippes eller støj bevares.",
         "options": {
           "silero": "Silero",
@@ -1153,7 +1153,7 @@
         "compact": "Compact"
       },
       "overlay": {
-        "title": "Dictation overlay",
+        "title": "Dikteringsindikator",
         "description": "The overlay shown during dictation. Hidden remains available in Advanced.",
         "pill": "Pill",
         "wave": "Wave",
@@ -1172,24 +1172,24 @@
       "reformulationLink": "Open Reformulation settings",
       "modeTitle": "Where should transcription run?",
       "localMode": "On this computer",
-      "localDescription": "Audio is transcribed locally, without a transcription API.",
-      "apiMode": "By API",
+      "localDescription": "Lyden bliver på denne computer.",
+      "apiMode": "Via en udbyder",
       "apiDescription": "Send audio to a provider. Keep a local model as backup.",
       "apiSummary": "Transcription: {{provider}} · {{model}}",
       "localSummary": "Transcription on this computer: {{model}}",
       "configured": "API configured. Availability will be checked when you dictate.",
       "localSummaryHelp": "Uses the local model below. Text cleanup is configured separately.",
       "loading": "Loading configuration…",
-      "modelMissing": "No API model selected",
+      "modelMissing": "Ingen udbydermodel valgt",
       "localMissing": "No local model available",
       "missingProvider": "Choose a supported transcription provider.",
-      "missingModel": "Choose an API transcription model.",
+      "missingModel": "Vælg en udbydermodel.",
       "missingKey": "Add an API key to use this provider.",
       "usingLocal": "Until then, the local model is used.",
       "noFallback": "No local backup is available. Download and select a model below to cover API failures and sessions that must stay local.",
       "sharedKey": "This key is also used for Reformulation with this provider. Changing it affects both uses.",
       "customKeyHelp": "A local server may not need a key. If provided, this key is shared with Reformulation.",
-      "advanced": "Advanced API settings",
+      "advanced": "Avancerede udbyderindstillinger",
       "timeoutTitle": "Wait before local backup (seconds)",
       "serverUrl": "Server base URL (OpenAI compatible)",
       "sharedUrl": "This base URL is shared with Reformulation for the custom provider. Handy Flow adds /audio/transcriptions or /audio/translations.",
@@ -1209,7 +1209,7 @@
       "downloadFallback": "Download and use as local backup",
       "selectLocal": "Use for local transcription",
       "downloadLocal": "Download and use for local transcription",
-      "footerIncomplete": "Transcription API: setup incomplete",
+      "footerIncomplete": "Udbyderen er ikke færdigkonfigureret",
       "footerApi": "API: {{provider}} · {{model}}",
       "footerLocal": "Local: {{model}}",
       "saveError": "This change could not be confirmed. Check the displayed values and try again.",

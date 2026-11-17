@@ -340,7 +340,7 @@
         "pressKeys": "Press keys...",
         "bindings": {
           "transcribe": {
-            "name": "Transcribe Shortcut",
+            "name": "Dictation shortcut",
             "description": "The keyboard shortcut to record and transcribe your voice."
           },
           "cancel": {
@@ -381,14 +381,14 @@
         "description": "Select the language for speech recognition. Auto will automatically determine the language, while selecting a specific language can improve accuracy for that language.",
         "searchPlaceholder": "Search languages...",
         "noResults": "No languages found",
-        "auto": "Auto",
+        "auto": "Detect language automatically",
         "autoUnavailable": {
-          "title": "Auto is disabled",
+          "title": "Automatic language detection unavailable",
           "oneLanguage": "Only one of your languages works with this model",
           "undetectable": "Not available with {{languages}}",
           "noMatch": "None of your languages work with this model"
         },
-        "detectorMissingTitle": "Auto needs a separate download",
+        "detectorMissingTitle": "Language detection needs a download",
         "detectorMissing": "This model can't tell which language you're speaking. Auto needs a small language detector to figure it out",
         "stopDetectorDownload": "Stop downloading the language detector"
       },
@@ -399,7 +399,7 @@
         "weak": "No model recognizes {{languages}} well yet."
       },
       "shortcutActivation": {
-        "title": "Shortcut Behavior",
+        "title": "How the shortcut works",
         "description": "Choose how the transcribe shortcut starts and stops recording.",
         "options": {
           "holdOrToggle": "Auto",
@@ -407,7 +407,7 @@
           "toggle": "Toggle"
         },
         "descriptions": {
-          "hold_or_toggle": "Hold to record or tap to toggle",
+          "hold_or_toggle": "Hold to record; tap to start or stop",
           "push_to_talk": "Records while you hold the shortcut",
           "toggle": "Tap the shortcut to start recording, tap again to stop"
         }
@@ -452,7 +452,7 @@
         "deleteFailed": "Some old models couldn't be deleted. Check the log for details."
       },
       "rescan": {
-        "label": "Rescan",
+        "label": "Find added models",
         "tooltip": "Rescan for models added to the models folder or Hugging Face cache outside Handy Flow"
       }
     },
@@ -534,13 +534,13 @@
           "title": "Overlay",
           "description": "Choose the recording overlay: None hides it, Minimal shows a compact pill, Live shows transcription in real time as you speak (streaming-capable models only — look for the Streaming badge in the model picker). On Linux 'None' is recommended.",
           "options": {
-            "none": "None",
+            "none": "Hidden",
             "minimal": "Minimal",
             "live": "Live"
           }
         },
         "position": {
-          "title": "Overlay Position",
+          "title": "Pill position",
           "description": "Where the overlay appears on screen during recording and transcription.",
           "options": {
             "bottom": "Bottom",
@@ -549,7 +549,7 @@
         }
       },
       "pasteMethod": {
-        "title": "Paste Method",
+        "title": "Insert text",
         "description": "Choose how text is inserted. Direct: simulates typing via system input. None: skips paste, only updates history/clipboard.",
         "options": {
           "clipboard": "Clipboard ({{modifier}}+V)",
@@ -569,7 +569,7 @@
         }
       },
       "clipboardHandling": {
-        "title": "Clipboard Handling",
+        "title": "Clipboard after dictation",
         "description": "Don't Modify Clipboard preserves your current clipboard contents after transcription. Copy to Clipboard leaves the transcription result in your clipboard after pasting.",
         "options": {
           "dontModify": "Don't Modify Clipboard",
@@ -577,7 +577,7 @@
         }
       },
       "autoSubmit": {
-        "title": "Auto Submit",
+        "title": "Send after dictation",
         "description": "Automatically send the selected key combination after text insertion. Cmd+Enter applies on macOS, while Windows/Linux use Super+Enter.",
         "options": {
           "off": "Off",
@@ -614,11 +614,11 @@
         "duplicate": "\"{{word}}\" already exists"
       },
       "voiceActivityDetection": {
-        "title": "Voice Activity Detection",
+        "title": "Filter silence",
         "description": "Filter silence from recordings. Streaming-capable models use a longer VAD tail; disabling VAD records raw audio."
       },
       "longFormChunking": {
-        "title": "Long Audio Chunking",
+        "title": "Split long recordings",
         "description": "Splits long recordings at pauses before transcribing, which typically improves transcription performance. Transcribed files and long re-transcriptions are always split."
       },
       "languageDetection": {
@@ -628,7 +628,7 @@
         "downloadingHint": "Downloading the language detector. Turn this off to cancel"
       },
       "vadBackend": {
-        "title": "Voice Activity Backend",
+        "title": "Silence detector",
         "description": "Choose the detector used to filter silence. Earshot is experimental; switch back to Silero if speech is clipped or noise is retained.",
         "options": {
           "silero": "Silero",
@@ -1153,7 +1153,7 @@
         "compact": "Compact"
       },
       "overlay": {
-        "title": "Dictation overlay",
+        "title": "Dictation pill",
         "description": "The overlay shown during dictation. Hidden remains available in Advanced.",
         "pill": "Pill",
         "wave": "Wave",
@@ -1172,24 +1172,24 @@
       "reformulationLink": "Open Reformulation settings",
       "modeTitle": "Where should transcription run?",
       "localMode": "On this computer",
-      "localDescription": "Audio is transcribed locally, without a transcription API.",
-      "apiMode": "By API",
+      "localDescription": "Audio stays on this computer.",
+      "apiMode": "Through a provider",
       "apiDescription": "Send audio to a provider. Keep a local model as backup.",
       "apiSummary": "Transcription: {{provider}} · {{model}}",
       "localSummary": "Transcription on this computer: {{model}}",
       "configured": "API configured. Availability will be checked when you dictate.",
       "localSummaryHelp": "Uses the local model below. Text cleanup is configured separately.",
       "loading": "Loading configuration…",
-      "modelMissing": "No API model selected",
+      "modelMissing": "No provider model selected",
       "localMissing": "No local model available",
       "missingProvider": "Choose a supported transcription provider.",
-      "missingModel": "Choose an API transcription model.",
+      "missingModel": "Choose a provider model.",
       "missingKey": "Add an API key to use this provider.",
       "usingLocal": "Until then, the local model is used.",
       "noFallback": "No local backup is available. Download and select a model below to cover API failures and sessions that must stay local.",
       "sharedKey": "This key is also used for Reformulation with this provider. Changing it affects both uses.",
       "customKeyHelp": "A local server may not need a key. If provided, this key is shared with Reformulation.",
-      "advanced": "Advanced API settings",
+      "advanced": "Advanced provider settings",
       "timeoutTitle": "Wait before local backup (seconds)",
       "serverUrl": "Server base URL (OpenAI compatible)",
       "sharedUrl": "This base URL is shared with Reformulation for the custom provider. Handy Flow adds /audio/transcriptions or /audio/translations.",
@@ -1209,7 +1209,7 @@
       "downloadFallback": "Download and use as local backup",
       "selectLocal": "Use for local transcription",
       "downloadLocal": "Download and use for local transcription",
-      "footerIncomplete": "Transcription API: setup incomplete",
+      "footerIncomplete": "Provider setup incomplete",
       "footerApi": "API: {{provider}} · {{model}}",
       "footerLocal": "Local: {{model}}",
       "saveError": "This change could not be confirmed. Check the displayed values and try again.",

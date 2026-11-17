@@ -340,7 +340,7 @@
         "pressKeys": "Premeu les tecles...",
         "bindings": {
           "transcribe": {
-            "name": "Drecera de transcripció",
+            "name": "Drecera de dictat",
             "description": "La drecera de teclat per enregistrar i transcriure la vostra veu."
           },
           "cancel": {
@@ -381,14 +381,14 @@
         "description": "Seleccioneu la llengua per al reconeixement de la parla. L'opció automàtica detecta la llengua, mentre que seleccionar-ne una d'específica pot millorar-ne la precisió.",
         "searchPlaceholder": "Cerca llengües...",
         "noResults": "No s'ha trobat cap llengua",
-        "auto": "Automàtica",
+        "auto": "Detecta la llengua automàticament",
         "autoUnavailable": {
-          "title": "Automàtica està desactivada",
+          "title": "Detecció automàtica de llengua no disponible",
           "oneLanguage": "Només una de les teves llengües funciona amb aquest model",
           "undetectable": "No disponible amb {{languages}}",
           "noMatch": "Cap de les teves llengües funciona amb aquest model"
         },
-        "detectorMissingTitle": "Automàtica necessita una baixada a part",
+        "detectorMissingTitle": "La detecció de llengua requereix una baixada",
         "detectorMissing": "Aquest model no pot saber en quin idioma parles. Automàtica necessita un petit detector d'idioma per esbrinar-ho",
         "stopDetectorDownload": "Atura la baixada del detector d'idioma"
       },
@@ -399,7 +399,7 @@
         "weak": "Cap model reconeix bé {{languages}} encara."
       },
       "shortcutActivation": {
-        "title": "Comportament de la drecera",
+        "title": "Com funciona la drecera",
         "description": "Trieu com la drecera de transcripció inicia i atura l'enregistrament.",
         "options": {
           "holdOrToggle": "Automàtic",
@@ -407,7 +407,7 @@
           "toggle": "Commuta"
         },
         "descriptions": {
-          "hold_or_toggle": "Manteniu-la premuda per enregistrar o feu una pulsació breu per iniciar o aturar l'enregistrament",
+          "hold_or_toggle": "Mantén premut per gravar; prem per iniciar o aturar",
           "push_to_talk": "Enregistreu mentre manteniu premuda la drecera",
           "toggle": "Premeu la drecera per iniciar l'enregistrament i torneu-la a prémer per aturar-lo"
         }
@@ -452,7 +452,7 @@
         "deleteFailed": "No s'han pogut suprimir alguns models antics. Consulteu el registre per a més detalls."
       },
       "rescan": {
-        "label": "Torna a cercar",
+        "label": "Cerca models afegits",
         "tooltip": "Torna a cercar models afegits a la carpeta de models o a la memòria cau de Hugging Face des de fora del Handy Flow"
       }
     },
@@ -534,13 +534,13 @@
           "title": "Finestra superposada",
           "description": "Tria la finestra superposada d'enregistrament: Cap l'amaga, Mínima mostra un indicador compacte i En directe mostra la transcripció en temps real mentre parleu (només amb models compatibles; cerqueu el distintiu En temps real al selector de models). Al Linux es recomana Cap.",
           "options": {
-            "none": "Cap",
+            "none": "Ocult",
             "minimal": "Mínima",
             "live": "En directe"
           }
         },
         "position": {
-          "title": "Posició de la finestra superposada",
+          "title": "Posició de l'indicador",
           "description": "On apareix la finestra superposada a la pantalla durant l'enregistrament i la transcripció.",
           "options": {
             "bottom": "A baix",
@@ -549,7 +549,7 @@
         }
       },
       "pasteMethod": {
-        "title": "Mètode d'enganxament",
+        "title": "Insereix el text",
         "description": "Trieu com s'insereix el text. Directe: simula l'escriptura mitjançant l'entrada del sistema. Cap: no enganxa el text, només actualitza l'historial i el porta-retalls.",
         "options": {
           "clipboard": "Porta-retalls ({{modifier}}+V)",
@@ -569,7 +569,7 @@
         }
       },
       "clipboardHandling": {
-        "title": "Gestió del porta-retalls",
+        "title": "Porta-retalls després del dictat",
         "description": "«No modifiqueu el porta-retalls» conserva el contingut actual del porta-retalls després de la transcripció. «Copieu al porta-retalls» hi deixa el resultat de la transcripció després d'enganxar-lo.",
         "options": {
           "dontModify": "No modifiqueu el porta-retalls",
@@ -577,7 +577,7 @@
         }
       },
       "autoSubmit": {
-        "title": "Enviament automàtic",
+        "title": "Envia després del dictat",
         "description": "Envia automàticament la combinació de tecles seleccionada després d'inserir el text. S'utilitza Cmd+Enter al macOS i Super+Enter al Windows i al Linux.",
         "options": {
           "off": "Desactivat",
@@ -614,11 +614,11 @@
         "duplicate": "«{{word}}» ja existeix"
       },
       "voiceActivityDetection": {
-        "title": "Detecció d'activitat de veu",
+        "title": "Filtra els silencis",
         "description": "Filtra els silencis dels enregistraments. Els models compatibles amb la transcripció en temps real utilitzen un marge final de detecció de veu més llarg; si desactiveu la detecció, s'enregistra l'àudio sense filtrar."
       },
       "longFormChunking": {
-        "title": "Divisió d'àudio llarg",
+        "title": "Divideix els enregistraments llargs",
         "description": "Divideix els enregistraments llargs a les pauses abans de transcriure'ls, cosa que normalment millora el rendiment de la transcripció. Els fitxers transcrits i les retranscripcions llargues sempre es divideixen."
       },
       "languageDetection": {
@@ -628,7 +628,7 @@
         "downloadingHint": "S'està baixant el detector d'idioma. Desactiva-ho per cancel·lar"
       },
       "vadBackend": {
-        "title": "Motor de detecció d'activitat de veu",
+        "title": "Detector de silenci",
         "description": "Trieu el detector utilitzat per filtrar els silencis. L'Earshot és experimental; torneu al Silero si es corta la parla o es conserva el soroll.",
         "options": {
           "silero": "Silero",
@@ -1153,7 +1153,7 @@
         "compact": "Compact"
       },
       "overlay": {
-        "title": "Dictation overlay",
+        "title": "Indicador de dictat",
         "description": "The overlay shown during dictation. Hidden remains available in Advanced.",
         "pill": "Pill",
         "wave": "Wave",
@@ -1172,24 +1172,24 @@
       "reformulationLink": "Open Reformulation settings",
       "modeTitle": "Where should transcription run?",
       "localMode": "On this computer",
-      "localDescription": "Audio is transcribed locally, without a transcription API.",
-      "apiMode": "By API",
+      "localDescription": "L’àudio es queda en aquest ordinador.",
+      "apiMode": "Mitjançant un proveïdor",
       "apiDescription": "Send audio to a provider. Keep a local model as backup.",
       "apiSummary": "Transcription: {{provider}} · {{model}}",
       "localSummary": "Transcription on this computer: {{model}}",
       "configured": "API configured. Availability will be checked when you dictate.",
       "localSummaryHelp": "Uses the local model below. Text cleanup is configured separately.",
       "loading": "Loading configuration…",
-      "modelMissing": "No API model selected",
+      "modelMissing": "Cap model del proveïdor seleccionat",
       "localMissing": "No local model available",
       "missingProvider": "Choose a supported transcription provider.",
-      "missingModel": "Choose an API transcription model.",
+      "missingModel": "Tria un model del proveïdor.",
       "missingKey": "Add an API key to use this provider.",
       "usingLocal": "Until then, the local model is used.",
       "noFallback": "No local backup is available. Download and select a model below to cover API failures and sessions that must stay local.",
       "sharedKey": "This key is also used for Reformulation with this provider. Changing it affects both uses.",
       "customKeyHelp": "A local server may not need a key. If provided, this key is shared with Reformulation.",
-      "advanced": "Advanced API settings",
+      "advanced": "Configuració avançada del proveïdor",
       "timeoutTitle": "Wait before local backup (seconds)",
       "serverUrl": "Server base URL (OpenAI compatible)",
       "sharedUrl": "This base URL is shared with Reformulation for the custom provider. Handy Flow adds /audio/transcriptions or /audio/translations.",
@@ -1209,7 +1209,7 @@
       "downloadFallback": "Download and use as local backup",
       "selectLocal": "Use for local transcription",
       "downloadLocal": "Download and use for local transcription",
-      "footerIncomplete": "Transcription API: setup incomplete",
+      "footerIncomplete": "Configuració del proveïdor incompleta",
       "footerApi": "API: {{provider}} · {{model}}",
       "footerLocal": "Local: {{model}}",
       "saveError": "This change could not be confirmed. Check the displayed values and try again.",

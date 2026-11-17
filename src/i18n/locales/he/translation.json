@@ -340,7 +340,7 @@
         "pressKeys": "לחץ על המקשים...",
         "bindings": {
           "transcribe": {
-            "name": "קיצור מקשים לתמלול",
+            "name": "קיצור להכתבה",
             "description": "קיצור המקלדת להקלטה ולתמלול הקול שלך."
           },
           "cancel": {
@@ -381,14 +381,14 @@
         "description": "בחר את שפת זיהוי הדיבור. מצב אוטומטי יזהה את השפה לבד, בעוד שבחירת שפה מסוימת יכולה לשפר את הדיוק עבורה.",
         "searchPlaceholder": "חפש שפות...",
         "noResults": "לא נמצאו שפות",
-        "auto": "אוטומטי",
+        "auto": "זיהוי שפה אוטומטי",
         "autoUnavailable": {
-          "title": "אוטומטי מושבת",
+          "title": "זיהוי שפה אוטומטי אינו זמין",
           "oneLanguage": "רק אחת מהשפות שלך עובדת עם המודל הזה",
           "undetectable": "לא זמין עם {{languages}}",
           "noMatch": "אף אחת מהשפות שלך לא עובדת עם המודל הזה"
         },
-        "detectorMissingTitle": "אוטומטי דורש הורדה נפרדת",
+        "detectorMissingTitle": "זיהוי שפה דורש הורדה",
         "detectorMissing": "המודל הזה לא יכול לזהות באיזו שפה מדברים. אוטומטי צריך גלאי שפה קטן כדי לזהות אותה",
         "stopDetectorDownload": "עצירת ההורדה של גלאי השפה"
       },
@@ -399,7 +399,7 @@
         "weak": "עדיין אין מודל שמזהה היטב את {{languages}}."
       },
       "shortcutActivation": {
-        "title": "התנהגות קיצור הדרך",
+        "title": "אופן פעולת הקיצור",
         "description": "בחר כיצד קיצור התמלול מתחיל ומפסיק את ההקלטה.",
         "options": {
           "holdOrToggle": "אוטומטי",
@@ -407,7 +407,7 @@
           "toggle": "החלפת מצב"
         },
         "descriptions": {
-          "hold_or_toggle": "לחצו לחיצה ארוכה כדי להקליט או הקישו כדי להחליף מצב",
+          "hold_or_toggle": "החזיקו להקלטה; לחצו להתחלה או לעצירה",
           "push_to_talk": "מקליט כל עוד קיצור הדרך לחוץ",
           "toggle": "הקישו על קיצור הדרך כדי להתחיל להקליט, והקישו שוב כדי לעצור"
         }
@@ -452,7 +452,7 @@
         "deleteFailed": "לא ניתן היה למחוק חלק מהמודלים הישנים. פרטים נוספים ביומן."
       },
       "rescan": {
-        "label": "סריקה מחדש",
+        "label": "חיפוש מודלים שנוספו",
         "tooltip": "סריקה מחדש לאיתור מודלים שנוספו לתיקיית המודלים או למטמון של Hugging Face מחוץ ל-Handy Flow"
       }
     },
@@ -534,13 +534,13 @@
           "title": "שכבת-על",
           "description": "בחר את שכבת-העל בהקלטה: 'ללא' מסתירה אותה, 'מינימלי' מציג סמן קומפקטי, 'בזמן אמת' מציג תמלול בזמן אמת בזמן הדיבור (מודלים התומכים בסטרימינג בלבד — חפש את התווית 'סטרימינג' בבורר המודלים). ב-Linux מומלץ לבחור 'ללא'.",
           "options": {
-            "none": "ללא",
+            "none": "מוסתר",
             "minimal": "מינימלי",
             "live": "בזמן אמת"
           }
         },
         "position": {
-          "title": "מיקום שכבת המשוב",
+          "title": "מיקום המחוון",
           "description": "הצג שכבת משוב חזותית בזמן הקלטה ותמלול. בלינוקס מומלץ לבחור 'ללא'.",
           "options": {
             "bottom": "למטה",
@@ -549,7 +549,7 @@
         }
       },
       "pasteMethod": {
-        "title": "שיטת הדבקה",
+        "title": "הוספת טקסט",
         "description": "בחר איך הטקסט יוכנס. ישיר: מדמה הקלדה דרך קלט המערכת. ללא: מדלג על הדבקה ומעדכן רק היסטוריה/לוח.",
         "options": {
           "clipboard": "לוח ({{modifier}}+V)",
@@ -569,7 +569,7 @@
         }
       },
       "clipboardHandling": {
-        "title": "התנהגות הלוח",
+        "title": "הלוח לאחר ההכתבה",
         "description": "אל תשנה את הלוח ישמור על תוכן הלוח הנוכחי שלך אחרי התמלול. העתק ללוח ישאיר את תוצאת התמלול בלוח אחרי ההדבקה.",
         "options": {
           "dontModify": "אל תשנה את הלוח",
@@ -577,7 +577,7 @@
         }
       },
       "autoSubmit": {
-        "title": "שליחה אוטומטית",
+        "title": "שליחה לאחר ההכתבה",
         "description": "שלח אוטומטית את צירוף המקשים שנבחר אחרי הכנסת הטקסט. ב-macOS יופעל Cmd+Enter, וב-Windows/Linux יופעל Super+Enter.",
         "options": {
           "off": "כבוי",
@@ -614,11 +614,11 @@
         "duplicate": "\"{{word}}\" כבר קיימת"
       },
       "voiceActivityDetection": {
-        "title": "זיהוי פעילות קולית",
+        "title": "סינון שתיקה",
         "description": "סינון שקט מההקלטות. מודלים התומכים בסטרימינג משתמשים בזנב VAD ארוך יותר; ביטול VAD מקליט אודיו גולמי."
       },
       "longFormChunking": {
-        "title": "פיצול שמע ארוך",
+        "title": "פיצול הקלטות ארוכות",
         "description": "מפצל הקלטות ארוכות בהפסקות לפני התמלול, מה שבדרך כלל משפר את איכות התמלול. קבצים מתומללים ותמלולים חוזרים ארוכים מפוצלים תמיד."
       },
       "languageDetection": {
@@ -628,7 +628,7 @@
         "downloadingHint": "גלאי השפה בהורדה. כבו כדי לבטל"
       },
       "vadBackend": {
-        "title": "מנוע זיהוי פעילות קולית",
+        "title": "גלאי שתיקה",
         "description": "בחרו את הגלאי המשמש לסינון שקט. Earshot ניסיוני; חזרו ל-Silero אם הדיבור נחתך או שרעש נשמר.",
         "options": {
           "silero": "Silero",
@@ -1153,7 +1153,7 @@
         "compact": "Compact"
       },
       "overlay": {
-        "title": "Dictation overlay",
+        "title": "מחוון הכתבה",
         "description": "The overlay shown during dictation. Hidden remains available in Advanced.",
         "pill": "Pill",
         "wave": "Wave",
@@ -1172,24 +1172,24 @@
       "reformulationLink": "Open Reformulation settings",
       "modeTitle": "Where should transcription run?",
       "localMode": "On this computer",
-      "localDescription": "Audio is transcribed locally, without a transcription API.",
-      "apiMode": "By API",
+      "localDescription": "השמע נשאר במחשב הזה.",
+      "apiMode": "דרך ספק",
       "apiDescription": "Send audio to a provider. Keep a local model as backup.",
       "apiSummary": "Transcription: {{provider}} · {{model}}",
       "localSummary": "Transcription on this computer: {{model}}",
       "configured": "API configured. Availability will be checked when you dictate.",
       "localSummaryHelp": "Uses the local model below. Text cleanup is configured separately.",
       "loading": "Loading configuration…",
-      "modelMissing": "No API model selected",
+      "modelMissing": "לא נבחר מודל של ספק",
       "localMissing": "No local model available",
       "missingProvider": "Choose a supported transcription provider.",
-      "missingModel": "Choose an API transcription model.",
+      "missingModel": "יש לבחור מודל של ספק.",
       "missingKey": "Add an API key to use this provider.",
       "usingLocal": "Until then, the local model is used.",
       "noFallback": "No local backup is available. Download and select a model below to cover API failures and sessions that must stay local.",
       "sharedKey": "This key is also used for Reformulation with this provider. Changing it affects both uses.",
       "customKeyHelp": "A local server may not need a key. If provided, this key is shared with Reformulation.",
-      "advanced": "Advanced API settings",
+      "advanced": "הגדרות ספק מתקדמות",
       "timeoutTitle": "Wait before local backup (seconds)",
       "serverUrl": "Server base URL (OpenAI compatible)",
       "sharedUrl": "This base URL is shared with Reformulation for the custom provider. Handy Flow adds /audio/transcriptions or /audio/translations.",
@@ -1209,7 +1209,7 @@
       "downloadFallback": "Download and use as local backup",
       "selectLocal": "Use for local transcription",
       "downloadLocal": "Download and use for local transcription",
-      "footerIncomplete": "Transcription API: setup incomplete",
+      "footerIncomplete": "הגדרת הספק לא הושלמה",
       "footerApi": "API: {{provider}} · {{model}}",
       "footerLocal": "Local: {{model}}",
       "saveError": "This change could not be confirmed. Check the displayed values and try again.",

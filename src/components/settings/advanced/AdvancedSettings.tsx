@@ -1,6 +1,5 @@
 import React from "react";
 import { useTranslation } from "react-i18next";
-import { ShowOverlay } from "../ShowOverlay";
 import { ModelUnloadTimeoutSetting } from "../ModelUnloadTimeout";
 import { CustomWords } from "../CustomWords";
 import { SettingsGroup } from "../../ui/SettingsGroup";
@@ -27,7 +26,9 @@ import { AirPodsMode } from "../AirPodsMode";
 import { FillerWordRemoval } from "../FillerWordRemoval";
 import { VadBackendSelector } from "../VadBackendSelector";
 
-export const AdvancedSettings: React.FC = () => {
+export const AdvancedSettings: React.FC<{ onShowAppearance?: () => void }> = ({
+  onShowAppearance,
+}) => {
   const { t } = useTranslation();
   const { getSetting } = useSettings();
   const experimentalEnabled = getSetting("experimental_enabled") || false;
@@ -38,7 +39,15 @@ export const AdvancedSettings: React.FC = () => {
         <StartHidden descriptionMode="tooltip" grouped={true} />
         <AutostartToggle descriptionMode="tooltip" grouped={true} />
         <ShowTrayIcon descriptionMode="tooltip" grouped={true} />
-        <ShowOverlay descriptionMode="tooltip" grouped={true} />
+        <div className="row-setting px-4">
+          <button
+            type="button"
+            onClick={onShowAppearance}
+            className="text-sm text-accent-text hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-logo-primary"
+          >
+            {t("settings.appearance.overlay.title")} → {t("sidebar.appearance")}
+          </button>
+        </div>
         <ModelUnloadTimeoutSetting descriptionMode="tooltip" grouped={true} />
         <ExperimentalToggle descriptionMode="tooltip" grouped={true} />
       </SettingsGroup>

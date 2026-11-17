@@ -340,7 +340,7 @@
         "pressKeys": "Nhấn phím...",
         "bindings": {
           "transcribe": {
-            "name": "Phím tắt chuyển đổi",
+            "name": "Phím tắt đọc chính tả",
             "description": "Phím tắt để ghi âm và chuyển đổi giọng nói của bạn."
           },
           "cancel": {
@@ -381,14 +381,14 @@
         "description": "Chọn ngôn ngữ để nhận dạng giọng nói. Tự động sẽ tự động xác định ngôn ngữ, trong khi chọn một ngôn ngữ cụ thể có thể cải thiện độ chính xác cho ngôn ngữ đó.",
         "searchPlaceholder": "Tìm kiếm ngôn ngữ...",
         "noResults": "Không tìm thấy ngôn ngữ",
-        "auto": "Tự động",
+        "auto": "Tự động nhận diện ngôn ngữ",
         "autoUnavailable": {
-          "title": "Tự động đã tắt",
+          "title": "Không thể tự động nhận diện ngôn ngữ",
           "oneLanguage": "Chỉ một trong các ngôn ngữ của bạn hoạt động với mô hình này",
           "undetectable": "Không khả dụng với {{languages}}",
           "noMatch": "Không ngôn ngữ nào của bạn hoạt động với mô hình này"
         },
-        "detectorMissingTitle": "Tự động cần tải xuống riêng",
+        "detectorMissingTitle": "Cần tải xuống để nhận diện ngôn ngữ",
         "detectorMissing": "Mô hình này không nhận biết được bạn đang nói ngôn ngữ nào. Tự động cần một trình nhận diện ngôn ngữ nhỏ để xác định",
         "stopDetectorDownload": "Dừng tải xuống trình nhận diện ngôn ngữ"
       },
@@ -399,7 +399,7 @@
         "weak": "Chưa có mô hình nào nhận dạng tốt {{languages}}."
       },
       "shortcutActivation": {
-        "title": "Hành vi phím tắt",
+        "title": "Cách phím tắt hoạt động",
         "description": "Chọn cách phím tắt chuyển đổi bắt đầu và dừng ghi âm.",
         "options": {
           "holdOrToggle": "Tự động",
@@ -407,7 +407,7 @@
           "toggle": "Bật/tắt"
         },
         "descriptions": {
-          "hold_or_toggle": "Giữ để ghi âm hoặc nhấn nhanh để bật/tắt",
+          "hold_or_toggle": "Giữ để ghi âm; nhấn để bắt đầu hoặc dừng",
           "push_to_talk": "Ghi âm trong lúc bạn giữ phím tắt",
           "toggle": "Nhấn phím tắt để bắt đầu ghi âm, nhấn lại để dừng"
         }
@@ -452,7 +452,7 @@
         "deleteFailed": "Không thể xóa một số mô hình cũ. Hãy kiểm tra nhật ký để biết chi tiết."
       },
       "rescan": {
-        "label": "Quét lại",
+        "label": "Tìm các mô hình đã thêm",
         "tooltip": "Quét lại các mô hình được thêm vào thư mục mô hình hoặc bộ nhớ đệm Hugging Face bên ngoài Handy Flow"
       }
     },
@@ -534,13 +534,13 @@
           "title": "Lớp phủ",
           "description": "Chọn lớp phủ khi ghi âm: 'Không có' sẽ ẩn nó, 'Tối giản' hiển thị một chỉ báo nhỏ gọn, 'Trực tiếp' hiển thị bản chép lời theo thời gian thực khi bạn nói (chỉ với các mô hình hỗ trợ truyền trực tiếp — hãy tìm huy hiệu 'Truyền trực tiếp' trong bộ chọn mô hình). Trên Linux, khuyến nghị chọn 'Không có'.",
           "options": {
-            "none": "Không có",
+            "none": "Ẩn",
             "minimal": "Tối giản",
             "live": "Trực tiếp"
           }
         },
         "position": {
-          "title": "Vị trí lớp phủ",
+          "title": "Vị trí chỉ báo",
           "description": "Hiển thị lớp phủ phản hồi trực quan trong quá trình ghi âm và chuyển đổi. Trên Linux, 'Không có' được khuyến nghị.",
           "options": {
             "bottom": "Dưới",
@@ -549,7 +549,7 @@
         }
       },
       "pasteMethod": {
-        "title": "Phương thức dán",
+        "title": "Chèn văn bản",
         "description": "Chọn cách chèn văn bản. Trực tiếp: mô phỏng gõ phím qua đầu vào hệ thống. Không có: bỏ qua dán, chỉ cập nhật lịch sử/clipboard.",
         "options": {
           "clipboard": "Bảng nhớ tạm ({{modifier}}+V)",
@@ -569,7 +569,7 @@
         }
       },
       "clipboardHandling": {
-        "title": "Xử lý Clipboard",
+        "title": "Bộ nhớ tạm sau khi đọc chính tả",
         "description": "Không sửa đổi Clipboard giữ nguyên nội dung clipboard hiện tại sau khi chuyển đổi. Sao chép vào Clipboard để lại kết quả chuyển đổi trong clipboard sau khi dán.",
         "options": {
           "dontModify": "Không sửa đổi Clipboard",
@@ -577,7 +577,7 @@
         }
       },
       "autoSubmit": {
-        "title": "Gửi tự động",
+        "title": "Gửi sau khi đọc chính tả",
         "description": "Tự động gửi tổ hợp phím đã chọn sau khi chèn văn bản. Cmd+Enter áp dụng trên macOS, còn Windows/Linux dùng Super+Enter.",
         "options": {
           "off": "Tắt",
@@ -614,11 +614,11 @@
         "duplicate": "\"{{word}}\" đã tồn tại"
       },
       "voiceActivityDetection": {
-        "title": "Phát hiện hoạt động giọng nói",
+        "title": "Lọc khoảng lặng",
         "description": "Lọc bỏ khoảng lặng khỏi bản ghi. Các mô hình hỗ trợ truyền trực tiếp dùng đuôi VAD dài hơn; tắt VAD sẽ ghi âm thanh thô."
       },
       "longFormChunking": {
-        "title": "Chia nhỏ âm thanh dài",
+        "title": "Chia bản ghi dài",
         "description": "Chia các bản ghi dài tại các khoảng ngắt trước khi chuyển thành văn bản, điều này thường cải thiện hiệu quả chuyển văn bản. Tệp được chép lời và các lần phiên âm lại dài luôn được chia nhỏ."
       },
       "languageDetection": {
@@ -628,7 +628,7 @@
         "downloadingHint": "Đang tải xuống trình nhận diện ngôn ngữ. Tắt để hủy"
       },
       "vadBackend": {
-        "title": "Bộ phát hiện giọng nói",
+        "title": "Bộ phát hiện khoảng lặng",
         "description": "Chọn bộ phát hiện dùng để lọc khoảng lặng. Earshot đang thử nghiệm; hãy chuyển về Silero nếu giọng nói bị cắt hoặc tiếng ồn vẫn còn.",
         "options": {
           "silero": "Silero",
@@ -1153,7 +1153,7 @@
         "compact": "Compact"
       },
       "overlay": {
-        "title": "Dictation overlay",
+        "title": "Chỉ báo đọc chính tả",
         "description": "The overlay shown during dictation. Hidden remains available in Advanced.",
         "pill": "Pill",
         "wave": "Wave",
@@ -1172,24 +1172,24 @@
       "reformulationLink": "Open Reformulation settings",
       "modeTitle": "Where should transcription run?",
       "localMode": "On this computer",
-      "localDescription": "Audio is transcribed locally, without a transcription API.",
-      "apiMode": "By API",
+      "localDescription": "Âm thanh được giữ trên máy tính này.",
+      "apiMode": "Qua nhà cung cấp",
       "apiDescription": "Send audio to a provider. Keep a local model as backup.",
       "apiSummary": "Transcription: {{provider}} · {{model}}",
       "localSummary": "Transcription on this computer: {{model}}",
       "configured": "API configured. Availability will be checked when you dictate.",
       "localSummaryHelp": "Uses the local model below. Text cleanup is configured separately.",
       "loading": "Loading configuration…",
-      "modelMissing": "No API model selected",
+      "modelMissing": "Chưa chọn mô hình của nhà cung cấp",
       "localMissing": "No local model available",
       "missingProvider": "Choose a supported transcription provider.",
-      "missingModel": "Choose an API transcription model.",
+      "missingModel": "Chọn mô hình của nhà cung cấp.",
       "missingKey": "Add an API key to use this provider.",
       "usingLocal": "Until then, the local model is used.",
       "noFallback": "No local backup is available. Download and select a model below to cover API failures and sessions that must stay local.",
       "sharedKey": "This key is also used for Reformulation with this provider. Changing it affects both uses.",
       "customKeyHelp": "A local server may not need a key. If provided, this key is shared with Reformulation.",
-      "advanced": "Advanced API settings",
+      "advanced": "Cài đặt nâng cao của nhà cung cấp",
       "timeoutTitle": "Wait before local backup (seconds)",
       "serverUrl": "Server base URL (OpenAI compatible)",
       "sharedUrl": "This base URL is shared with Reformulation for the custom provider. Handy Flow adds /audio/transcriptions or /audio/translations.",
@@ -1209,7 +1209,7 @@
       "downloadFallback": "Download and use as local backup",
       "selectLocal": "Use for local transcription",
       "downloadLocal": "Download and use for local transcription",
-      "footerIncomplete": "Transcription API: setup incomplete",
+      "footerIncomplete": "Chưa hoàn tất thiết lập nhà cung cấp",
       "footerApi": "API: {{provider}} · {{model}}",
       "footerLocal": "Local: {{model}}",
       "saveError": "This change could not be confirmed. Check the displayed values and try again.",

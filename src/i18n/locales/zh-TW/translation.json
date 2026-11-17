@@ -340,7 +340,7 @@
         "pressKeys": "請按鍵...",
         "bindings": {
           "transcribe": {
-            "name": "轉錄快捷鍵",
+            "name": "聽寫快捷鍵",
             "description": "用於錄製和轉錄語音的鍵盤快捷鍵"
           },
           "cancel": {
@@ -381,14 +381,14 @@
         "description": "選擇語音辨識的語言。選擇自動將自動判定語言，選擇特定語言可以提高該語言的準確度",
         "searchPlaceholder": "搜尋語言...",
         "noResults": "未找到語言",
-        "auto": "自動",
+        "auto": "自動偵測語言",
         "autoUnavailable": {
-          "title": "自動已停用",
+          "title": "無法自動偵測語言",
           "oneLanguage": "你的語言中只有一種適用於此模型",
           "undetectable": "不支援{{languages}}",
           "noMatch": "你的語言都不適用於此模型"
         },
-        "detectorMissingTitle": "自動模式需要另外下載",
+        "detectorMissingTitle": "偵測語言需要下載",
         "detectorMissing": "此模型無法分辨你說的是哪種語言。自動模式需要一個小型語言偵測器來判斷",
         "stopDetectorDownload": "停止下載語言偵測器"
       },
@@ -399,7 +399,7 @@
         "weak": "目前還沒有模型能把{{languages}}辨識得很準。"
       },
       "shortcutActivation": {
-        "title": "快捷鍵行為",
+        "title": "快捷鍵的使用方式",
         "description": "選擇轉錄快捷鍵開始和停止錄音的方式。",
         "options": {
           "holdOrToggle": "自動",
@@ -407,7 +407,7 @@
           "toggle": "切換"
         },
         "descriptions": {
-          "hold_or_toggle": "按住錄音，或輕按切換",
+          "hold_or_toggle": "按住錄音；輕按開始或停止",
           "push_to_talk": "按住快捷鍵期間錄音",
           "toggle": "輕按快捷鍵開始錄音，再次輕按停止"
         }
@@ -452,7 +452,7 @@
         "deleteFailed": "部分舊模型無法刪除。請查看記錄檔以了解詳情。"
       },
       "rescan": {
-        "label": "重新掃描",
+        "label": "尋找已加入的模型",
         "tooltip": "重新掃描在 Handy Flow 之外新增到模型資料夾或 Hugging Face 快取中的模型"
       }
     },
@@ -534,13 +534,13 @@
           "title": "懸浮窗",
           "description": "選擇錄音懸浮窗的樣式：「無」會隱藏懸浮窗，「精簡」顯示小巧的膠囊狀指示，「即時」在您說話時即時顯示轉錄內容（僅限支援串流的模型——請在模型選擇器中尋找「串流」標籤）。在 Linux 上建議選擇「無」",
           "options": {
-            "none": "無",
+            "none": "隱藏",
             "minimal": "精簡",
             "live": "即時"
           }
         },
         "position": {
-          "title": "懸浮窗位置",
+          "title": "提示條位置",
           "description": "在錄製和轉錄期間顯示視覺回饋懸浮窗。在 Linux 上建議選擇「無」",
           "options": {
             "bottom": "底部",
@@ -549,7 +549,7 @@
         }
       },
       "pasteMethod": {
-        "title": "貼上方式",
+        "title": "插入文字",
         "description": "選擇文字插入方式。直接：透過系統輸入模擬打字。無：跳過貼上，僅更新歷史紀錄/剪貼簿",
         "options": {
           "clipboard": "剪貼簿 ({{modifier}}+V)",
@@ -569,7 +569,7 @@
         }
       },
       "clipboardHandling": {
-        "title": "剪貼簿處理",
+        "title": "聽寫後的剪貼簿",
         "description": "不修改剪貼簿將在轉錄後保留目前剪貼簿內容。複製到剪貼簿會在貼上後將轉錄結果留在剪貼簿中",
         "options": {
           "dontModify": "不修改剪貼簿",
@@ -577,7 +577,7 @@
         }
       },
       "autoSubmit": {
-        "title": "自動送出",
+        "title": "聽寫後傳送",
         "description": "插入文字後自動發送指定的按鍵組合。macOS 為 Cmd+Enter，Windows/Linux 為 Super+Enter",
         "options": {
           "off": "關閉",
@@ -614,11 +614,11 @@
         "duplicate": "「{{word}}」已存在"
       },
       "voiceActivityDetection": {
-        "title": "語音活動偵測",
+        "title": "過濾靜音",
         "description": "過濾錄音中的靜音。支援串流的模型會使用較長的 VAD 尾段；停用 VAD 則會錄製原始音訊"
       },
       "longFormChunking": {
-        "title": "長音訊分段",
+        "title": "拆分長錄音",
         "description": "在轉錄前依停頓處將長錄音分段，通常可以提升轉錄效果。轉錄檔案與較長的重新轉錄一律會分段。"
       },
       "languageDetection": {
@@ -628,7 +628,7 @@
         "downloadingHint": "正在下載語言偵測器。關閉此項即可取消"
       },
       "vadBackend": {
-        "title": "語音活動偵測後端",
+        "title": "靜音偵測器",
         "description": "選擇用於過濾靜音的偵測器。Earshot 為實驗性功能；若語音被截斷或雜訊被保留，請切換回 Silero。",
         "options": {
           "silero": "Silero",
@@ -1153,7 +1153,7 @@
         "compact": "Compact"
       },
       "overlay": {
-        "title": "Dictation overlay",
+        "title": "聽寫提示條",
         "description": "The overlay shown during dictation. Hidden remains available in Advanced.",
         "pill": "Pill",
         "wave": "Wave",
@@ -1172,24 +1172,24 @@
       "reformulationLink": "Open Reformulation settings",
       "modeTitle": "Where should transcription run?",
       "localMode": "On this computer",
-      "localDescription": "Audio is transcribed locally, without a transcription API.",
-      "apiMode": "By API",
+      "localDescription": "音訊保留在這台電腦上。",
+      "apiMode": "透過服務供應商",
       "apiDescription": "Send audio to a provider. Keep a local model as backup.",
       "apiSummary": "Transcription: {{provider}} · {{model}}",
       "localSummary": "Transcription on this computer: {{model}}",
       "configured": "API configured. Availability will be checked when you dictate.",
       "localSummaryHelp": "Uses the local model below. Text cleanup is configured separately.",
       "loading": "Loading configuration…",
-      "modelMissing": "No API model selected",
+      "modelMissing": "尚未選擇供應商模型",
       "localMissing": "No local model available",
       "missingProvider": "Choose a supported transcription provider.",
-      "missingModel": "Choose an API transcription model.",
+      "missingModel": "請選擇供應商模型。",
       "missingKey": "Add an API key to use this provider.",
       "usingLocal": "Until then, the local model is used.",
       "noFallback": "No local backup is available. Download and select a model below to cover API failures and sessions that must stay local.",
       "sharedKey": "This key is also used for Reformulation with this provider. Changing it affects both uses.",
       "customKeyHelp": "A local server may not need a key. If provided, this key is shared with Reformulation.",
-      "advanced": "Advanced API settings",
+      "advanced": "供應商進階設定",
       "timeoutTitle": "Wait before local backup (seconds)",
       "serverUrl": "Server base URL (OpenAI compatible)",
       "sharedUrl": "This base URL is shared with Reformulation for the custom provider. Handy Flow adds /audio/transcriptions or /audio/translations.",
@@ -1209,7 +1209,7 @@
       "downloadFallback": "Download and use as local backup",
       "selectLocal": "Use for local transcription",
       "downloadLocal": "Download and use for local transcription",
-      "footerIncomplete": "Transcription API: setup incomplete",
+      "footerIncomplete": "供應商設定未完成",
       "footerApi": "API: {{provider}} · {{model}}",
       "footerLocal": "Local: {{model}}",
       "saveError": "This change could not be confirmed. Check the displayed values and try again.",
