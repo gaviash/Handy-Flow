@@ -761,6 +761,8 @@ pub fn run(cli_args: CliArgs) {
             learning::get_learned_words,
             learning::delete_learned_word,
             learning::clear_learned_words,
+            learning::clear_style_rules,
+            learning::remove_heard_form,
             learning::export_learned_words,
             learning::get_style_rules,
             learning::delete_style_rule,

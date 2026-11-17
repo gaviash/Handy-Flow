@@ -823,7 +823,8 @@
           "clear": "Tout effacer",
           "export": "Exporter",
           "confirmClear": "Effacer tous les mots appris ?",
-          "expires": "Oublié le {{date}} si vous ne le dictez pas d'ici là"
+          "expires": "Oublié le {{date}} si vous ne le dictez pas d'ici là",
+          "exportError": "Impossible d'exporter ce que Handy Flow a appris."
         },
         "notice": "Appris : {{terms}}",
         "undo": "Annuler",
@@ -835,7 +836,9 @@
         "rules": {
           "label": "Règles de style",
           "description": "Préférences de formulation tirées de vos corrections, appliquées à vos prochaines dictées.",
-          "empty": "Aucune règle pour l'instant."
+          "empty": "Aucune règle pour l'instant.",
+          "clear": "Tout effacer",
+          "confirmClear": "Effacer toutes les règles de style ?"
         },
         "asr": {
           "label": "Contexte de transcription",
@@ -854,6 +857,12 @@
             "description": "Les tournures de 2 à 4 mots dites dans au moins 3 dictées sur 30 jours : ce que reçoit le modèle de reconnaissance.",
             "count": "{{count}} expressions"
           }
+        },
+        "judge": {
+          "label": "Juge des corrections",
+          "description": "Envoie votre correction (avant et après) à une IA pour apprendre des règles de style et des mots techniques.",
+          "status": "Utilise {{provider}}",
+          "none": "Inactif : aucune clé d'API pour Groq ni pour votre fournisseur de réécriture."
         }
       },
       "styles": {

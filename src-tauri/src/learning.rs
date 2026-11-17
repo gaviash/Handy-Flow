@@ -616,9 +616,30 @@ fn same_term(a: &str, b: &str) -> bool {
     a.to_lowercase() == b.to_lowercase()
 }
 
-/// Records a sighting; `true` when the word becomes usable or gains a form
-/// (news to announce). A misheard word is pending until seen twice.
-pub(crate) fn record_word(m: &mut Memory, c: &Candidate, now: i64) -> bool {
+/// What just became usable, as announced to the user and undone exactly by
+/// the notification's Undo: a new word, a new heard form of a known word, or
+/// a style rule.
+#[derive(Debug, Clone, PartialEq, Serialize, Type)]
+#[serde(tag = "kind", rename_all = "snake_case")]
+pub enum LearnedNews {
+    Word { term: String },
+    Form { term: String, heard: String },
+    Rule { rule: String },
+}
+
+impl LearnedNews {
+    /// The text shown on the pill and in the notification.
+    pub fn label(&self) -> &str {
+        match self {
+            Self::Word { term } | Self::Form { term, .. } => term,
+            Self::Rule { rule } => rule,
+        }
+    }
+}
+
+/// Records a sighting; the news when the word becomes usable or a usable
+/// word gains a form. A misheard word is pending until seen twice.
+pub(crate) fn record_word(m: &mut Memory, c: &Candidate, now: i64) -> Option<LearnedNews> {
     match m.words.iter_mut().find(|l| same_term(&l.term, &c.term)) {
         Some(l) => {
             l.count += 1;
@@ -626,7 +647,16 @@ pub(crate) fn record_word(m: &mut Memory, c: &Candidate, now: i64) -> bool {
             let new_form = add_heard(l, c.heard.clone());
             let activated = !l.active && l.count >= 2;
             l.active |= activated;
-            activated || (l.active && new_form)
+            if activated {
+                Some(LearnedNews::Word {
+                    term: l.term.clone(),
+                })
+            } else {
+                (l.active && new_form).then(|| LearnedNews::Form {
+                    term: l.term.clone(),
+                    heard: c.heard.clone(),
+                })
+            }
         }
         None => {
             let active = c.kind == WordKind::Term;
@@ -638,9 +668,19 @@ pub(crate) fn record_word(m: &mut Memory, c: &Candidate, now: i64) -> bool {
                 kind: c.kind,
                 active,
             });
-            active
+            active.then(|| LearnedNews::Word {
+                term: c.term.clone(),
+            })
         }
     }
+}
+
+/// Undoes one heard form; a word left with none goes.
+pub(crate) fn drop_form(m: &mut Memory, term: &str, heard: &str) {
+    for w in m.words.iter_mut().filter(|w| same_term(&w.term, term)) {
+        w.heard.retain(|h| !same_term(h, heard));
+    }
+    m.words.retain(|w| !w.heard.is_empty());
 }
 
 // ---------------------------------------------------------------- memory
@@ -754,9 +794,11 @@ pub(crate) fn apply_verdicts(
     m: &mut Memory,
     verdicts: &[crate::judge::Verdict],
     local: &[Candidate],
-    _app_name: &str,
+    inserted: &str,
+    kept: &str,
     now: i64,
-) -> Vec<String> {
+) -> Vec<LearnedNews> {
+    let (inserted, kept) = (unify(inserted).to_lowercase(), unify(kept).to_lowercase());
     use crate::judge::VerdictKind;
     let mut news = Vec::new();
     for v in verdicts {
@@ -778,12 +820,24 @@ pub(crate) fn apply_verdicts(
                     log::debug!("Learning: judge item rejected (not a misheard pair)");
                     continue;
                 }
+                // The judge may invent a pair: both forms must be in the texts.
+                if !counted
+                    && !(contains_word(&inserted, &unify(heard).to_lowercase())
+                        && contains_word(&kept, &unify(term).to_lowercase()))
+                {
+                    log::debug!("Learning: judge item rejected (not in the texts)");
+                    continue;
+                }
                 let c = Candidate {
                     term: term.into(),
                     heard: heard.into(),
                     kind: WordKind::Misheard,
                 };
-                let mut new = !counted && record_word(m, &c, now);
+                let mut new = if counted {
+                    None
+                } else {
+                    record_word(m, &c, now)
+                };
                 // A technical or rare, hard-to-say word is usable at once.
                 if v.technical {
                     if let Some(l) = m
@@ -792,12 +846,12 @@ pub(crate) fn apply_verdicts(
                         .find(|l| same_term(&l.term, term) && !l.active)
                     {
                         l.active = true;
-                        new = true;
+                        new = Some(LearnedNews::Word {
+                            term: l.term.clone(),
+                        });
                     }
                 }
-                if new {
-                    news.push(c.term);
-                }
+                news.extend(new);
             }
             VerdictKind::StyleRule | VerdictKind::Filler => {
                 let existing = v.same_as.and_then(|i| m.rules.get_mut(i));
@@ -805,9 +859,12 @@ pub(crate) fn apply_verdicts(
                     Some(r) => {
                         r.count += 1;
                         r.last_seen = now;
-                        if !r.active && (r.count >= 2 || v.consistent_with_history) {
+                        // Two sightings, whatever the judge says about history.
+                        if !r.active && r.count >= 2 {
                             r.active = true;
-                            news.push(r.rule.clone());
+                            news.push(LearnedNews::Rule {
+                                rule: r.rule.clone(),
+                            });
                         }
                     }
                     None => {
@@ -815,17 +872,13 @@ pub(crate) fn apply_verdicts(
                         else {
                             continue;
                         };
-                        let active = v.consistent_with_history;
                         m.rules.push(StyleRule {
                             rule: rule.into(),
                             count: 1,
-                            active,
+                            active: false,
                             last_seen: now,
                             apps: Vec::new(),
                         });
-                        if active {
-                            news.push(rule.into());
-                        }
                     }
                 }
             }
@@ -866,7 +919,8 @@ pub fn record_verdicts(
     verdicts: &[crate::judge::Verdict],
     rules_sent: &[String],
     local: &[Candidate],
-    app_name: &str,
+    inserted: &str,
+    kept: &str,
 ) {
     if verdicts.is_empty() {
         return;
@@ -874,7 +928,7 @@ pub fn record_verdicts(
     let now = chrono::Utc::now().timestamp();
     let news = with_memory(app, |m| {
         let verdicts = remap_same_as(verdicts, rules_sent, &m.rules);
-        let news = apply_verdicts(m, &verdicts, local, app_name, now);
+        let news = apply_verdicts(m, &verdicts, local, inserted, kept, now);
         save(app, m);
         news
     });
@@ -912,9 +966,7 @@ fn learn(app: &AppHandle, inserted: &str, fin: &str) -> Vec<Candidate> {
                 c.term.chars().count(),
                 c.kind
             );
-            if record_word(m, c, now) {
-                new_terms.push(c.term.clone());
-            }
+            new_terms.extend(record_word(m, c, now));
         }
         save(app, m);
     });
@@ -927,9 +979,10 @@ fn learn(app: &AppHandle, inserted: &str, fin: &str) -> Vec<Candidate> {
 
 /// F95, as Wispr: the overlay pill says what was learned, over the window the
 /// user dictates into, with the system's notification sound.
-fn announce(app: &AppHandle, words: &[String]) {
+fn announce(app: &AppHandle, news: &[LearnedNews]) {
     use crate::notices::{Notice, NoticeCode, NoticeSource};
-    let (app, detail) = (app.clone(), words.join(", "));
+    let labels: Vec<&str> = news.iter().map(LearnedNews::label).collect();
+    let (app, detail) = (app.clone(), labels.join(", "));
     std::thread::spawn(move || {
         // A dictation on the pill goes first: the news waits for it (≤ 20 s).
         for _ in 0..80 {
@@ -1039,7 +1092,26 @@ pub fn delete_style_rule(app: AppHandle, rule: String) {
 pub fn clear_learned_words(app: AppHandle) {
     with_memory(&app, |m| {
         m.words.clear();
+        save(&app, m);
+    });
+}
+
+/// Clears the style rules only; the learned words stay.
+#[tauri::command]
+#[specta::specta]
+pub fn clear_style_rules(app: AppHandle) {
+    with_memory(&app, |m| {
         m.rules.clear();
+        save(&app, m);
+    });
+}
+
+/// Undoes one heard form of a learned word (the notification's Undo).
+#[tauri::command]
+#[specta::specta]
+pub fn remove_heard_form(app: AppHandle, term: String, heard: String) {
+    with_memory(&app, |m| {
+        drop_form(m, &term, &heard);
         save(&app, m);
     });
 }
@@ -1048,8 +1120,9 @@ pub fn clear_learned_words(app: AppHandle) {
 #[tauri::command]
 #[specta::specta]
 pub fn export_learned_words(app: AppHandle, path: String) -> Result<(), String> {
+    // Words and style rules: everything learned.
     let json =
-        with_memory(&app, |m| serde_json::to_string_pretty(&m.words)).map_err(|e| e.to_string())?;
+        with_memory(&app, |m| serde_json::to_string_pretty(&*m)).map_err(|e| e.to_string())?;
     std::fs::write(path, json).map_err(|e| e.to_string())
 }
 
@@ -1249,6 +1322,10 @@ pub fn observe(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// Texts holding every form the verdict tests use.
+    const T_IN: &str = "conflig jeffu chefo mardi";
+    const T_KEPT: &str = "config jevu jeudi";
 
     #[test]
     fn tracks_the_dictation_with_wispr_anchors() {
@@ -1477,6 +1554,73 @@ mod tests {
     }
 
     #[test]
+    fn undo_a_new_form_keeps_the_word() {
+        let c = |heard: &str| Candidate {
+            term: "Qwen".into(),
+            heard: heard.into(),
+            kind: WordKind::Term,
+        };
+        let mut m = Memory::default();
+        let word = LearnedNews::Word {
+            term: "Qwen".into(),
+        };
+        assert_eq!(record_word(&mut m, &c("Quen"), 0), Some(word));
+        let form = LearnedNews::Form {
+            term: "Qwen".into(),
+            heard: "Quinn".into(),
+        };
+        assert_eq!(record_word(&mut m, &c("Quinn"), 1), Some(form));
+        drop_form(&mut m, "Qwen", "Quinn");
+        assert_eq!(m.words[0].heard, vec!["Quen"]);
+        drop_form(&mut m, "qwen", "quen");
+        assert!(m.words.is_empty());
+    }
+
+    #[test]
+    fn judge_pairs_must_be_in_the_texts() {
+        use crate::judge::{Verdict, VerdictKind};
+        let v = Verdict {
+            kind: VerdictKind::Misheard,
+            heard: Some("dashbord".into()),
+            term: Some("dashboard".into()),
+            rule: None,
+            same_as: None,
+            consistent_with_history: false,
+            technical: true,
+        };
+        let kept = "le dashboard est prêt";
+        let mut m = Memory::default();
+        let news = apply_verdicts(&mut m, &[v.clone()], &[], "le tableau est prêt", kept, 0);
+        assert!(news.is_empty() && m.words.is_empty());
+        let news = apply_verdicts(&mut m, &[v], &[], "le dashbord est prêt", kept, 0);
+        let word = LearnedNews::Word {
+            term: "dashboard".into(),
+        };
+        assert_eq!(news, vec![word]);
+    }
+
+    #[test]
+    fn a_style_rule_needs_two_sightings() {
+        use crate::judge::{Verdict, VerdictKind};
+        let rule = "Toujours vouvoyer.";
+        let v = |same_as| Verdict {
+            kind: VerdictKind::StyleRule,
+            heard: None,
+            term: None,
+            rule: Some(rule.into()),
+            same_as,
+            consistent_with_history: true,
+            technical: false,
+        };
+        let mut m = Memory::default();
+        assert!(apply_verdicts(&mut m, &[v(None)], &[], "a", "b", 0).is_empty());
+        assert!(!m.rules[0].active);
+        let news = apply_verdicts(&mut m, &[v(Some(0))], &[], "a", "b", 1);
+        assert!(m.rules[0].active);
+        assert_eq!(news, vec![LearnedNews::Rule { rule: rule.into() }]);
+    }
+
+    #[test]
     fn misheard_common_word_is_learned_after_two_corrections() {
         let c = super::candidates(
             "regarde le conflig du serveur",
@@ -1491,9 +1635,9 @@ mod tests {
             }]
         );
         let mut m = Memory::default();
-        assert!(!record_word(&mut m, &c[0], 0));
+        assert!(record_word(&mut m, &c[0], 0).is_none());
         assert!(!m.words[0].active);
-        assert!(record_word(&mut m, &c[0], 1));
+        assert!(record_word(&mut m, &c[0], 1).is_some());
         assert!(m.words[0].active);
     }
 
@@ -1540,7 +1684,7 @@ mod tests {
         let out = remap_same_as(&verdicts, &sent, &m.rules);
         let got: Vec<_> = out.iter().map(|v| v.same_as).collect();
         assert_eq!(got, vec![Some(0), None]);
-        apply_verdicts(&mut m, &out, &[], "Code", 1);
+        apply_verdicts(&mut m, &out, &[], T_IN, T_KEPT, 1);
         let rules: Vec<_> = m.rules.iter().map(|r| r.rule.as_str()).collect();
         assert_eq!(rules, vec!["B", "C"], "the deleted rule never comes back");
         assert_eq!(m.rules[0].count, 2);
@@ -1576,7 +1720,8 @@ mod tests {
                 v(VerdictKind::ContentChange, None, None, None, None, true),
             ],
             &[],
-            "Code",
+            T_IN,
+            T_KEPT,
             0,
         );
         assert!(m.words.is_empty() && m.rules.is_empty());
@@ -1592,7 +1737,8 @@ mod tests {
                 true,
             )],
             &[],
-            "Code",
+            T_IN,
+            T_KEPT,
             0,
         );
         assert!(!m.words[0].active);
@@ -1609,7 +1755,8 @@ mod tests {
                 false,
             )],
             &[],
-            "Code",
+            T_IN,
+            T_KEPT,
             0,
         );
         assert!(!m.rules[0].active);
@@ -1624,12 +1771,13 @@ mod tests {
                 false,
             )],
             &[],
-            "Code",
+            T_IN,
+            T_KEPT,
             1,
         );
         assert!(m.rules[0].active && m.rules[0].count == 2);
-        assert_eq!(on, vec![rule.to_string()]);
-        // A rule consistent with history is active at once.
+        assert_eq!(on, vec![LearnedNews::Rule { rule: rule.into() }]);
+        // Even "consistent with history", a new rule waits for a second sighting.
         apply_verdicts(
             &mut m,
             &[v(
@@ -1641,10 +1789,11 @@ mod tests {
                 true,
             )],
             &[],
-            "Code",
+            T_IN,
+            T_KEPT,
             2,
         );
-        assert!(m.rules[1].active);
+        assert!(!m.rules[1].active);
         // A `same_as` out of range is a new rule, not a crash.
         apply_verdicts(
             &mut m,
@@ -1657,7 +1806,8 @@ mod tests {
                 false,
             )],
             &[],
-            "Code",
+            T_IN,
+            T_KEPT,
             3,
         );
         assert_eq!(m.rules.len(), 3);
@@ -1737,26 +1887,31 @@ mod tests {
         };
         // Not technical: one correction stays pending.
         let mut m = Memory::default();
-        apply_verdicts(&mut m, &[v("jeffu", false)], &[], "Code", 0);
+        apply_verdicts(&mut m, &[v("jeffu", false)], &[], T_IN, T_KEPT, 0);
         assert!(!m.words[0].active);
         // Technical: usable at once, even a farther form ("chefo", 0.8).
         let mut m = Memory::default();
-        let news = apply_verdicts(&mut m, &[v("chefo", true)], &[], "Code", 0);
+        let news = apply_verdicts(&mut m, &[v("chefo", true)], &[], T_IN, T_KEPT, 0);
         assert!(m.words[0].active);
-        assert_eq!(news, vec!["jevu".to_string()]);
+        assert_eq!(
+            news,
+            vec![LearnedNews::Word {
+                term: "jevu".into()
+            }]
+        );
         // Found locally this dictation: not counted twice, only promoted.
         let local = super::candidates("le jeffu est prêt", "le jevu est prêt");
         let mut m = Memory::default();
         record_word(&mut m, &local[0], 0);
-        apply_verdicts(&mut m, &[v("jeffu", false)], &local, "Code", 0);
+        apply_verdicts(&mut m, &[v("jeffu", false)], &local, T_IN, T_KEPT, 0);
         assert!(!m.words[0].active && m.words[0].count == 1);
-        apply_verdicts(&mut m, &[v("jeffu", true)], &local, "Code", 0);
+        apply_verdicts(&mut m, &[v("jeffu", true)], &local, T_IN, T_KEPT, 0);
         assert!(m.words[0].active && m.words[0].count == 1);
         // Still no meaning change, technical or not.
         let mut m = Memory::default();
         let mut mj = v("mardi", true);
         mj.term = Some("jeudi".into());
-        apply_verdicts(&mut m, &[mj], &[], "Code", 0);
+        apply_verdicts(&mut m, &[mj], &[], T_IN, T_KEPT, 0);
         assert!(m.words.is_empty());
     }
 
