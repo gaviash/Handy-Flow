@@ -1238,6 +1238,7 @@
     }
   },
   "footer": {
+    "appName": "Handy Flow",
     "checkingUpdates": "檢查更新中...",
     "updateAvailableShort": "有可用更新",
     "upToDate": "已是最新版本",

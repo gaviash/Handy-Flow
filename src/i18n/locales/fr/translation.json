@@ -1238,6 +1238,7 @@
     }
   },
   "footer": {
+    "appName": "Handy Flow",
     "checkingUpdates": "Recherche de mises à jour...",
     "updateAvailableShort": "Mise à jour disponible",
     "upToDate": "À jour",

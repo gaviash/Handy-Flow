@@ -163,7 +163,7 @@ export const ScreenTitle: React.FC<{
   className?: string;
 }> = ({ children, className = "" }) => (
   <h1
-    className={`m-0 font-display leading-[1.15] tracking-[-0.015em] text-balance text-title font-[650] ${className}`}
+    className={`m-0 font-heading leading-[1.15] text-balance text-title [font-weight:var(--heading-weight)] [letter-spacing:var(--heading-tracking)] ${className}`}
   >
     {children}
   </h1>

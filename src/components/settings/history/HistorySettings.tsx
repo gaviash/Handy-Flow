@@ -67,7 +67,7 @@ const IconButton: React.FC<{
     className={`p-1.5 rounded-md flex items-center justify-center transition-colors cursor-pointer disabled:cursor-not-allowed disabled:text-text/20 ${className} ${
       active
         ? "text-accent-text hover:text-accent-text"
-        : "text-ink-3 hover:text-logo-primary"
+        : "text-ink-2 hover:text-text"
     }`}
     title={title}
     aria-label={title}
@@ -382,12 +382,7 @@ export const HistorySettings: React.FC = () => {
   return (
     <div className="max-w-3xl w-full mx-auto space-y-6">
       <div className="space-y-2">
-        <div className="px-4 flex items-center justify-between">
-          <div>
-            <h2 className="text-xs font-medium text-ink-3 uppercase tracking-wide">
-              {t("settings.history.title")}
-            </h2>
-          </div>
+        <div className="px-4 flex items-center justify-end">
           <div className="flex items-center gap-2">
             <HeaderButton
               onClick={transcribeFile}
@@ -634,27 +629,6 @@ const HistoryEntryComponent: React.FC<HistoryEntryProps> = ({
               )}
             </IconButton>
           </div>
-          <IconButton
-            onClick={onToggleSaved}
-            active={entry.saved}
-            pressed={entry.saved}
-            className={
-              entry.saved
-                ? "opacity-100"
-                : "opacity-0 group-hover/history:opacity-100 group-focus-within/history:opacity-100 [@media(hover:none)]:opacity-100"
-            }
-            title={
-              entry.saved
-                ? t("settings.history.unsave")
-                : t("settings.history.save")
-            }
-          >
-            <Star
-              width={16}
-              height={16}
-              fill={entry.saved ? "currentColor" : "none"}
-            />
-          </IconButton>
           <div className="flex opacity-0 motion-safe:transition-opacity duration-150 group-hover/history:opacity-100 group-focus-within/history:opacity-100 [@media(hover:none)]:opacity-100">
             {retrying ? (
               <IconButton
@@ -683,6 +657,27 @@ const HistoryEntryComponent: React.FC<HistoryEntryProps> = ({
               <Trash2 width={16} height={16} />
             </IconButton>
           </div>
+          <IconButton
+            onClick={onToggleSaved}
+            active={entry.saved}
+            pressed={entry.saved}
+            className={
+              entry.saved
+                ? "opacity-100"
+                : "opacity-0 group-hover/history:opacity-100 group-focus-within/history:opacity-100 [@media(hover:none)]:opacity-100"
+            }
+            title={
+              entry.saved
+                ? t("settings.history.unsave")
+                : t("settings.history.save")
+            }
+          >
+            <Star
+              width={16}
+              height={16}
+              fill={entry.saved ? "currentColor" : "none"}
+            />
+          </IconButton>
         </div>
       </div>
     </div>

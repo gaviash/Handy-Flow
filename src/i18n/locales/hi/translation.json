@@ -1238,6 +1238,7 @@
     }
   },
   "footer": {
+    "appName": "Handy Flow",
     "checkingUpdates": "अपडेट जांचे जा रहे हैं...",
     "updateAvailableShort": "अपडेट उपलब्ध है",
     "upToDate": "अप-टू-डेट",
