@@ -1238,6 +1238,7 @@
     }
   },
   "footer": {
+    "appName": "Handy Flow",
     "checkingUpdates": "Memeriksa pembaruan...",
     "updateAvailableShort": "Pembaruan tersedia",
     "upToDate": "Sudah versi terbaru",

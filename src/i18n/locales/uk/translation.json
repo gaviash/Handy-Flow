@@ -1238,6 +1238,7 @@
     }
   },
   "footer": {
+    "appName": "Handy Flow",
     "checkingUpdates": "Перевірка оновлень...",
     "updateAvailableShort": "Доступне оновлення",
     "upToDate": "Актуальна версія",

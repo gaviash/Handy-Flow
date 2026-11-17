@@ -75,7 +75,7 @@ const Footer: React.FC<FooterProps> = ({ onShowHistory, onShowModels }) => {
             {updateChecksLocked === false ? (
               <UpdateChecker />
             ) : (
-              <span>{t("onboarding.done.panel.name")}</span>
+              <span>{t("footer.appName")}</span>
             )}
             {version && (
               <>

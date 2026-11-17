@@ -1238,6 +1238,7 @@
     }
   },
   "footer": {
+    "appName": "Handy Flow",
     "checkingUpdates": "Kontroluji aktualizace...",
     "updateAvailableShort": "Dostupná aktualizace",
     "upToDate": "Vše aktuální",

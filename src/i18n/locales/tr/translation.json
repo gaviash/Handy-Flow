@@ -1238,6 +1238,7 @@
     }
   },
   "footer": {
+    "appName": "Handy Flow",
     "checkingUpdates": "Güncellemeler kontrol ediliyor...",
     "updateAvailableShort": "Güncelleme mevcut",
     "upToDate": "Güncel",
