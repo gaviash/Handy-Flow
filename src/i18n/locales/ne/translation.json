@@ -1158,6 +1158,12 @@
         "pill": "Pill",
         "wave": "Wave",
         "live": "Live"
+      },
+      "pillTone": {
+        "title": "डिक्टेसन संकेतको शैली",
+        "description": "डिक्टेसनको प्रतिक्रिया कस्तो देखिने छान्नुहोस्।",
+        "discreet": "साधारण",
+        "expressive": "अभिव्यक्तिपूर्ण"
       }
     },
     "transcription": {
@@ -1319,7 +1325,8 @@
     "transcribing": "ट्रान्सक्राइब गरिँदैछ...",
     "processing": "प्रशोधन गरिँदैछ...",
     "loadingModel": "मोडेल लोड गरिँदैछ...",
-    "recording": "Listening"
+    "recording": "Listening",
+    "pasted": "टाँसियो"
   },
   "secureInput": {
     "blockedWithCulprit_one": "{{name}} ले 1 सर्टकट रोकिरहेको हुन सक्छ",

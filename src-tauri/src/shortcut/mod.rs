@@ -695,6 +695,18 @@ pub fn change_palette_setting(app: AppHandle, palette: String) -> Result<(), Str
 
 #[tauri::command]
 #[specta::specta]
+pub fn change_pill_tone_setting(app: AppHandle, tone: String) -> Result<(), String> {
+    let tone = if tone == "expressive" {
+        settings::PillTone::Expressive
+    } else {
+        settings::PillTone::Discreet
+    };
+    update_appearance(&app, |s| s.pill_tone = tone);
+    Ok(())
+}
+
+#[tauri::command]
+#[specta::specta]
 pub fn change_heading_style_setting(app: AppHandle, style: String) -> Result<(), String> {
     let style = settings::HeadingStyle::from_setting(&style);
     update_appearance(&app, |s| s.heading_style = style);

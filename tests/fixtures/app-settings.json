@@ -1,5 +1,5 @@
 {
-  "adaptive_settings_version": 3,
+  "adaptive_settings_version": 4,
   "airpods_mode": false,
   "always_on_microphone": false,
   "app_language": "en",
@@ -78,6 +78,14 @@
   "chinese_script": "as_transcribed",
   "clamshell_microphone": null,
   "clipboard_handling": "dont_modify",
+  "cloud_asr": {
+    "models": {
+      "groq": "whisper-large-v3",
+      "openai": "whisper-1"
+    },
+    "provider_id": "",
+    "timeout_secs": 20
+  },
   "context_enabled": true,
   "context_excluded_apps": [
     "1password",
@@ -142,6 +150,7 @@
   "paste_delay_after_ms": 60,
   "paste_delay_ms": 60,
   "paste_method": "ctrl_v",
+  "pill_tone": "discreet",
   "post_process_api_keys": {
     "anthropic": "",
     "bedrock_mantle": "",
@@ -321,6 +330,7 @@
   "user_name": "",
   "vad_backend": "silero",
   "vad_enabled": true,
+  "vscode_screen_reader": true,
   "whats_new_last_seen_version": "0.10.1",
   "word_correction_threshold": 0.18
 }

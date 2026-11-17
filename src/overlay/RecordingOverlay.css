@@ -538,3 +538,44 @@
 :root:not([data-overlay-label="false"]) .scard.compact .swave i {
   width: 2px;
 }
+
+.spasted {
+  display: flex;
+  justify-content: center;
+  gap: 7px;
+  color: var(--pill-ink);
+  font-size: 12px;
+  font-weight: 600;
+}
+.pasted-check {
+  width: 16px;
+  height: 16px;
+  color: var(--pill-accent);
+}
+:root[data-pill-tone="expressive"] .scard:not(.cnotice) {
+  --s-surface: var(--accent);
+  --pill-ink: var(--on-accent);
+  --s-accent: var(--on-accent);
+  --s-muted: var(--on-accent);
+  --s-faint: var(--on-accent);
+  --s-hair: color-mix(in srgb, var(--on-accent) 15%, var(--accent));
+  --s-accent-soft: color-mix(in srgb, var(--on-accent) 20%, transparent);
+  background: var(--accent);
+  transition:
+    width 450ms cubic-bezier(0.22, 1, 0.36, 1),
+    border-radius 450ms,
+    background-color 220ms;
+}
+:root[data-pill-tone="expressive"] .scard.pasted {
+  width: 148px;
+  border-radius: 14px;
+}
+:root[data-pill-tone="expressive"] .pasted-check {
+  color: var(--on-accent);
+}
+.pasted-check path {
+  stroke: var(--pill);
+}
+:root[data-pill-tone="expressive"] .pasted-check path {
+  stroke: var(--accent);
+}

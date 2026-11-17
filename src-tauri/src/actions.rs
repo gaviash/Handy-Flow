@@ -1591,7 +1591,13 @@ impl ShortcutAction for TranscribeAction {
                                                 notices::raise(&ah_clone, notice)
                                             }
                                             (true, None) => {
-                                                utils::hide_recording_overlay(&ah_clone)
+                                                if get_settings(&ah_clone).paste_method
+                                                    == crate::settings::PasteMethod::None
+                                                {
+                                                    utils::hide_recording_overlay(&ah_clone);
+                                                } else {
+                                                    crate::overlay::show_pasted_overlay(&ah_clone);
+                                                }
                                             }
                                             (false, Some(notice)) => {
                                                 notices::raise_without_overlay(&ah_clone, notice)

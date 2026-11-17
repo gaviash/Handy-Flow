@@ -1158,6 +1158,12 @@
         "pill": "Pill",
         "wave": "Wave",
         "live": "Live"
+      },
+      "pillTone": {
+        "title": "Ton der Anzeige",
+        "description": "Wähle das Aussehen der Diktierrückmeldung.",
+        "discreet": "Dezent",
+        "expressive": "Ausdrucksstark"
       }
     },
     "transcription": {
@@ -1319,7 +1325,8 @@
     "transcribing": "Transkribiere...",
     "processing": "Verarbeite...",
     "loadingModel": "Modell wird geladen...",
-    "recording": "Listening"
+    "recording": "Listening",
+    "pasted": "Eingefügt"
   },
   "secureInput": {
     "blockedWithCulprit_one": "{{name}} blockiert möglicherweise 1 Tastenkürzel",

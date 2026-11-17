@@ -21,6 +21,7 @@ export type Appearance = {
   palette: PaletteId;
   heading_style: HeadingStyle;
   ui_density: UiDensity;
+  pill_tone: "discreet" | "expressive";
   overlay_show_label: boolean;
 };
 
@@ -34,6 +35,7 @@ export const DEFAULT_APPEARANCE: Appearance = {
   palette: "rose",
   heading_style: "editorial",
   ui_density: "comfortable",
+  pill_tone: "discreet",
   overlay_show_label: true,
 };
 
@@ -52,6 +54,7 @@ export function normalizeAppearance(raw: unknown): Appearance {
     palette: isPaletteId(r.palette) ? r.palette : d.palette,
     heading_style: r.heading_style === "modern" ? "modern" : "editorial",
     ui_density: r.ui_density === "compact" ? "compact" : "comfortable",
+    pill_tone: r.pill_tone === "expressive" ? "expressive" : "discreet",
     overlay_show_label:
       typeof r.overlay_show_label === "boolean"
         ? r.overlay_show_label
@@ -70,6 +73,7 @@ export function applyAppearance(
   root.dataset.palette = a.palette;
   root.dataset.headings = a.heading_style;
   root.dataset.density = a.ui_density;
+  root.dataset.pillTone = a.pill_tone;
   root.dataset.overlayLabel = String(a.overlay_show_label);
   try {
     localStorage.setItem(APPEARANCE_STORAGE_KEY, JSON.stringify(a));

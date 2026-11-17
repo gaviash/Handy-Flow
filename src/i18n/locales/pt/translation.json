@@ -1158,6 +1158,12 @@
         "pill": "Pill",
         "wave": "Wave",
         "live": "Live"
+      },
+      "pillTone": {
+        "title": "Tom da cápsula",
+        "description": "Escolha o aspeto da resposta ao ditado.",
+        "discreet": "Discreto",
+        "expressive": "Expressivo"
       }
     },
     "transcription": {
@@ -1319,7 +1325,8 @@
     "transcribing": "Transcrevendo...",
     "processing": "Processando...",
     "loadingModel": "Carregando modelo...",
-    "recording": "Listening"
+    "recording": "Listening",
+    "pasted": "Colado"
   },
   "secureInput": {
     "blockedWithCulprit_one": "{{name}} pode estar bloqueando 1 atalho",

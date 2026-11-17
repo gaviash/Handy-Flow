@@ -1158,6 +1158,12 @@
         "pill": "Pill",
         "wave": "Wave",
         "live": "Live"
+      },
+      "pillTone": {
+        "title": "Tono de la pastilla",
+        "description": "Elige el aspecto de la respuesta del dictado.",
+        "discreet": "Discreto",
+        "expressive": "Expresivo"
       }
     },
     "transcription": {
@@ -1319,7 +1325,8 @@
     "transcribing": "Transcribiendo...",
     "processing": "Procesando...",
     "loadingModel": "Cargando modelo...",
-    "recording": "Listening"
+    "recording": "Listening",
+    "pasted": "Pegado"
   },
   "secureInput": {
     "blockedWithCulprit_one": "{{name}} puede estar bloqueando 1 atajo",

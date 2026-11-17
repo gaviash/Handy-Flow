@@ -184,6 +184,10 @@ const settingUpdaters: {
     const result = await commands.changePaletteSetting(value ?? "rose");
     if (result.status === "error") throw new Error(result.error);
   },
+  pill_tone: async (value) => {
+    const result = await commands.changePillToneSetting(value ?? "discreet");
+    if (result.status === "error") throw new Error(result.error);
+  },
   heading_style: async (value) => {
     const result = await commands.changeHeadingStyleSetting(
       value ?? "editorial",
@@ -414,6 +418,7 @@ export const useSettingsStore = create<SettingsStore>()(
             "palette",
             "heading_style",
             "ui_density",
+            "pill_tone",
             "overlay_show_label",
           ].includes(updateKey)
         ) {
@@ -436,6 +441,7 @@ export const useSettingsStore = create<SettingsStore>()(
               "palette",
               "heading_style",
               "ui_density",
+              "pill_tone",
               "overlay_show_label",
             ].includes(updateKey)
           ) {

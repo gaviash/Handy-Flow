@@ -309,3 +309,19 @@ for (const palette of PALETTE_IDS)
       await expect(page).toHaveScreenshot(`appearance-${palette}-${theme}.png`);
     });
   }
+
+test("pill tone can be changed in appearance", async ({ page }) => {
+  const backend = await mockTauri(page);
+  await page.goto("/");
+  await page.getByRole("button", { name: "Appearance", exact: true }).click();
+  await page.getByRole("radio", { name: "Expressive", exact: true }).click();
+  await expect
+    .poll(async () =>
+      (await backend.calls()).some(
+        (c) =>
+          c.cmd === "change_pill_tone_setting" &&
+          (c.args as { tone: string }).tone === "expressive",
+      ),
+    )
+    .toBe(true);
+});

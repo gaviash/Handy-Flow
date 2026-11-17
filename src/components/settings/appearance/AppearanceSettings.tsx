@@ -78,6 +78,21 @@ export const AppearanceSettings: React.FC = () => {
           />
         </SettingContainer>
         <SettingContainer
+          title={label("pillTone.title")}
+          description={label("pillTone.description")}
+          grouped
+        >
+          <Segmented<"discreet" | "expressive">
+            ariaLabel={label("pillTone.title")}
+            value={appearance.pill_tone}
+            options={(["discreet", "expressive"] as const).map((value) => ({
+              value,
+              label: label(`pillTone.${value}`),
+            }))}
+            onChange={(value) => void updateSetting("pill_tone", value)}
+          />
+        </SettingContainer>
+        <SettingContainer
           title={label("overlay.title")}
           description={label("overlay.description")}
           grouped

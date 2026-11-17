@@ -1158,6 +1158,12 @@
         "pill": "Pill",
         "wave": "Wave",
         "live": "Live"
+      },
+      "pillTone": {
+        "title": "Styl wskaźnika",
+        "description": "Wybierz wygląd informacji o dyktowaniu.",
+        "discreet": "Dyskretny",
+        "expressive": "Wyrazisty"
       }
     },
     "transcription": {
@@ -1319,7 +1325,8 @@
     "transcribing": "Transkrypcja...",
     "processing": "Przetwarzanie...",
     "loadingModel": "Wczytywanie modelu...",
-    "recording": "Listening"
+    "recording": "Listening",
+    "pasted": "Wklejono"
   },
   "secureInput": {
     "blockedWithCulprit_one": "{{name}} może blokować 1 skrót",

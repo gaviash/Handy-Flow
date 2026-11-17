@@ -1158,6 +1158,12 @@
         "pill": "Pill",
         "wave": "Wave",
         "live": "Live"
+      },
+      "pillTone": {
+        "title": "To de la píndola",
+        "description": "Trieu l’aspecte de la resposta del dictat.",
+        "discreet": "Discret",
+        "expressive": "Expressiu"
       }
     },
     "transcription": {
@@ -1319,7 +1325,8 @@
     "transcribing": "S'està transcrivint...",
     "processing": "S'està processant...",
     "loadingModel": "S'està carregant el model...",
-    "recording": "Listening"
+    "recording": "Listening",
+    "pasted": "Enganxat"
   },
   "secureInput": {
     "blockedWithCulprit_one": "{{name}} pot estar blocant 1 drecera",

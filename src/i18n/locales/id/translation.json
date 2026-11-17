@@ -1158,6 +1158,12 @@
         "pill": "Pill",
         "wave": "Wave",
         "live": "Live"
+      },
+      "pillTone": {
+        "title": "Gaya indikator",
+        "description": "Pilih tampilan umpan balik dikte.",
+        "discreet": "Samar",
+        "expressive": "Ekspresif"
       }
     },
     "transcription": {
@@ -1319,7 +1325,8 @@
     "transcribing": "Mentranskripsikan...",
     "processing": "Memproses...",
     "loadingModel": "Memuat model...",
-    "recording": "Listening"
+    "recording": "Listening",
+    "pasted": "Ditempel"
   },
   "secureInput": {
     "blockedWithCulprit_one": "{{name}} mungkin memblokir 1 pintasan",

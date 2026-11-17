@@ -1158,6 +1158,12 @@
         "pill": "Pill",
         "wave": "Wave",
         "live": "Live"
+      },
+      "pillTone": {
+        "title": "Stijl van de indicator",
+        "description": "Kies hoe dicteerfeedback eruitziet.",
+        "discreet": "Subtiel",
+        "expressive": "Expressief"
       }
     },
     "transcription": {
@@ -1319,7 +1325,8 @@
     "transcribing": "Transcriberen...",
     "processing": "Verwerken...",
     "loadingModel": "Model laden...",
-    "recording": "Listening"
+    "recording": "Listening",
+    "pasted": "Geplakt"
   },
   "secureInput": {
     "blockedWithCulprit_one": "{{name}} blokkeert mogelijk 1 sneltoets",
