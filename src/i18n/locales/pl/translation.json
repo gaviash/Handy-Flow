@@ -331,6 +331,12 @@
     },
     "general": {
       "title": "Ogólne",
+      "today": {
+        "words": "Słowa podyktowane dziś",
+        "saved": "Zaoszczędzone względem pisania",
+        "savedHint": "Szacunek: pisanie {{typing}} słów na minutę, mówienie {{speaking}}.",
+        "empty": "Dziś jeszcze nic nie podyktowano."
+      },
       "shortcut": {
         "title": "Skróty Handy Flow",
         "description": "Skonfiguruj skróty klawiaturowe do uruchamiania nagrywania mowy",

@@ -331,6 +331,12 @@
     },
     "general": {
       "title": "通用",
+      "today": {
+        "words": "今日听写字词",
+        "saved": "比打字节省",
+        "savedHint": "估算：打字每分钟 {{typing}} 词，说话每分钟 {{speaking}} 词。",
+        "empty": "今天还没有听写。"
+      },
       "shortcut": {
         "title": "Handy Flow 快捷键",
         "description": "配置启动语音转文字录制的键盘快捷键",

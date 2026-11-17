@@ -331,6 +331,12 @@
     },
     "general": {
       "title": "Chung",
+      "today": {
+        "words": "Số từ đã đọc hôm nay",
+        "saved": "Tiết kiệm so với gõ phím",
+        "savedHint": "Ước tính: gõ {{typing}} từ mỗi phút, nói {{speaking}} từ.",
+        "empty": "Hôm nay chưa đọc gì."
+      },
       "shortcut": {
         "title": "Phím tắt Handy Flow",
         "description": "Cấu hình phím tắt để kích hoạt ghi âm chuyển đổi giọng nói thành văn bản",

@@ -331,6 +331,12 @@
     },
     "general": {
       "title": "Generelt",
+      "today": {
+        "words": "Dikterede ord i dag",
+        "saved": "Sparet i forhold til at skrive",
+        "savedHint": "Skøn: skrive {{typing}} ord i minuttet, tale {{speaking}}.",
+        "empty": "Intet dikteret endnu i dag."
+      },
       "shortcut": {
         "title": "Handy Flow-genveje",
         "description": "Konfigurer tastaturgenveje til at udløse tale-til-tekst-optagelse",

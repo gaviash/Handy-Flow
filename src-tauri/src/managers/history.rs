@@ -443,31 +443,10 @@ impl HistoryManager {
         Ok(entry)
     }
 
-    /// Handy Adaptive (F110): dictations, words and top apps in the kept history.
-    pub fn stats(&self) -> Result<(u32, u32, Vec<(String, u32)>)> {
-        let conn = self.get_connection()?;
-        let mut stmt = conn.prepare(
-            "SELECT COALESCE(post_processed_text, transcription_text), app FROM transcription_history WHERE source_name IS NULL AND transcription_text != ''",
-        )?;
-        let rows: Vec<(String, Option<String>)> = stmt
-            .query_map([], |r| Ok((r.get(0)?, r.get(1)?)))?
-            .filter_map(|r| r.ok())
-            .collect();
-        let words = rows
-            .iter()
-            .map(|(t, _)| t.split_whitespace().count() as u32)
-            .sum();
-        let mut apps: Vec<(String, u32)> = Vec::new();
-        for app in rows.iter().filter_map(|(_, a)| a.as_deref()) {
-            let name = app.split(" · ").last().unwrap_or(app).to_string();
-            match apps.iter_mut().find(|(a, _)| *a == name) {
-                Some((_, n)) => *n += 1,
-                None => apps.push((name, 1)),
-            }
-        }
-        apps.sort_by(|a, b| b.1.cmp(&a.1));
-        apps.truncate(5);
-        Ok((rows.len() as u32, words, apps))
+    /// Handy Adaptive (F110): dictations, words, top apps and today's words
+    /// (local calendar day) in the kept history.
+    pub fn stats(&self) -> Result<(u32, u32, Vec<(String, u32)>, u32)> {
+        stats_on(&self.get_connection()?)
     }
 
     /// Handy Adaptive (F109): records where a dictation went.
@@ -498,6 +477,32 @@ pub struct PastDictation {
     pub text: String,
     pub app: Option<String>,
     pub timestamp: i64,
+}
+
+fn stats_on(conn: &Connection) -> Result<(u32, u32, Vec<(String, u32)>, u32)> {
+    let mut stmt = conn.prepare(
+        "SELECT COALESCE(post_processed_text, transcription_text), app,
+                date(timestamp, 'unixepoch', 'localtime') = date('now', 'localtime')
+         FROM transcription_history WHERE source_name IS NULL AND transcription_text != ''",
+    )?;
+    let rows: Vec<(String, Option<String>, bool)> = stmt
+        .query_map([], |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?)))?
+        .filter_map(|r| r.ok())
+        .collect();
+    let count = |t: &str| t.split_whitespace().count() as u32;
+    let words = rows.iter().map(|(t, _, _)| count(t)).sum();
+    let words_today = rows.iter().filter(|r| r.2).map(|(t, _, _)| count(t)).sum();
+    let mut apps: Vec<(String, u32)> = Vec::new();
+    for app in rows.iter().filter_map(|(_, a, _)| a.as_deref()) {
+        let name = app.split(" · ").last().unwrap_or(app).to_string();
+        match apps.iter_mut().find(|(a, _)| *a == name) {
+            Some((_, n)) => *n += 1,
+            None => apps.push((name, 1)),
+        }
+    }
+    apps.sort_by(|a, b| b.1.cmp(&a.1));
+    apps.truncate(5);
+    Ok((rows.len() as u32, words, apps, words_today))
 }
 
 fn set_kept_text_on(conn: &Connection, id: i64, text: &str) -> Result<()> {
@@ -854,6 +859,17 @@ impl HistoryManager {
 mod tests {
     use super::*;
     use rusqlite::{params, Connection};
+
+    #[test]
+    fn todays_words_count_only_entries_from_today() {
+        let conn = setup_conn();
+        let now = chrono::Utc::now().timestamp();
+        insert_entry(&conn, now, "un deux trois", None);
+        insert_entry(&conn, now, "brut", Some("quatre cinq"));
+        insert_entry(&conn, now - 3 * 86_400, "il y a trois jours", None);
+        let (dictations, words, _, today) = stats_on(&conn).unwrap();
+        assert_eq!((dictations, words, today), (3, 10, 5));
+    }
 
     fn setup_conn() -> Connection {
         let conn = Connection::open_in_memory().expect("open in-memory db");

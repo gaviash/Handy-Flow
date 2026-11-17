@@ -14,6 +14,7 @@ import { MuteWhileRecording } from "../MuteWhileRecording";
 import { PreferredLanguages } from "../PreferredLanguages";
 import { ChineseScriptSetting } from "../ChineseScript";
 import { isChinese } from "@/lib/utils/languageSuggestions";
+import { TodayCounter } from "./TodayCounter";
 
 export const GeneralSettings: React.FC = () => {
   const { t } = useTranslation();
@@ -26,6 +27,7 @@ export const GeneralSettings: React.FC = () => {
   return (
     <div className="max-w-3xl w-full mx-auto space-y-6">
       <h1 className="page-title">{t("settings.general.title")}</h1>
+      <TodayCounter />
       <SettingsGroup title={t("settings.general.dictationShortcut")}>
         <ShortcutInput shortcutId="transcribe" grouped={true} />
       </SettingsGroup>

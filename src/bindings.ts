@@ -1655,7 +1655,11 @@ export type DictationStats = { dictations: number; words: number;
 /**
  * Most used apps, with their dictation count.
  */
-top_apps: ([string, number])[]; learned_words: number }
+top_apps: ([string, number])[]; learned_words: number; 
+/**
+ * Words dictated today (local calendar day).
+ */
+words_today: number }
 /**
  * What was read from the focused field (F23).
  */

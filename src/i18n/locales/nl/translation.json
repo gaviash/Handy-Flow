@@ -331,6 +331,12 @@
     },
     "general": {
       "title": "Algemeen",
+      "today": {
+        "words": "Vandaag gedicteerde woorden",
+        "saved": "Bespaard t.o.v. typen",
+        "savedHint": "Schatting: typen met {{typing}} woorden per minuut, spreken met {{speaking}}.",
+        "empty": "Vandaag nog niets gedicteerd."
+      },
       "shortcut": {
         "title": "Sneltoetsen",
         "description": "Configureer sneltoetsen om spraak-naar-tekst-opnames te starten",
