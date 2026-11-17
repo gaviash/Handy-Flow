@@ -6,7 +6,7 @@ export function PalettePreview({ palette }: { palette: PaletteId }) {
     <span
       data-palette={palette}
       aria-hidden="true"
-      className="flex h-16 overflow-hidden rounded-lg bg-[var(--bg)]"
+      className="flex h-16 w-full shrink-0 overflow-hidden rounded-lg border border-line bg-[var(--bg)]"
     >
       <span className="flex w-1/4 flex-col gap-1 bg-side p-2">
         <span className="h-1 w-full rounded bg-side-ink" />

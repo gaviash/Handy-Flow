@@ -28,7 +28,7 @@ export function PalettePicker({
           aria-label={t(`settings.appearance.palettes.${id}.name`)}
           aria-checked={value === id}
           tabIndex={value === id ? 0 : -1}
-          className={`rounded-[14px] border p-2 text-left transition-transform duration-150 ease-glide hover:-translate-y-0.5 ${value === id ? "border-accent-text outline outline-accent-text" : "border-line"}`}
+          className={`flex flex-col rounded-[14px] border p-2 text-left transition-transform duration-150 ease-glide hover:-translate-y-0.5 ${value === id ? "border-accent-text outline outline-accent-text" : "border-line"}`}
           onClick={() => onChange(id)}
           onKeyDown={(event) => {
             const columns = window.matchMedia("(min-width: 900px)").matches
