@@ -18,7 +18,7 @@ interface FooterProps {
 const Footer: React.FC<FooterProps> = ({ onShowHistory, onShowModels }) => {
   const [version, setVersion] = useState("");
   const { t } = useTranslation();
-  const { settings, isLoading } = useSettings();
+  const { settings, isLoading, updateChecksLocked } = useSettings();
   const { models, currentModel, downloadProgress, loading } = useModelStore();
   const config = getTranscriptionConfig(settings, models, currentModel);
   const k = (key: string) => `settings.transcription.${key}`;
@@ -44,7 +44,6 @@ const Footer: React.FC<FooterProps> = ({ onShowHistory, onShowModels }) => {
         setVersion(appVersion);
       } catch (error) {
         console.error("Failed to get app version:", error);
-        setVersion("0.1.2");
       }
     };
 
@@ -53,7 +52,7 @@ const Footer: React.FC<FooterProps> = ({ onShowHistory, onShowModels }) => {
 
   return (
     <div className="w-full border-t border-line pt-3">
-      <div className="flex justify-between items-center text-xs px-4 pb-3 text-ink-2">
+      <div className="flex justify-between items-center text-label px-4 pb-3 text-ink-2">
         <div className="flex min-w-0 items-center gap-4">
           <button
             type="button"
@@ -73,10 +72,18 @@ const Footer: React.FC<FooterProps> = ({ onShowHistory, onShowModels }) => {
         <div className="flex items-center gap-3">
           {/* Update Status */}
           <div className="flex items-center gap-1">
-            <UpdateChecker />
-            <span>•</span>
-            {/* eslint-disable-next-line i18next/no-literal-string */}
-            <span>v{version}</span>
+            {updateChecksLocked === false ? (
+              <UpdateChecker />
+            ) : (
+              <span>{t("onboarding.done.panel.name")}</span>
+            )}
+            {version && (
+              <>
+                <span>•</span>
+                {/* eslint-disable-next-line i18next/no-literal-string */}
+                <span>v{version}</span>
+              </>
+            )}
           </div>
           <NoticeChip />
         </div>
