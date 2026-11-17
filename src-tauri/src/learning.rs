@@ -559,7 +559,7 @@ fn has_meaning_word(s: &str) -> bool {
 /// Whether `heard` → `term` can be a misheard common word (also checked on
 /// what the LLM judge proposes).
 pub fn is_misheard_pair(heard: &str, term: &str) -> bool {
-    close_pair(heard, term, MISHEARD_DISTANCE)
+    close_pair(heard, term, MISHEARD_DISTANCE) && !is_grammar_change(heard, term)
 }
 
 fn close_pair(heard: &str, term: &str, max: f64) -> bool {
@@ -569,7 +569,6 @@ fn close_pair(heard: &str, term: &str, max: f64) -> bool {
         && h != t
         && !has_meaning_word(&h)
         && !has_meaning_word(&t)
-        && !is_grammar_change(&h, &t)
         && distance(&h, &t) <= max
 }
 
@@ -816,7 +815,12 @@ pub(crate) fn apply_verdicts(
                 } else {
                     MISHEARD_DISTANCE
                 };
-                if !counted && !close_pair(heard, term, max) {
+                // A technical word may be short (npm, Vue); a common one never
+                // learns a grammar fix.
+                if !counted
+                    && (!close_pair(heard, term, max)
+                        || (!v.technical && is_grammar_change(heard, term)))
+                {
                     log::debug!("Learning: judge item rejected (not a misheard pair)");
                     continue;
                 }
@@ -828,10 +832,17 @@ pub(crate) fn apply_verdicts(
                     log::debug!("Learning: judge item rejected (not in the texts)");
                     continue;
                 }
+                // A technical word is a term: forced in the rewrite, kept by the
+                // grammar purge.
+                let kind = if v.technical {
+                    WordKind::Term
+                } else {
+                    WordKind::Misheard
+                };
                 let c = Candidate {
                     term: term.into(),
                     heard: heard.into(),
-                    kind: WordKind::Misheard,
+                    kind,
                 };
                 let mut new = if counted {
                     None
@@ -840,21 +851,27 @@ pub(crate) fn apply_verdicts(
                 };
                 // A technical or rare, hard-to-say word is usable at once.
                 if v.technical {
-                    if let Some(l) = m
-                        .words
-                        .iter_mut()
-                        .find(|l| same_term(&l.term, term) && !l.active)
-                    {
-                        l.active = true;
-                        new = Some(LearnedNews::Word {
-                            term: l.term.clone(),
-                        });
+                    if let Some(l) = m.words.iter_mut().find(|l| same_term(&l.term, term)) {
+                        l.kind = WordKind::Term;
+                        if !l.active {
+                            l.active = true;
+                            new = Some(LearnedNews::Word {
+                                term: l.term.clone(),
+                            });
+                        }
                     }
                 }
                 news.extend(new);
             }
             VerdictKind::StyleRule | VerdictKind::Filler => {
-                let existing = v.same_as.and_then(|i| m.rules.get_mut(i));
+                // The judge's number, else the same text: a rule repeated
+                // without `same_as` still counts as a second sighting.
+                let same_text = v.rule.as_deref().map(str::trim).and_then(|t| {
+                    m.rules
+                        .iter()
+                        .position(|r| r.rule.trim().eq_ignore_ascii_case(t))
+                });
+                let existing = v.same_as.or(same_text).and_then(|i| m.rules.get_mut(i));
                 match existing {
                     Some(r) => {
                         r.count += 1;
@@ -1618,6 +1635,44 @@ mod tests {
         let news = apply_verdicts(&mut m, &[v(Some(0))], &[], "a", "b", 1);
         assert!(m.rules[0].active);
         assert_eq!(news, vec![LearnedNews::Rule { rule: rule.into() }]);
+    }
+
+    #[test]
+    fn technical_judge_words_are_terms_even_short() {
+        use crate::judge::{Verdict, VerdictKind};
+        let v = Verdict {
+            kind: VerdictKind::Misheard,
+            heard: Some("vu".into()),
+            term: Some("Vue".into()),
+            rule: None,
+            same_as: None,
+            consistent_with_history: false,
+            technical: true,
+        };
+        let mut m = Memory::default();
+        apply_verdicts(&mut m, &[v], &[], "on code en vu", "on code en Vue", 0);
+        assert_eq!(m.words.len(), 1);
+        assert!(m.words[0].active);
+        assert_eq!(m.words[0].kind, WordKind::Term);
+    }
+
+    #[test]
+    fn a_repeated_rule_counts_even_without_same_as() {
+        use crate::judge::{Verdict, VerdictKind};
+        let v = Verdict {
+            kind: VerdictKind::StyleRule,
+            heard: None,
+            term: None,
+            rule: Some("Toujours vouvoyer.".into()),
+            same_as: None,
+            consistent_with_history: false,
+            technical: false,
+        };
+        let mut m = Memory::default();
+        apply_verdicts(&mut m, &[v.clone()], &[], "a", "b", 0);
+        apply_verdicts(&mut m, &[v], &[], "a", "b", 1);
+        assert_eq!(m.rules.len(), 1);
+        assert!(m.rules[0].active);
     }
 
     #[test]
