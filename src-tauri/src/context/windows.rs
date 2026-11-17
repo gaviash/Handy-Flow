@@ -237,10 +237,9 @@ fn read(
     // SAFETY: all calls go through live COM interfaces on the worker thread.
     unsafe {
         let focused = a.GetFocusedElement().ok();
-        cap.sensitive = focused
-            .as_ref()
-            .and_then(|f| f.CurrentIsPassword().ok())
-            .is_some_and(|b| b.as_bool());
+        let password = focused.as_ref().and_then(|f| f.CurrentIsPassword().ok());
+        cap.password_checked = password.is_some();
+        cap.sensitive = password.is_some_and(|b| b.as_bool());
         // The site is read even with context off: domain exclusions need it.
         if is_browser(&cap.process) {
             cap.host = read_host(a, HWND(hwnd as *mut _));

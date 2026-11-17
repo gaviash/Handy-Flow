@@ -23,11 +23,7 @@ export const ModelSettingsCard: React.FC = () => {
   }
 
   return (
-    <SettingsGroup
-      title={t("settings.modelSettings.title", {
-        model: currentModelInfo.name,
-      })}
-    >
+    <SettingsGroup title={t("settings.transcription.localOptions")}>
       {showLanguageSelector && (
         <LanguageSelector
           descriptionMode="tooltip"

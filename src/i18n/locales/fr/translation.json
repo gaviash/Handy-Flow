@@ -772,7 +772,8 @@
             "before": "Texte avant le curseur :",
             "prompt": "Prompt envoyé",
             "screenLate": "L'écran est arrivé trop tard : envoyé sans l'application ni le texte.",
-            "echo": "Le modèle a relu son contexte au lieu de la parole : le texte a été jeté."
+            "echo": "Le modèle a relu son contexte au lieu de la parole : le texte a été jeté.",
+            "cloudError": "L'API de transcription a échoué, le modèle local a transcrit : {{error}}"
           },
           "llm": {
             "title": "LLM (reformulation ou transformation)"
@@ -795,6 +796,10 @@
           "learnedWordsDescription": "Les mots appris de vos corrections, avec les formes mal entendues.",
           "styleRulesDescription": "Vos préférences d'écriture apprises de vos corrections.",
           "pastDictationsDescription": "Jusqu'à 5 de vos dictées reformulées récentes qui ressemblent à celle-ci."
+        },
+        "vscode": {
+          "label": "Mode lecteur d'écran de VS Code",
+          "description": "Active « Screen Reader Optimized » (editor.accessibilitySupport) dans VS Code, Cursor et VSCodium, pour que le texte autour du curseur puisse être lu pour le contexte et l'apprentissage."
         }
       },
       "learning": {
@@ -1146,6 +1151,76 @@
         "pill": "Pastille",
         "wave": "Onde",
         "live": "Live"
+      }
+    },
+    "transcription": {
+      "title": "Modèles de transcription",
+      "intro": "Choisissez comment Handy Flow transforme votre voix en texte. La mise au propre se règle séparément.",
+      "reformulationLink": "Ouvrir les réglages de reformulation",
+      "modeTitle": "Où effectuer la transcription ?",
+      "localMode": "Sur cet ordinateur",
+      "localDescription": "L’audio est transcrit localement, sans API de transcription.",
+      "apiMode": "Par API",
+      "apiDescription": "L’audio est envoyé à un fournisseur. Gardez un modèle local en secours.",
+      "apiSummary": "Transcription : {{provider}} · {{model}}",
+      "localSummary": "Transcription sur cet ordinateur : {{model}}",
+      "configured": "API configurée. Sa disponibilité sera vérifiée lors de votre prochaine dictée.",
+      "localSummaryHelp": "Le modèle local ci-dessous est utilisé. La reformulation se configure séparément.",
+      "loading": "Chargement de la configuration…",
+      "modelMissing": "Aucun modèle API choisi",
+      "localMissing": "Aucun modèle local disponible",
+      "missingProvider": "Choisissez un fournisseur de transcription compatible.",
+      "missingModel": "Choisissez un modèle de transcription API.",
+      "missingKey": "Ajoutez une clé API pour utiliser ce fournisseur.",
+      "usingLocal": "En attendant, le modèle local est utilisé.",
+      "noFallback": "Aucun secours local disponible. Téléchargez et sélectionnez un modèle ci-dessous pour couvrir les erreurs API et les dictées qui doivent rester locales.",
+      "sharedKey": "Cette clé sert aussi à la reformulation chez ce fournisseur. La modifier affecte les deux usages.",
+      "customKeyHelp": "Un serveur local peut fonctionner sans clé. Si vous en renseignez une, elle sera partagée avec la reformulation.",
+      "advanced": "Réglages API avancés",
+      "timeoutTitle": "Attente avant le secours local (secondes)",
+      "serverUrl": "URL de base du serveur (compatible OpenAI)",
+      "sharedUrl": "Cette URL est partagée avec la reformulation pour le fournisseur personnalisé. Handy Flow ajoute /audio/transcriptions ou /audio/translations.",
+      "apiLanguage": "Langue de transcription",
+      "automaticLanguage": "Détecter automatiquement",
+      "sharedLanguage": "La langue et la traduction s’appliquent aussi au secours local, selon ses capacités.",
+      "fallbackTitle": "Modèle local de secours",
+      "localTitle": "Modèle de transcription local",
+      "fallbackHelp": "Prend le relais si l’API échoue, renvoie un texte inexploitable ou dépasse le délai. Les protections de confidentialité peuvent aussi imposer la transcription locale.",
+      "localHelp": "Ce modèle transcrit vos dictées sur cet ordinateur. Téléchargez-en un et sélectionnez-le pour commencer.",
+      "downloadRequired": "Téléchargez et sélectionnez un modèle local pour transcrire sur cet ordinateur.",
+      "chooseFallback": "Choisir ou télécharger un modèle de secours",
+      "chooseLocal": "Choisir ou télécharger un modèle local",
+      "catalogFallbackHelp": "Choisir un modèle ici change uniquement le secours local. La transcription par API reste sélectionnée.",
+      "catalogLocalHelp": "Sélectionnez un modèle téléchargé ou téléchargez-en un dans le catalogue.",
+      "selectFallback": "Utiliser comme secours local",
+      "downloadFallback": "Télécharger et utiliser comme secours local",
+      "selectLocal": "Utiliser pour la transcription locale",
+      "downloadLocal": "Télécharger et utiliser pour la transcription locale",
+      "footerIncomplete": "API de transcription : configuration incomplète",
+      "footerApi": "API : {{provider}} · {{model}}",
+      "footerLocal": "Local : {{model}}",
+      "saveError": "Impossible de confirmer l’enregistrement de cette modification. Vérifiez les valeurs affichées et réessayez.",
+      "localOptions": "Options du modèle local"
+    },
+    "cloudAsr": {
+      "title": "Transcription par API",
+      "provider": {
+        "label": "Fournisseur de transcription",
+        "description": "Transcrire avec une API en ligne au lieu du modèle local. Le modèle local prend le relais si l'API échoue ou tarde. Le même contexte que pour le modèle local est envoyé comme prompt de Whisper.",
+        "local": "Modèle local (sur cet ordinateur)",
+        "custom": "Personnalisé (compatible OpenAI)"
+      },
+      "model": {
+        "label": "Modèle",
+        "description": "Le modèle de transcription de ce fournisseur. Groq : whisper-large-v3 (le plus juste) ou whisper-large-v3-turbo (plus rapide)."
+      },
+      "apiKey": {
+        "label": "Clé API",
+        "description": "La même clé que pour la reformulation chez ce fournisseur."
+      },
+      "timeout": {
+        "label": "Attente max (s)",
+        "description": "Au-delà de ce délai, le modèle local transcrit à la place."
       }
     }
   },

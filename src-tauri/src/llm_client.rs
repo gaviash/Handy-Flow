@@ -248,6 +248,11 @@ impl ProviderClient {
 
 /// Process-wide client. A short idle timeout and TCP keepalive keep the pool
 /// from handing out connections that died during sleep or a network change.
+/// The shared client, for another API on the same pool (speech by API).
+pub(crate) fn shared_http_client() -> Result<&'static reqwest::Client, String> {
+    shared_client()
+}
+
 fn shared_client() -> Result<&'static reqwest::Client, String> {
     static SHARED: OnceLock<reqwest::Client> = OnceLock::new();
     if let Some(client) = SHARED.get() {

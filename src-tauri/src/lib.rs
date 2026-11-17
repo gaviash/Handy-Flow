@@ -11,6 +11,7 @@ mod catalog;
 mod chinese_script;
 pub mod cli;
 mod clipboard;
+mod cloud_asr;
 mod commands;
 mod context;
 pub mod engine_supervisor;
@@ -40,6 +41,7 @@ mod transcription_hook;
 mod tray;
 mod tray_i18n;
 mod utils;
+mod vscode;
 pub mod webkit_renderer;
 
 pub use cli::CliArgs;
@@ -212,6 +214,10 @@ fn initialize_core_logic(app_handle: &AppHandle) {
     // on macOS before the user is ready.
 
     context::load_rules(app_handle);
+    // Handy Adaptive: VS Code exposes its editor text only in screen reader mode.
+    if cfg!(target_os = "windows") && settings::get_settings(app_handle).vscode_screen_reader {
+        std::thread::spawn(vscode::ensure_screen_reader_mode);
+    }
 
     // Initialize the managers. The audio recorder receives the streaming router
     // explicitly, so always-on microphone startup can wire live-preview frames
@@ -749,6 +755,8 @@ pub fn run(cli_args: CliArgs) {
             learning::change_asr_context_setting,
             learning::get_asr_support,
             learning::get_frequent_expressions,
+            cloud_asr::change_cloud_asr_setting,
+            vscode::change_vscode_screen_reader_setting,
             shortcut::change_language_detection_setting,
             shortcut::change_language_detection_window_setting,
             shortcut::change_paste_delay_ms_setting,
