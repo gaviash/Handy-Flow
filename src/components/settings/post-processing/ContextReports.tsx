@@ -87,6 +87,11 @@ const AsrPanel: React.FC<{ asr: AsrReport | null }> = ({ asr }) => {
           {asr.screen_waited === false && (
             <div className="text-xs">{t(k("reports.asr.screenLate"))}</div>
           )}
+          {asr.cloud_error && (
+            <div className="text-xs">
+              {t(k("reports.asr.cloudError"), { error: asr.cloud_error })}
+            </div>
+          )}
           {asr.echo_dropped && (
             <div className="text-xs">{t(k("reports.asr.echo"))}</div>
           )}

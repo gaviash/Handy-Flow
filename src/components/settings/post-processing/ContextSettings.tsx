@@ -95,6 +95,15 @@ export const ContextSettings: React.FC = () => {
         descriptionMode="tooltip"
         grouped={true}
       />
+      <ToggleSwitch
+        checked={getSetting("vscode_screen_reader") ?? true}
+        onChange={(v) => updateSetting("vscode_screen_reader", v)}
+        isUpdating={isUpdating("vscode_screen_reader")}
+        label={t("settings.postProcessing.context.vscode.label")}
+        description={t("settings.postProcessing.context.vscode.description")}
+        descriptionMode="tooltip"
+        grouped={true}
+      />
       <ExclusionList
         settingKey="context_excluded_apps"
         label={t("settings.postProcessing.context.excludedApps.label")}

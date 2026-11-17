@@ -331,6 +331,7 @@ impl TranscriptionJobManager {
             &text,
             entry.post_process_requested,
             None,
+            None,
         ));
         // Post-processing can take a while; a cancel during it still wins.
         if cancelled.load(Ordering::Acquire) {

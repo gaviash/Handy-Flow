@@ -15,6 +15,7 @@ import type {
   LanguageDetectionMode,
   AsrContextSettings,
   LlmContextParts,
+  CloudAsrSettings,
 } from "@/bindings";
 import { commands } from "@/bindings";
 import { notify } from "@/stores/noticeStore";
@@ -263,6 +264,14 @@ const settingUpdaters: {
     commands.changeRewriteContextSetting(value as LlmContextParts),
   transform_context: (value) =>
     commands.changeTransformContextSetting(value as LlmContextParts),
+  cloud_asr: async (value) => {
+    const result = await commands.changeCloudAsrSetting(
+      value as CloudAsrSettings,
+    );
+    if (result.status === "error") throw new Error(result.error);
+  },
+  vscode_screen_reader: (value) =>
+    commands.changeVscodeScreenReaderSetting(value as boolean),
   context_excluded_domains: (value) =>
     commands.changeContextExcludedDomainsSetting(value as string[]),
   language_detection: (value) =>

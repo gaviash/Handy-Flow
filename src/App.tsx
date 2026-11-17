@@ -56,7 +56,10 @@ const renderSettingsContent = (
 ) => {
   if (section === "models") {
     return (
-      <ModelsSettings onChangeLanguages={() => onSectionChange("general")} />
+      <ModelsSettings
+        onChangeLanguages={() => onSectionChange("general")}
+        onShowReformulation={() => onSectionChange("postprocessing")}
+      />
     );
   }
   if (section === "debug") {
@@ -355,10 +358,9 @@ function App() {
           {/* Scrollable content area */}
           <div className="flex-1 flex flex-col overflow-hidden">
             <div ref={settingsScrollRef} className="flex-1 overflow-y-auto">
-              {/* Models fills the window: its table scrolls, not the page. */}
               <div
                 key={currentSection}
-                className={`flex flex-col items-center p-4 gap-4 animate-rise ${currentSection === "models" ? "h-full" : ""}`}
+                className="flex flex-col items-center p-4 gap-4 animate-rise"
               >
                 {!["general", "appearance", "about", "models"].includes(
                   currentSection,
@@ -380,7 +382,10 @@ function App() {
           </div>
         </div>
         {/* Fixed footer at bottom */}
-        <Footer onShowHistory={showHistory} />
+        <Footer
+          onShowHistory={showHistory}
+          onShowModels={() => setCurrentSection("models")}
+        />
         <FileDropOverlay onDropped={showHistory} />
       </div>
     );

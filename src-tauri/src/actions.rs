@@ -152,6 +152,7 @@ async fn transform_text(
     instruction: &str,
     text: &str,
     context: Option<&crate::context::LlmContext>,
+    report: Option<u64>,
 ) -> Option<String> {
     let provider = settings.active_post_process_provider().cloned()?;
     let model = settings
@@ -165,7 +166,7 @@ async fn transform_text(
         .cloned()
         .unwrap_or_default();
     let message = crate::adaptive::transform_user_message(instruction, text, context);
-    crate::context::record_sent(&message);
+    crate::context::record_sent(report, &message);
     let call = crate::llm_client::send_chat_completion_with_schema(
         &provider,
         key,
@@ -301,7 +302,7 @@ impl ShortcutAction for TransformAction {
                 &selection,
                 &settings.transform_context,
             );
-            crate::context::set_report(crate::context::ContextReport {
+            let report = crate::context::set_report(crate::context::ContextReport {
                 kind: if slot.is_some() {
                     crate::context::ReportKind::Transform
                 } else {
@@ -316,6 +317,7 @@ impl ShortcutAction for TransformAction {
                 &instruction,
                 &selection,
                 context.as_ref(),
+                Some(report),
             ));
             match result {
                 // Pasting over the selection replaces it; the app's undo reverts it.
@@ -429,6 +431,7 @@ async fn post_process_transcription(
     settings: &AppSettings,
     transcription: &str,
     context: Option<&crate::context::LlmContext>,
+    report: Option<u64>,
 ) -> PostProcessOutcome {
     if is_blank_transcription(transcription) {
         debug!("Post-processing skipped because the transcription is empty");
@@ -507,7 +510,7 @@ async fn post_process_transcription(
         && provider.id != APPLE_INTELLIGENCE_PROVIDER_ID
     {
         let message = crate::adaptive::house_user_message(transcription, context);
-        crate::context::record_sent(&message);
+        crate::context::record_sent(report, &message);
         let primary = async {
             let mut reply = crate::llm_client::send_chat_completion_with_schema(
                 &provider,
@@ -754,6 +757,7 @@ pub(crate) async fn process_transcription_output(
     transcription: &str,
     post_process: bool,
     context: Option<&crate::context::LlmContext>,
+    report: Option<u64>,
 ) -> ProcessedTranscription {
     let settings = get_settings(app);
     let mut final_text = transcription.to_string();
@@ -767,7 +771,7 @@ pub(crate) async fn process_transcription_output(
             .min(POST_PROCESS_TIMEOUT);
         let outcome = match tokio::time::timeout(
             timeout,
-            post_process_transcription(&settings, &final_text, context),
+            post_process_transcription(&settings, &final_text, context, report),
         )
         .await
         {
@@ -1032,6 +1036,8 @@ impl ShortcutAction for TranscribeAction {
         // Handy Adaptive (spec §7): the app and text before the cursor, for an
         // ASR model that takes context. Never from a password or excluded field.
         let (screen_tx, screen_rx) = std::sync::mpsc::channel::<Option<(String, String)>>();
+        // The speech API never hears a password or an excluded app's field.
+        let (private_tx, private_rx) = std::sync::mpsc::channel::<bool>();
         let ctx_settings = get_settings(app);
         let capture_task = tauri::async_runtime::spawn_blocking(move || {
             let capture = crate::context::capture(
@@ -1040,6 +1046,9 @@ impl ShortcutAction for TranscribeAction {
                 &ctx_settings.context_excluded_domains,
             );
             let _ = sensitive_tx.send(capture.sensitive);
+            // Windows: a password check that didn't happen counts as private.
+            let unchecked = cfg!(target_os = "windows") && !capture.password_checked;
+            let _ = private_tx.send(capture.sensitive || capture.excluded || unchecked);
             let screen = (!capture.sensitive && !capture.excluded).then(|| {
                 let before = capture
                     .field
@@ -1142,17 +1151,105 @@ impl ShortcutAction for TranscribeAction {
                     // Spec §7: only a model that takes context, with the screen
                     // option on, waits for the capture, and at most capture_wait_ms.
                     let asr = get_settings(&ah).asr_context;
+                    // Handy Adaptive: speech by API (Groq Whisper…), local as fallback.
+                    let mut cloud = crate::cloud_asr::configured(&get_settings(&ah));
+                    // Unknown in time counts as private: the local model transcribes.
+                    if cloud.is_some()
+                        && private_rx
+                            .recv_timeout(Duration::from_millis(1500))
+                            .unwrap_or(true)
+                    {
+                        log::info!("Speech API skipped: password, excluded or unread field");
+                        cloud = None;
+                    }
                     let mut screen_waited = None;
-                    if asr.screen && get_settings(&ah).learning_enabled && tm.asr_context_wanted() {
+                    let wants_context = match &cloud {
+                        Some(_) => asr.enabled,
+                        None => tm.asr_context_wanted(),
+                    };
+                    if asr.screen && get_settings(&ah).learning_enabled && wants_context {
                         let wait = Duration::from_millis(asr.capture_wait_ms);
                         let screen = screen_rx.recv_timeout(wait).ok();
                         screen_waited = Some(screen.is_some());
                         tm.set_asr_screen(screen.flatten());
                     }
                     let transcription_time = Instant::now();
-                    let transcription_result = tm.transcribe_recording(samples);
+                    let mut cloud_report = None;
+                    let mut cloud_text = None;
+                    let mut cloud_cancelled = false;
+                    if let Some(c) = cloud.as_ref().filter(|_| !samples.is_empty()) {
+                        let language = crate::cloud_asr::language(&get_settings(&ah));
+                        let label = format!("{} {}", c.provider.id, c.model);
+                        let (prompt, mut report) = tm.cloud_context(&label, language.clone());
+                        // Escape stops the call at once, without a local run.
+                        match complete_unless_cancelled(
+                            crate::cloud_asr::transcribe(
+                                c,
+                                &samples,
+                                language.as_deref(),
+                                prompt.as_deref(),
+                                get_settings(&ah).translate_to_english,
+                            ),
+                            || rm.was_cancelled_since(cancel_generation),
+                        )
+                        .await
+                        {
+                            None => cloud_cancelled = true,
+                            Some(Ok(raw)) => {
+                                log::info!(
+                                    "Speech API '{label}' transcribed {:.1}s of audio in {:?}",
+                                    samples.len() as f64 / 16_000.0,
+                                    transcription_time.elapsed()
+                                );
+                                let (t, echo) =
+                                    tm.finish_cloud_text(raw, language, prompt.as_deref());
+                                report.echo_dropped = echo;
+                                if t.text.trim().is_empty() {
+                                    // Speech may still be there: the local model decides.
+                                    warn!("Speech API '{label}' returned no text; using the local model");
+                                    report.cloud_error = Some("empty result".into());
+                                    tm.set_asr_screen(
+                                        report.app.clone().zip(report.before.clone()),
+                                    );
+                                } else {
+                                    // The live decode, if any, is no longer needed.
+                                    tm.cancel_stream();
+                                    cloud_text = Some(t);
+                                }
+                            }
+                            Some(Err(e)) => {
+                                warn!("Speech API '{label}' failed ({e}); using the local model");
+                                tm.set_asr_screen(report.app.clone().zip(report.before.clone()));
+                                report.cloud_error = Some(e);
+                            }
+                        }
+                        cloud_report = Some(report);
+                    }
+                    let transcription_result = match cloud_text {
+                        Some(t) => Ok(t),
+                        None if cloud_cancelled => {
+                            tm.cancel_stream();
+                            Err(anyhow::anyhow!("cancelled during the speech API call"))
+                        }
+                        None => tm.transcribe_recording(samples),
+                    };
+                    // This dictation's screen never reaches the next one.
+                    tm.set_asr_screen(None);
                     // F114: what the speech model was given, for Settings → Context.
-                    let asr_report = tm.take_asr_report().map(|mut r| {
+                    let asr_report = match cloud_report {
+                        // A failed API call keeps its error; the local run's
+                        // report says what the local model got.
+                        Some(r) if r.cloud_error.is_some() => tm
+                            .take_asr_report()
+                            .map(|mut l| {
+                                l.cloud_error = r.cloud_error.clone();
+                                l
+                            })
+                            .or(Some(r)),
+                        Some(r) => Some(r),
+                        None => tm.take_asr_report(),
+                    }
+                    .map(|mut r| {
                         r.screen_waited = screen_waited;
                         r
                     });
@@ -1243,16 +1340,17 @@ impl ShortcutAction for TranscribeAction {
                                     )
                                 })
                                 .flatten();
-                            crate::context::set_report(crate::context::ContextReport {
-                                kind: if instruct {
-                                    crate::context::ReportKind::Instruction
-                                } else {
-                                    crate::context::ReportKind::Dictation
-                                },
-                                capture: Some(capture),
-                                asr: asr_report,
-                                ..Default::default()
-                            });
+                            let report_id =
+                                crate::context::set_report(crate::context::ContextReport {
+                                    kind: if instruct {
+                                        crate::context::ReportKind::Instruction
+                                    } else {
+                                        crate::context::ReportKind::Dictation
+                                    },
+                                    capture: Some(capture),
+                                    asr: asr_report,
+                                    ..Default::default()
+                                });
 
                             if post_process {
                                 if use_streaming_overlay {
@@ -1292,6 +1390,7 @@ impl ShortcutAction for TranscribeAction {
                                         &transcription,
                                         &selection,
                                         transform_context.as_ref(),
+                                        Some(report_id),
                                     )
                                     .await,
                                 )
@@ -1319,6 +1418,7 @@ impl ShortcutAction for TranscribeAction {
                                         .unwrap_or(&transcription),
                                     post_process,
                                     llm_context.as_ref(),
+                                    Some(report_id),
                                 ),
                                 || rm.was_cancelled_since(cancel_generation),
                             )
@@ -1723,7 +1823,12 @@ mod tests {
     }
 
     fn run_post_process(settings: &AppSettings, transcription: &str) -> PostProcessOutcome {
-        tauri::async_runtime::block_on(post_process_transcription(settings, transcription, None))
+        tauri::async_runtime::block_on(post_process_transcription(
+            settings,
+            transcription,
+            None,
+            None,
+        ))
     }
 
     #[test]
@@ -1784,7 +1889,13 @@ mod tests {
     fn a_transformation_falls_back_and_a_refusal_keeps_the_text() {
         let settings = with_fallback(r#"{"choices":[{"message":{"content":"Texte poli."}}]}"#);
         assert_eq!(
-            tauri::async_runtime::block_on(transform_text(&settings, "Polis", "texte poli", None)),
+            tauri::async_runtime::block_on(transform_text(
+                &settings,
+                "Polis",
+                "texte poli",
+                None,
+                None
+            )),
             Some("Texte poli.".to_string())
         );
         let refusal =
@@ -1792,7 +1903,13 @@ mod tests {
         let mut settings = post_process_settings(&serve_once(refusal));
         settings.post_process_fallback_provider_id.clear();
         assert_eq!(
-            tauri::async_runtime::block_on(transform_text(&settings, "Polis", "texte poli", None)),
+            tauri::async_runtime::block_on(transform_text(
+                &settings,
+                "Polis",
+                "texte poli",
+                None,
+                None
+            )),
             None
         );
     }

@@ -13,6 +13,10 @@ import RetiredModelsNotice from "./RetiredModelsNotice";
 import { ModelRow } from "./ModelRow";
 import { Legend } from "./Legend";
 import { useModelEntries } from "./modelEntries";
+import { CloudAsrSettings } from "./CloudAsrSettings";
+import { ModelSettingsCard } from "./ModelSettingsCard";
+import { useSettings } from "@/hooks/useSettings";
+import { getTranscriptionConfig } from "@/lib/utils/transcriptionConfig";
 
 /** Past this many models on disk, the rest fold under "Show N more". */
 const YOURS_LIMIT = 5;
@@ -42,27 +46,23 @@ const Rescan: React.FC = () => {
 interface ModelsSettingsProps {
   /** Where the languages are changed (General). */
   onChangeLanguages?: () => void;
+  onShowReformulation?: () => void;
 }
 
 /** The Models page: onboarding's model table, filling the window. */
 export const ModelsSettings: React.FC<ModelsSettingsProps> = ({
   onChangeLanguages,
+  onShowReformulation,
 }) => {
   const { t } = useTranslation();
   const loading = useModelStore((s) => s.loading);
   const { facts, lists } = useModelEntries();
   const { filters, setFilters, searching, matches } = useModelFilters();
   const [more, setMore] = useState(false);
-
-  if (loading) {
-    return (
-      <div className="max-w-3xl w-full mx-auto">
-        <div className="flex items-center justify-center py-16">
-          <div className="w-8 h-8 border-2 border-logo-primary border-t-transparent rounded-full animate-spin" />
-        </div>
-      </div>
-    );
-  }
+  const { settings, isLoading } = useSettings();
+  const { models, currentModel } = useModelStore();
+  const config = getTranscriptionConfig(settings, models, currentModel);
+  const k = (key: string) => `settings.transcription.${key}`;
 
   const keep = (xs: typeof lists.yours) => xs.filter(matches);
   const moreButton = !searching && lists.yours.length > YOURS_LIMIT && (
@@ -136,46 +136,126 @@ export const ModelsSettings: React.FC<ModelsSettingsProps> = ({
       ];
 
   return (
-    <div className="mx-auto flex min-h-0 w-full max-w-3xl flex-1 flex-col">
+    <div className="mx-auto w-full max-w-3xl space-y-7 pb-4">
       {/* The title, and across from it where to change the languages the
           grades are for. */}
-      <div className="mb-[16px] flex flex-none items-center justify-between gap-[12px] px-[12px]">
-        <h1 className="page-title">{t("settings.models.title")}</h1>
-        {onChangeLanguages && (
+      <div className="space-y-2">
+        <h1 className="page-title">{t(k("title"))}</h1>
+        <p className="text-sm text-ink-2">{t(k("intro"))}</p>
+        {onShowReformulation && (
           <button
             type="button"
-            onClick={onChangeLanguages}
-            className="shrink-0 cursor-pointer text-sm text-text underline decoration-line-strong underline-offset-[3px] hover:decoration-text focus:outline-none focus-visible:ring-1 focus-visible:ring-logo-primary"
+            onClick={onShowReformulation}
+            className="cursor-pointer rounded text-sm text-text underline decoration-line-strong underline-offset-4 hover:decoration-text focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-logo-primary"
           >
-            {t("settings.models.changeLanguages")}
+            {t(k("reformulationLink"))}
           </button>
         )}
       </div>
-      <div className="mx-[12px] mb-[16px] flex-none empty:hidden">
-        <RetiredModelsNotice />
-      </div>
-      <ModelTable
-        grading={facts}
-        filters={filters}
-        setFilters={setFilters}
-        // "Yours" always shows at rest; a search hides empty sections.
-        sections={sections.filter(
-          (s) => s.rows.length || (s.key === "yours" && !searching),
+      <div
+        role="status"
+        className={`rounded-lg border p-4 text-sm ${config.issue ? "border-warning text-text" : "border-line bg-wash text-text"}`}
+      >
+        <p className="font-medium">
+          {isLoading
+            ? t(k("loading"))
+            : config.api
+              ? t(k("apiSummary"), {
+                  provider: config.providerName,
+                  model: config.model || t(k("modelMissing")),
+                })
+              : t(k("localSummary"), {
+                  model: config.localModel?.name || t(k("localMissing")),
+                })}
+        </p>
+        {!isLoading && (
+          <p className="mt-1 text-ink-2">
+            {config.api
+              ? config.issue
+                ? `${t(k(config.issue))} ${t(k(config.localModel ? "usingLocal" : "noFallback"))}`
+                : t(k("configured"))
+              : t(k("localSummaryHelp"))}
+          </p>
         )}
-        renderRow={(e) => <ModelRow key={e.id} entry={e} />}
-        actionsHead={<Legend tier={facts.tier} />}
-        footer={
-          !searching &&
-          lists.untested.length > 0 && (
-            <Note>
-              {t("settings.models.untestedHidden", {
-                count: lists.untested.length,
-              })}
-            </Note>
-          )
-        }
-        thinEdge
-      />
+      </div>
+      <CloudAsrSettings />
+      <section className="space-y-3" aria-labelledby="local-model-title">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <h2 id="local-model-title" className="text-base font-semibold">
+            {t(k(config.api ? "fallbackTitle" : "localTitle"))}
+          </h2>
+          {onChangeLanguages && (
+            <button
+              type="button"
+              onClick={onChangeLanguages}
+              className="shrink-0 cursor-pointer text-sm text-text underline decoration-line-strong underline-offset-[3px] hover:decoration-text focus:outline-none focus-visible:ring-1 focus-visible:ring-logo-primary"
+            >
+              {t("settings.models.changeLanguages")}
+            </button>
+          )}
+        </div>
+        <p className="text-sm text-ink-2">
+          {t(k(config.api ? "fallbackHelp" : "localHelp"))}
+        </p>
+        <p className="text-sm font-medium">
+          {loading
+            ? t(k("loading"))
+            : config.localModel?.name || t(k("localMissing"))}
+        </p>
+        {!loading && !config.localModel && (
+          <p role="status" className="text-sm text-text">
+            {t(k(config.api ? "noFallback" : "downloadRequired"))}
+          </p>
+        )}
+        {!config.api && <ModelSettingsCard />}
+        <details className="group" open={!config.localModel || undefined}>
+          <summary className="cursor-pointer rounded py-2 text-sm font-medium text-text underline decoration-line-strong underline-offset-4 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-logo-primary">
+            {t(k(config.api ? "chooseFallback" : "chooseLocal"))}
+          </summary>
+          <p className="mb-3 text-xs text-ink-2">
+            {t(k(config.api ? "catalogFallbackHelp" : "catalogLocalHelp"))}
+          </p>
+          <div className="mx-[12px] mb-[16px] flex-none empty:hidden">
+            <RetiredModelsNotice />
+          </div>
+          {loading ? (
+            <p className="py-8 text-center text-sm text-ink-2">
+              {t(k("loading"))}
+            </p>
+          ) : (
+            <div className="flex h-[480px] min-h-0 flex-col">
+              <ModelTable
+                grading={facts}
+                filters={filters}
+                setFilters={setFilters}
+                // "Yours" always shows at rest; a search hides empty sections.
+                sections={sections.filter(
+                  (s) => s.rows.length || (s.key === "yours" && !searching),
+                )}
+                renderRow={(e) => (
+                  <ModelRow
+                    key={e.id}
+                    entry={e}
+                    role={config.api ? "fallback" : "primary"}
+                  />
+                )}
+                actionsHead={<Legend tier={facts.tier} />}
+                footer={
+                  !searching &&
+                  lists.untested.length > 0 && (
+                    <Note>
+                      {t("settings.models.untestedHidden", {
+                        count: lists.untested.length,
+                      })}
+                    </Note>
+                  )
+                }
+                thinEdge
+              />
+            </div>
+          )}
+        </details>
+      </section>
     </div>
   );
 };

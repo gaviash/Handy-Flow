@@ -17,7 +17,10 @@ import {
 } from "./modelEntries";
 
 /** A Models page row: the shared table row plus use, stop and delete. */
-export const ModelRow: React.FC<{ entry: Entry }> = ({ entry }) => {
+export const ModelRow: React.FC<{
+  entry: Entry;
+  role?: "primary" | "fallback";
+}> = ({ entry, role = "primary" }) => {
   const { t } = useTranslation();
   const place = usePlace(entry.id);
   const target = useIsTarget(entry.id);
@@ -203,7 +206,9 @@ export const ModelRow: React.FC<{ entry: Entry }> = ({ entry }) => {
           setAsking(true);
         }
       }}
-      hint={place === "remote" ? t("settings.models.download") : undefined}
+      hint={t(
+        `settings.transcription.${role === "fallback" ? (onDisk ? "selectFallback" : "downloadFallback") : onDisk ? "selectLocal" : "downloadLocal"}`,
+      )}
     />
   );
 };
