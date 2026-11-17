@@ -1088,11 +1088,6 @@
         "description": "Consulta el codi font i col·laboreu-hi",
         "button": "Mostra al GitHub"
       },
-      "supportDevelopment": {
-        "title": "Dona suport al desenvolupament",
-        "description": "Ajudeu-nos a continuar desenvolupant el Handy",
-        "button": "Feu una donació"
-      },
       "acknowledgments": {
         "title": "Agraïments",
         "ggml": {
@@ -1246,12 +1241,7 @@
     "downloading": "S'està baixant... {{progress}}%",
     "installing": "S'està instal·lant...",
     "preparing": "S'està preparant...",
-    "checkForUpdates": "Comprova si hi ha actualitzacions",
-    "portableUpdateTitle": "Cal actualitzar manualment",
-    "portableUpdateMessage": "Les instal·lacions portables no es poden actualitzar automàticament. Baixa l'instal·lador per al vostre sistema a continuació, executeu-lo i instal·leu-lo a la mateixa carpeta. La carpeta Data/ (configuració, models i enregistraments) es conserva.",
-    "portableUpdateButton": "Baixa l'instal·lador",
-    "portableUpdateBrowseMessage": "Les instal·lacions portables no es poden actualitzar automàticament. Baixa l'última versió per al vostre sistema des de GitHub Releases i instal·leu-la a la mateixa carpeta. La carpeta Data/ (configuració, models i enregistraments) es conserva.",
-    "portableUpdateBrowseButton": "Obriu GitHub Releases"
+    "checkForUpdates": "Comprova si hi ha actualitzacions"
   },
   "whatsNew": {
     "title": "Novetats del Handy Flow v{{version}}"

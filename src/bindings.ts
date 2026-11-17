@@ -776,6 +776,29 @@ async triggerUpdateCheck() : Promise<Result<null, string>> {
     else return { status: "error", error: e  as any };
 }
 },
+/**
+ * The newer version published on the fork, if any.
+ */
+async checkForUpdate() : Promise<Result<string | null, string>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("check_for_update") };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+/**
+ * Downloads, verifies and installs the latest release, then restarts.
+ * Emits `update-download-progress` (0-100) while downloading.
+ */
+async installUpdate() : Promise<Result<null, string>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("install_update") };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
 async showMainWindowCommand() : Promise<Result<null, string>> {
     try {
     return { status: "ok", data: await TAURI_INVOKE("show_main_window_command") };

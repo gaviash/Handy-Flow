@@ -1088,11 +1088,6 @@
         "description": "檢視原始碼並參與貢獻",
         "button": "在 GitHub 上檢視"
       },
-      "supportDevelopment": {
-        "title": "支持開發",
-        "description": "幫助我們繼續開發 Handy",
-        "button": "捐贈"
-      },
       "acknowledgments": {
         "title": "致謝",
         "ggml": {
@@ -1246,12 +1241,7 @@
     "downloading": "下載中... {{progress}}%",
     "installing": "安裝中...",
     "preparing": "準備中...",
-    "checkForUpdates": "檢查更新",
-    "portableUpdateTitle": "需要手動更新",
-    "portableUpdateMessage": "可攜式安裝無法自動更新。請透過下方按鈕下載適用於你的系統的安裝程式，執行後安裝到相同資料夾，你的 Data/ 資料夾（設定、模型、錄音）會保留在原處。",
-    "portableUpdateButton": "下載安裝程式",
-    "portableUpdateBrowseMessage": "可攜式安裝無法自動更新。請從 GitHub Releases 下載適用於你的系統的最新版本，並安裝到相同資料夾，你的 Data/ 資料夾（設定、模型、錄音）會保留在原處。",
-    "portableUpdateBrowseButton": "開啟 GitHub Releases"
+    "checkForUpdates": "檢查更新"
   },
   "whatsNew": {
     "title": "Handy Flow v{{version}} 新功能"

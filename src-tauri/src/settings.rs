@@ -1887,13 +1887,15 @@ fn self_update_possible() -> bool {
 /// can't work against an immutable /nix/store install — or when this build
 /// cannot install its own update (see `linux_self_update_possible`).
 pub fn update_checks_forced_disabled() -> bool {
-    // Handy Adaptive: the updater points at the official Handy releases; an
-    // update would replace this fork with them. Always off in the fork.
-    const FORK: bool = true;
+    // Handy Flow ships only the Windows x64 portable ZIP (see self_update.rs).
+    let fork_can_update =
+        cfg!(all(windows, target_arch = "x86_64")) && crate::portable::is_portable();
     use std::sync::OnceLock;
     static IS_UPDATER_DISABLED: OnceLock<bool> = OnceLock::new();
     *IS_UPDATER_DISABLED.get_or_init(|| {
-        FORK || utils::env_flag_enabled("HANDY_DISABLE_UPDATER") || !self_update_possible()
+        !fork_can_update
+            || utils::env_flag_enabled("HANDY_DISABLE_UPDATER")
+            || !self_update_possible()
     })
 }
 

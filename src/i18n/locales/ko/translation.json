@@ -1088,11 +1088,6 @@
         "description": "소스 코드 보기 및 기여",
         "button": "GitHub에서 보기"
       },
-      "supportDevelopment": {
-        "title": "개발 지원",
-        "description": "Handy 개발을 계속할 수 있도록 도와주세요",
-        "button": "후원하기"
-      },
       "acknowledgments": {
         "title": "감사의 말",
         "ggml": {
@@ -1246,12 +1241,7 @@
     "downloading": "다운로드 중... {{progress}}%",
     "installing": "설치 중...",
     "preparing": "준비 중...",
-    "checkForUpdates": "업데이트 확인",
-    "portableUpdateTitle": "수동 업데이트 필요",
-    "portableUpdateMessage": "포터블 설치는 자동으로 업데이트할 수 없습니다. 아래에서 사용 중인 시스템에 맞는 설치 프로그램을 다운로드해 실행하고 같은 폴더에 설치하세요. Data/ 폴더(설정, 모델, 녹음)는 그대로 유지됩니다.",
-    "portableUpdateButton": "설치 프로그램 다운로드",
-    "portableUpdateBrowseMessage": "포터블 설치는 자동으로 업데이트할 수 없습니다. GitHub Releases에서 사용 중인 시스템에 맞는 최신 버전을 다운로드해 같은 폴더에 설치하세요. Data/ 폴더(설정, 모델, 녹음)는 그대로 유지됩니다.",
-    "portableUpdateBrowseButton": "GitHub Releases 열기"
+    "checkForUpdates": "업데이트 확인"
   },
   "whatsNew": {
     "title": "Handy Flow v{{version}}의 새 소식"

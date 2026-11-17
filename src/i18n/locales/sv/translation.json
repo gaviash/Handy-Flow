@@ -1088,11 +1088,6 @@
         "description": "Visa källkod och bidra",
         "button": "Visa på GitHub"
       },
-      "supportDevelopment": {
-        "title": "Stöd utvecklingen",
-        "description": "Hjälp oss att fortsätta bygga Handy",
-        "button": "Donera"
-      },
       "acknowledgments": {
         "title": "Tack till",
         "ggml": {
@@ -1246,12 +1241,7 @@
     "downloading": "Laddar ner... {{progress}}%",
     "installing": "Installerar...",
     "preparing": "Förbereder...",
-    "checkForUpdates": "Sök efter uppdateringar",
-    "portableUpdateTitle": "Manuell uppdatering krävs",
-    "portableUpdateMessage": "Portabla installationer kan inte uppdateras automatiskt. Ladda ner installeraren för ditt system nedan, kör den och installera i samma mapp — din Data/-mapp (inställningar, modeller, inspelningar) behålls.",
-    "portableUpdateButton": "Ladda ner installeraren",
-    "portableUpdateBrowseMessage": "Portabla installationer kan inte uppdateras automatiskt. Ladda ner den senaste versionen för ditt system från GitHub Releases och installera den i samma mapp — din Data/-mapp (inställningar, modeller, inspelningar) behålls.",
-    "portableUpdateBrowseButton": "Öppna GitHub Releases"
+    "checkForUpdates": "Sök efter uppdateringar"
   },
   "whatsNew": {
     "title": "Nytt i Handy Flow v{{version}}"

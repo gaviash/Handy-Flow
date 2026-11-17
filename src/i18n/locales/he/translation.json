@@ -1088,11 +1088,6 @@
         "description": "צפה בקוד המקור ותרום",
         "button": "צפה ב-GitHub"
       },
-      "supportDevelopment": {
-        "title": "תמיכה בפיתוח",
-        "description": "עזור לנו להמשיך לבנות את Handy",
-        "button": "תרומה"
-      },
       "acknowledgments": {
         "title": "תודות",
         "ggml": {
@@ -1246,12 +1241,7 @@
     "downloading": "מוריד... {{progress}}%",
     "installing": "מתקין...",
     "preparing": "מכין...",
-    "checkForUpdates": "בדוק עדכונים",
-    "portableUpdateTitle": "נדרש עדכון ידני",
-    "portableUpdateMessage": "התקנות ניידות אינן מתעדכנות אוטומטית. הורד למטה את המתקין המתאים למערכת שלך, הפעל אותו והתקן לאותה תיקייה — תיקיית Data/ (הגדרות, מודלים, הקלטות) נשמרת במקומה.",
-    "portableUpdateButton": "הורדת המתקין",
-    "portableUpdateBrowseMessage": "התקנות ניידות אינן מתעדכנות אוטומטית. הורד את הגרסה האחרונה המתאימה למערכת שלך מ-GitHub Releases והתקן אותה לאותה תיקייה — תיקיית Data/ (הגדרות, מודלים, הקלטות) נשמרת במקומה.",
-    "portableUpdateBrowseButton": "פתח את GitHub Releases"
+    "checkForUpdates": "בדוק עדכונים"
   },
   "whatsNew": {
     "title": "חדש ב-Handy Flow v{{version}}"
