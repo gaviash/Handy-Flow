@@ -340,7 +340,7 @@
         "pressKeys": "Tryck på tangenter...",
         "bindings": {
           "transcribe": {
-            "name": "Kortkommando för transkribering",
+            "name": "Dikteringsgenväg",
             "description": "Kortkommandot för att spela in och transkribera din röst."
           },
           "cancel": {
@@ -381,14 +381,14 @@
         "description": "Välj språk för taligenkänning. Auto kommer automatiskt att bestämma språket, medan val av ett specifikt språk kan förbättra noggrannheten för det språket.",
         "searchPlaceholder": "Sök språk...",
         "noResults": "Inga språk hittades",
-        "auto": "Automatiskt",
+        "auto": "Identifiera språk automatiskt",
         "autoUnavailable": {
-          "title": "Automatiskt är avstängt",
+          "title": "Automatisk språkidentifiering är inte tillgänglig",
           "oneLanguage": "Bara ett av dina språk fungerar med den här modellen",
           "undetectable": "Inte tillgängligt med {{languages}}",
           "noMatch": "Inget av dina språk fungerar med den här modellen"
         },
-        "detectorMissingTitle": "Automatiskt kräver en separat nedladdning",
+        "detectorMissingTitle": "Språkidentifiering kräver en nedladdning",
         "detectorMissing": "Den här modellen kan inte avgöra vilket språk du talar. Automatiskt behöver en liten språkidentifiering som tar reda på det",
         "stopDetectorDownload": "Stoppa nedladdningen av språkidentifieringen"
       },
@@ -399,7 +399,7 @@
         "weak": "Ingen modell känner igen {{languages}} bra ännu."
       },
       "shortcutActivation": {
-        "title": "Genvägens beteende",
+        "title": "Så fungerar genvägen",
         "description": "Välj hur kortkommandot för transkribering startar och stoppar inspelningen.",
         "options": {
           "holdOrToggle": "Automatiskt",
@@ -407,7 +407,7 @@
           "toggle": "Växla"
         },
         "descriptions": {
-          "hold_or_toggle": "Håll nere för att spela in eller tryck kort för att växla",
+          "hold_or_toggle": "Håll ned för att spela in; tryck för att starta eller stoppa",
           "push_to_talk": "Spelar in så länge du håller genvägen nedtryckt",
           "toggle": "Tryck på genvägen för att starta inspelningen, tryck igen för att stoppa"
         }
@@ -452,7 +452,7 @@
         "deleteFailed": "Vissa gamla modeller kunde inte tas bort. Se loggen för mer information."
       },
       "rescan": {
-        "label": "Skanna om",
+        "label": "Sök efter tillagda modeller",
         "tooltip": "Skanna om efter modeller som lagts till i modellmappen eller Hugging Face-cachen utanför Handy Flow"
       }
     },
@@ -534,13 +534,13 @@
           "title": "Overlay",
           "description": "Välj inspelningsöverlägget: ”Ingen” döljer det, ”Minimal” visar en kompakt indikator, ”Live” visar transkriberingen i realtid medan du talar (endast modeller med streamingstöd — leta efter Streaming-märket i modellväljaren). På Linux rekommenderas ”Ingen”.",
           "options": {
-            "none": "Ingen",
+            "none": "Dold",
             "minimal": "Minimal",
             "live": "Live"
           }
         },
         "position": {
-          "title": "Överlagringsposition",
+          "title": "Indikatorns placering",
           "description": "Visa visuell återkoppling under inspelning och transkription. På Linux rekommenderas 'Ingen'.",
           "options": {
             "bottom": "Nederst",
@@ -549,7 +549,7 @@
         }
       },
       "pasteMethod": {
-        "title": "Klistra-in-metod",
+        "title": "Infoga text",
         "description": "Välj hur text infogas. Direkt: simulerar skrivande via systeminmatning. Ingen: hoppar över klistra in, uppdaterar endast historik/urklipp.",
         "options": {
           "clipboard": "Urklipp ({{modifier}}+V)",
@@ -569,7 +569,7 @@
         }
       },
       "clipboardHandling": {
-        "title": "Hantering av urklipp",
+        "title": "Urklipp efter diktering",
         "description": "Ändra inte urklipp bevarar ditt nuvarande urklippsinnehåll efter transkription. Kopiera till urklipp lämnar transkriptionsresultatet i ditt urklipp efter att ha klistrat in.",
         "options": {
           "dontModify": "Ändra inte urklipp",
@@ -577,7 +577,7 @@
         }
       },
       "autoSubmit": {
-        "title": "Skicka automatiskt",
+        "title": "Skicka efter diktering",
         "description": "Skicka automatiskt den valda tangentkombinationen efter textinsättning. Cmd+Enter gäller på macOS, medan Windows/Linux använder Super+Enter.",
         "options": {
           "off": "Av",
@@ -614,11 +614,11 @@
         "duplicate": "\"{{word}}\" finns redan"
       },
       "voiceActivityDetection": {
-        "title": "Röstaktivitetsdetektering",
+        "title": "Filtrera tystnad",
         "description": "Filtrerar bort tystnad från inspelningar. Modeller med streamingstöd använder en längre VAD-svans; om VAD inaktiveras spelas rått ljud in."
       },
       "longFormChunking": {
-        "title": "Dela upp långt ljud",
+        "title": "Dela långa inspelningar",
         "description": "Delar upp långa inspelningar vid pauser före transkribering, vilket oftast förbättrar transkriberingen. Transkriberade filer och långa omtranskriberingar delas alltid upp."
       },
       "languageDetection": {
@@ -628,7 +628,7 @@
         "downloadingHint": "Språkidentifieringen laddas ned. Stäng av för att avbryta"
       },
       "vadBackend": {
-        "title": "Backend för röstdetektering",
+        "title": "Tystnadsdetektor",
         "description": "Välj detektorn som används för att filtrera bort tystnad. Earshot är experimentell; byt tillbaka till Silero om tal klipps eller brus behålls.",
         "options": {
           "silero": "Silero",
@@ -1153,7 +1153,7 @@
         "compact": "Compact"
       },
       "overlay": {
-        "title": "Dictation overlay",
+        "title": "Dikteringsindikator",
         "description": "The overlay shown during dictation. Hidden remains available in Advanced.",
         "pill": "Pill",
         "wave": "Wave",
@@ -1172,24 +1172,24 @@
       "reformulationLink": "Open Reformulation settings",
       "modeTitle": "Where should transcription run?",
       "localMode": "On this computer",
-      "localDescription": "Audio is transcribed locally, without a transcription API.",
-      "apiMode": "By API",
+      "localDescription": "Ljudet stannar på den här datorn.",
+      "apiMode": "Via en leverantör",
       "apiDescription": "Send audio to a provider. Keep a local model as backup.",
       "apiSummary": "Transcription: {{provider}} · {{model}}",
       "localSummary": "Transcription on this computer: {{model}}",
       "configured": "API configured. Availability will be checked when you dictate.",
       "localSummaryHelp": "Uses the local model below. Text cleanup is configured separately.",
       "loading": "Loading configuration…",
-      "modelMissing": "No API model selected",
+      "modelMissing": "Ingen leverantörsmodell vald",
       "localMissing": "No local model available",
       "missingProvider": "Choose a supported transcription provider.",
-      "missingModel": "Choose an API transcription model.",
+      "missingModel": "Välj en leverantörsmodell.",
       "missingKey": "Add an API key to use this provider.",
       "usingLocal": "Until then, the local model is used.",
       "noFallback": "No local backup is available. Download and select a model below to cover API failures and sessions that must stay local.",
       "sharedKey": "This key is also used for Reformulation with this provider. Changing it affects both uses.",
       "customKeyHelp": "A local server may not need a key. If provided, this key is shared with Reformulation.",
-      "advanced": "Advanced API settings",
+      "advanced": "Avancerade leverantörsinställningar",
       "timeoutTitle": "Wait before local backup (seconds)",
       "serverUrl": "Server base URL (OpenAI compatible)",
       "sharedUrl": "This base URL is shared with Reformulation for the custom provider. Handy Flow adds /audio/transcriptions or /audio/translations.",
@@ -1209,7 +1209,7 @@
       "downloadFallback": "Download and use as local backup",
       "selectLocal": "Use for local transcription",
       "downloadLocal": "Download and use for local transcription",
-      "footerIncomplete": "Transcription API: setup incomplete",
+      "footerIncomplete": "Leverantören är inte färdiginställd",
       "footerApi": "API: {{provider}} · {{model}}",
       "footerLocal": "Local: {{model}}",
       "saveError": "This change could not be confirmed. Check the displayed values and try again.",

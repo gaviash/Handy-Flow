@@ -340,7 +340,7 @@
         "pressKeys": "Tuşlara basın...",
         "bindings": {
           "transcribe": {
-            "name": "Transkripsiyon Kısayolu",
+            "name": "Dikte kısayolu",
             "description": "Sesinizi kaydetmek ve metne dönüştürmek için klavye kısayolu."
           },
           "cancel": {
@@ -381,14 +381,14 @@
         "description": "Konuşma tanıma dilini seçin. 'Otomatik' seçeneği dili kendisi belirler, ancak belirli bir dil seçmek o dildeki doğruluğu artırabilir.",
         "searchPlaceholder": "Dil ara...",
         "noResults": "Dil bulunamadı",
-        "auto": "Otomatik",
+        "auto": "Dili otomatik algıla",
         "autoUnavailable": {
-          "title": "Otomatik devre dışı",
+          "title": "Otomatik dil algılama kullanılamıyor",
           "oneLanguage": "Dillerinizden yalnızca biri bu modelle çalışıyor",
           "undetectable": "{{languages}} ile kullanılamaz",
           "noMatch": "Dillerinizden hiçbiri bu modelle çalışmıyor"
         },
-        "detectorMissingTitle": "Otomatik için ayrı bir indirme gerekiyor",
+        "detectorMissingTitle": "Dil algılama indirme gerektirir",
         "detectorMissing": "Bu model hangi dili konuştuğunuzu anlayamıyor. Otomatik'in bunu anlamak için küçük bir dil algılayıcıya ihtiyacı var",
         "stopDetectorDownload": "Dil algılayıcının indirilmesini durdur"
       },
@@ -399,7 +399,7 @@
         "weak": "Henüz hiçbir model {{languages}} dilini iyi tanımıyor."
       },
       "shortcutActivation": {
-        "title": "Kısayol davranışı",
+        "title": "Kısayolun çalışma şekli",
         "description": "Transkripsiyon kısayolunun kaydı nasıl başlatıp durduracağını seçin.",
         "options": {
           "holdOrToggle": "Otomatik",
@@ -407,7 +407,7 @@
           "toggle": "Aç/Kapat"
         },
         "descriptions": {
-          "hold_or_toggle": "Kaydetmek için basılı tutun veya açıp kapatmak için dokunun",
+          "hold_or_toggle": "Kaydetmek için basılı tutun; başlatmak veya durdurmak için basın",
           "push_to_talk": "Kısayolu basılı tuttuğunuz sürece kaydeder",
           "toggle": "Kaydı başlatmak için kısayola dokunun, durdurmak için tekrar dokunun"
         }
@@ -452,7 +452,7 @@
         "deleteFailed": "Bazı eski modeller silinemedi. Ayrıntılar için günlüğe bakın."
       },
       "rescan": {
-        "label": "Yeniden Tara",
+        "label": "Eklenen modelleri bul",
         "tooltip": "Handy Flow dışında modeller klasörüne veya Hugging Face önbelleğine eklenen modelleri yeniden tara"
       }
     },
@@ -534,13 +534,13 @@
           "title": "Ekran Katmanı",
           "description": "Kayıt sırasında gösterilecek ekran katmanını seçin: 'Yok' katmanı gizler, 'Sade' küçük bir gösterge gösterir, 'Canlı' siz konuşurken transkripsiyonu gerçek zamanlı gösterir (yalnızca akış destekli modeller — model seçicide 'Akış' rozetini arayın). Linux'ta 'Yok' önerilir.",
           "options": {
-            "none": "Yok",
+            "none": "Gizli",
             "minimal": "Sade",
             "live": "Canlı"
           }
         },
         "position": {
-          "title": "Ekran Katmanı Konumu",
+          "title": "Göstergenin konumu",
           "description": "Ekran katmanının kayıt ve transkripsiyon sırasında nerede görüneceğini belirler.",
           "options": {
             "bottom": "Alt",
@@ -549,7 +549,7 @@
         }
       },
       "pasteMethod": {
-        "title": "Yapıştırma Yöntemi",
+        "title": "Metin ekle",
         "description": "Metnin nasıl ekleneceğini seçin. Doğrudan: sistem girişiyle yazmayı simüle eder. Yok: yapıştırmayı atlar, sadece geçmişi/panoyu günceller.",
         "options": {
           "clipboard": "Pano ({{modifier}}+V)",
@@ -569,7 +569,7 @@
         }
       },
       "clipboardHandling": {
-        "title": "Pano Yönetimi",
+        "title": "Dikteden sonra pano",
         "description": "Panoyu Değiştirme, transkripsiyon sonrası mevcut pano içeriğini korur. Panoya Kopyala ise yapıştırma işleminden sonra transkripsiyon sonucunu panoda bırakır.",
         "options": {
           "dontModify": "Panoyu Değiştirme",
@@ -577,7 +577,7 @@
         }
       },
       "autoSubmit": {
-        "title": "Otomatik Gönder",
+        "title": "Dikteden sonra gönder",
         "description": "Metin eklendikten sonra seçilen tuş kombinasyonunu otomatik olarak gönderir. macOS'ta Cmd+Enter, Windows/Linux'ta Super+Enter geçerlidir.",
         "options": {
           "off": "Kapalı",
@@ -614,11 +614,11 @@
         "duplicate": "\"{{word}}\" zaten mevcut"
       },
       "voiceActivityDetection": {
-        "title": "Ses Etkinliği Algılama",
+        "title": "Sessizliği filtrele",
         "description": "Kayıtlardaki sessizliği filtreler. Akış destekli modeller daha uzun bir VAD kuyruğu kullanır; VAD devre dışı bırakıldığında ham ses kaydedilir."
       },
       "longFormChunking": {
-        "title": "Uzun Sesi Bölme",
+        "title": "Uzun kayıtları böl",
         "description": "Uzun kayıtları yazıya dökmeden önce duraklamalardan böler; bu genellikle yazıya dökme performansını artırır. Yazıya dökülen dosyalar ve uzun yeniden transkripsiyonlar her zaman bölünür."
       },
       "languageDetection": {
@@ -628,7 +628,7 @@
         "downloadingHint": "Dil algılayıcı indiriliyor. İptal etmek için kapatın"
       },
       "vadBackend": {
-        "title": "Ses Etkinliği Arka Ucu",
+        "title": "Sessizlik algılayıcı",
         "description": "Sessizliği filtrelemek için kullanılan algılayıcıyı seçin. Earshot deneyseldir; konuşma kesiliyorsa veya gürültü korunuyorsa Silero'ya geri dönün.",
         "options": {
           "silero": "Silero",
@@ -1153,7 +1153,7 @@
         "compact": "Compact"
       },
       "overlay": {
-        "title": "Dictation overlay",
+        "title": "Dikte göstergesi",
         "description": "The overlay shown during dictation. Hidden remains available in Advanced.",
         "pill": "Pill",
         "wave": "Wave",
@@ -1172,24 +1172,24 @@
       "reformulationLink": "Open Reformulation settings",
       "modeTitle": "Where should transcription run?",
       "localMode": "On this computer",
-      "localDescription": "Audio is transcribed locally, without a transcription API.",
-      "apiMode": "By API",
+      "localDescription": "Ses bu bilgisayarda kalır.",
+      "apiMode": "Bir sağlayıcı aracılığıyla",
       "apiDescription": "Send audio to a provider. Keep a local model as backup.",
       "apiSummary": "Transcription: {{provider}} · {{model}}",
       "localSummary": "Transcription on this computer: {{model}}",
       "configured": "API configured. Availability will be checked when you dictate.",
       "localSummaryHelp": "Uses the local model below. Text cleanup is configured separately.",
       "loading": "Loading configuration…",
-      "modelMissing": "No API model selected",
+      "modelMissing": "Sağlayıcı modeli seçilmedi",
       "localMissing": "No local model available",
       "missingProvider": "Choose a supported transcription provider.",
-      "missingModel": "Choose an API transcription model.",
+      "missingModel": "Bir sağlayıcı modeli seçin.",
       "missingKey": "Add an API key to use this provider.",
       "usingLocal": "Until then, the local model is used.",
       "noFallback": "No local backup is available. Download and select a model below to cover API failures and sessions that must stay local.",
       "sharedKey": "This key is also used for Reformulation with this provider. Changing it affects both uses.",
       "customKeyHelp": "A local server may not need a key. If provided, this key is shared with Reformulation.",
-      "advanced": "Advanced API settings",
+      "advanced": "Gelişmiş sağlayıcı ayarları",
       "timeoutTitle": "Wait before local backup (seconds)",
       "serverUrl": "Server base URL (OpenAI compatible)",
       "sharedUrl": "This base URL is shared with Reformulation for the custom provider. Handy Flow adds /audio/transcriptions or /audio/translations.",
@@ -1209,7 +1209,7 @@
       "downloadFallback": "Download and use as local backup",
       "selectLocal": "Use for local transcription",
       "downloadLocal": "Download and use for local transcription",
-      "footerIncomplete": "Transcription API: setup incomplete",
+      "footerIncomplete": "Sağlayıcı kurulumu tamamlanmadı",
       "footerApi": "API: {{provider}} · {{model}}",
       "footerLocal": "Local: {{model}}",
       "saveError": "This change could not be confirmed. Check the displayed values and try again.",

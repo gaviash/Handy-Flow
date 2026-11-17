@@ -340,7 +340,7 @@
         "pressKeys": "キーを押してください…",
         "bindings": {
           "transcribe": {
-            "name": "文字起こしのショートカット",
+            "name": "音声入力のショートカット",
             "description": "音声を録音して文字起こしするためのキーボードショートカット。"
           },
           "cancel": {
@@ -381,14 +381,14 @@
         "description": "音声認識の言語を選択してください。自動を選択すると言語を自動的に判定します。特定の言語を選択すると、その言語の精度が向上する場合があります。",
         "searchPlaceholder": "言語を検索…",
         "noResults": "言語が見つかりません",
-        "auto": "自動",
+        "auto": "言語を自動検出",
         "autoUnavailable": {
-          "title": "自動は無効です",
+          "title": "言語の自動検出を利用できません",
           "oneLanguage": "このモデルで使えるのはあなたの言語のうち1つだけです",
           "undetectable": "{{languages}}では利用できません",
           "noMatch": "あなたの言語はどれもこのモデルで使えません"
         },
-        "detectorMissingTitle": "自動には別のダウンロードが必要です",
+        "detectorMissingTitle": "言語の検出にはダウンロードが必要です",
         "detectorMissing": "このモデルは話している言語を判別できません。自動では小さな言語検出を使って判別します",
         "stopDetectorDownload": "言語検出のダウンロードを停止"
       },
@@ -407,7 +407,7 @@
           "toggle": "切り替え"
         },
         "descriptions": {
-          "hold_or_toggle": "長押しで録音、タップで切り替え",
+          "hold_or_toggle": "長押しで録音、押すと開始または停止",
           "push_to_talk": "ショートカットを押している間だけ録音します",
           "toggle": "ショートカットをタップすると録音を開始し、もう一度タップすると停止します"
         }
@@ -452,7 +452,7 @@
         "deleteFailed": "一部の古いモデルを削除できませんでした。詳細はログを確認してください。"
       },
       "rescan": {
-        "label": "再スキャン",
+        "label": "追加されたモデルを探す",
         "tooltip": "Handy Flow を使わずに models フォルダーまたは Hugging Face キャッシュに追加されたモデルを再スキャンします"
       }
     },
@@ -534,13 +534,13 @@
           "title": "オーバーレイ",
           "description": "録音中のオーバーレイを選択します。「なし」は非表示、「ミニマル」はコンパクトなカプセル型表示、「ライブ」はリアルタイムで文字起こしを表示します(ストリーミング対応モデルのみ。モデル選択画面の「ストリーミング」表示を確認してください)。Linux では「なし」を推奨します。",
           "options": {
-            "none": "なし",
+            "none": "非表示",
             "minimal": "ミニマル",
             "live": "ライブ"
           }
         },
         "position": {
-          "title": "オーバーレイの位置",
+          "title": "表示位置",
           "description": "録音と文字起こし中に表示するオーバーレイが表示される位置を選択します。",
           "options": {
             "bottom": "下",
@@ -549,7 +549,7 @@
         }
       },
       "pasteMethod": {
-        "title": "貼り付け方法",
+        "title": "テキストを挿入",
         "description": "テキストの挿入方法を選択。「直接」はシステム入力でタイピングをシミュレート。「なし」は貼り付けをスキップし、履歴/クリップボードのみ更新。",
         "options": {
           "clipboard": "クリップボード ({{modifier}}+V)",
@@ -569,7 +569,7 @@
         }
       },
       "clipboardHandling": {
-        "title": "クリップボードの処理",
+        "title": "音声入力後のクリップボード",
         "description": "クリップボードを変更しないを選択すると、文字起こし後も現在のクリップボード内容が保持されます。クリップボードにコピーを選択すると、貼り付け後も文字起こし結果がクリップボードに残ります。",
         "options": {
           "dontModify": "クリップボードを変更しない",
@@ -577,7 +577,7 @@
         }
       },
       "autoSubmit": {
-        "title": "自動送信",
+        "title": "音声入力後に送信",
         "description": "テキスト挿入後に選択したキーの組み合わせを自動的に送信します。macOS では Cmd+Enter、Windows/Linux では Super+Enter が適用されます。",
         "options": {
           "off": "オフ",
@@ -614,11 +614,11 @@
         "duplicate": "「{{word}}」は既に存在します"
       },
       "voiceActivityDetection": {
-        "title": "音声区間検出 (VAD)",
+        "title": "無音を除外",
         "description": "録音から無音部分を除去します。ストリーミング対応モデルはより長い音声検出区間を使用します。VAD を無効にすると音声をそのまま録音します。"
       },
       "longFormChunking": {
-        "title": "長い音声の分割",
+        "title": "長い録音を分割",
         "description": "文字起こしの前に長い録音を無音部分で分割します。通常、文字起こしの精度が向上します。ファイルの文字起こしと長い再文字起こしは常に分割されます。"
       },
       "languageDetection": {
@@ -628,7 +628,7 @@
         "downloadingHint": "言語検出をダウンロード中です。キャンセルするにはオフにしてください"
       },
       "vadBackend": {
-        "title": "音声区間検出バックエンド",
+        "title": "無音の検出方法",
         "description": "無音のフィルタリングに使用する検出器を選択します。Earshot は実験的機能です。音声が途切れたりノイズが残る場合は Silero に戻してください。",
         "options": {
           "silero": "Silero",
@@ -1153,7 +1153,7 @@
         "compact": "Compact"
       },
       "overlay": {
-        "title": "Dictation overlay",
+        "title": "音声入力の表示",
         "description": "The overlay shown during dictation. Hidden remains available in Advanced.",
         "pill": "Pill",
         "wave": "Wave",
@@ -1172,24 +1172,24 @@
       "reformulationLink": "Open Reformulation settings",
       "modeTitle": "Where should transcription run?",
       "localMode": "On this computer",
-      "localDescription": "Audio is transcribed locally, without a transcription API.",
-      "apiMode": "By API",
+      "localDescription": "音声はこのコンピューター内にとどまります。",
+      "apiMode": "プロバイダーを使用",
       "apiDescription": "Send audio to a provider. Keep a local model as backup.",
       "apiSummary": "Transcription: {{provider}} · {{model}}",
       "localSummary": "Transcription on this computer: {{model}}",
       "configured": "API configured. Availability will be checked when you dictate.",
       "localSummaryHelp": "Uses the local model below. Text cleanup is configured separately.",
       "loading": "Loading configuration…",
-      "modelMissing": "No API model selected",
+      "modelMissing": "プロバイダーのモデルが選択されていません",
       "localMissing": "No local model available",
       "missingProvider": "Choose a supported transcription provider.",
-      "missingModel": "Choose an API transcription model.",
+      "missingModel": "プロバイダーのモデルを選択してください。",
       "missingKey": "Add an API key to use this provider.",
       "usingLocal": "Until then, the local model is used.",
       "noFallback": "No local backup is available. Download and select a model below to cover API failures and sessions that must stay local.",
       "sharedKey": "This key is also used for Reformulation with this provider. Changing it affects both uses.",
       "customKeyHelp": "A local server may not need a key. If provided, this key is shared with Reformulation.",
-      "advanced": "Advanced API settings",
+      "advanced": "プロバイダーの詳細設定",
       "timeoutTitle": "Wait before local backup (seconds)",
       "serverUrl": "Server base URL (OpenAI compatible)",
       "sharedUrl": "This base URL is shared with Reformulation for the custom provider. Handy Flow adds /audio/transcriptions or /audio/translations.",
@@ -1209,7 +1209,7 @@
       "downloadFallback": "Download and use as local backup",
       "selectLocal": "Use for local transcription",
       "downloadLocal": "Download and use for local transcription",
-      "footerIncomplete": "Transcription API: setup incomplete",
+      "footerIncomplete": "プロバイダーの設定が未完了です",
       "footerApi": "API: {{provider}} · {{model}}",
       "footerLocal": "Local: {{model}}",
       "saveError": "This change could not be confirmed. Check the displayed values and try again.",

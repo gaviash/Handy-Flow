@@ -340,7 +340,7 @@
         "pressKeys": "키를 눌러주세요...",
         "bindings": {
           "transcribe": {
-            "name": "음성 텍스트 변환 단축키",
+            "name": "받아쓰기 단축키",
             "description": "음성을 녹음하고 테스트로 변환하는 키보드 단축키입니다."
           },
           "cancel": {
@@ -381,14 +381,14 @@
         "description": "음성 인식 언어를 선택하세요. 자동은 언어를 자동으로 감지하며, 특정 언어를 선택하면 해당 언어의 정확도가 향상될 수 있습니다.",
         "searchPlaceholder": "언어 검색...",
         "noResults": "언어를 찾을 수 없습니다",
-        "auto": "자동",
+        "auto": "언어 자동 감지",
         "autoUnavailable": {
-          "title": "자동이 꺼져 있습니다",
+          "title": "자동 언어 감지를 사용할 수 없음",
           "oneLanguage": "이 모델에서는 사용자 언어 중 하나만 사용할 수 있습니다",
           "undetectable": "{{languages}}에서는 사용할 수 없습니다",
           "noMatch": "이 모델에서 사용할 수 있는 언어가 없습니다"
         },
-        "detectorMissingTitle": "자동을 사용하려면 별도 다운로드가 필요합니다",
+        "detectorMissingTitle": "언어 감지에 다운로드 필요",
         "detectorMissing": "이 모델은 어떤 언어로 말하는지 구별할 수 없습니다. 자동은 작은 언어 감지기로 언어를 알아냅니다",
         "stopDetectorDownload": "언어 감지기 다운로드 중지"
       },
@@ -399,7 +399,7 @@
         "weak": "아직 {{languages}}을(를) 잘 인식하는 모델이 없습니다."
       },
       "shortcutActivation": {
-        "title": "단축키 동작",
+        "title": "단축키 작동 방식",
         "description": "음성 텍스트 변환 단축키로 녹음을 시작하고 중지하는 방식을 선택합니다.",
         "options": {
           "holdOrToggle": "자동",
@@ -407,7 +407,7 @@
           "toggle": "전환"
         },
         "descriptions": {
-          "hold_or_toggle": "길게 누르면 녹음, 탭하면 전환",
+          "hold_or_toggle": "길게 눌러 녹음하고, 짧게 눌러 시작하거나 중지",
           "push_to_talk": "단축키를 누르고 있는 동안 녹음합니다",
           "toggle": "단축키를 탭하면 녹음을 시작하고, 다시 탭하면 중지합니다"
         }
@@ -452,7 +452,7 @@
         "deleteFailed": "일부 이전 모델을 삭제할 수 없습니다. 자세한 내용은 로그를 확인하세요."
       },
       "rescan": {
-        "label": "다시 스캔",
+        "label": "추가된 모델 찾기",
         "tooltip": "Handy Flow 외부에서 모델 폴더 또는 Hugging Face 캐시에 추가된 모델을 다시 스캔합니다"
       }
     },
@@ -534,13 +534,13 @@
           "title": "오버레이",
           "description": "녹음 오버레이를 선택하세요. '없음'은 오버레이를 숨기고, '간단'은 작은 알약 모양 표시를 보여주며, '실시간'은 말하는 동안 전사 결과를 실시간으로 표시합니다(스트리밍 지원 모델만 해당 — 모델 선택기에서 '스트리밍' 배지를 확인하세요). Linux에서는 '없음'을 권장합니다.",
           "options": {
-            "none": "없음",
+            "none": "숨김",
             "minimal": "간단",
             "live": "실시간"
           }
         },
         "position": {
-          "title": "오버레이 위치",
+          "title": "표시 위치",
           "description": "녹음 및 전사 중 시각적 피드백 오버레이를 표시합니다. Linux에서는 '없음'을 권장합니다.",
           "options": {
             "bottom": "하단",
@@ -549,7 +549,7 @@
         }
       },
       "pasteMethod": {
-        "title": "붙여넣기 방법",
+        "title": "텍스트 삽입",
         "description": "텍스트 삽입 방법을 선택하세요. 직접: 시스템 입력을 통해 타이핑 시뮬레이션. 없음: 붙여넣기를 건너뛰고 히스토리/클립보드만 업데이트합니다.",
         "options": {
           "clipboard": "클립보드 ({{modifier}}+V)",
@@ -569,7 +569,7 @@
         }
       },
       "clipboardHandling": {
-        "title": "클립보드 처리",
+        "title": "받아쓰기 후 클립보드",
         "description": "클립보드 수정 안 함은 전사 후 현재 클립보드 내용을 보존합니다. 클립보드에 복사는 붙여넣기 후 전사 결과를 클립보드에 남겨둡니다.",
         "options": {
           "dontModify": "클립보드 수정 안 함",
@@ -577,7 +577,7 @@
         }
       },
       "autoSubmit": {
-        "title": "자동 제출",
+        "title": "받아쓰기 후 전송",
         "description": "텍스트 삽입 후 선택한 키 조합을 자동으로 전송합니다. macOS에서는 Cmd+Enter가, Windows/Linux에서는 Super+Enter가 적용됩니다.",
         "options": {
           "off": "끄기",
@@ -614,11 +614,11 @@
         "duplicate": "\"{{word}}\"이(가) 이미 존재합니다"
       },
       "voiceActivityDetection": {
-        "title": "음성 활동 감지",
+        "title": "무음 걸러내기",
         "description": "녹음에서 무음 구간을 걸러냅니다. 스트리밍 지원 모델은 더 긴 VAD 테일을 사용하며, VAD를 끄면 원본 오디오가 그대로 녹음됩니다."
       },
       "longFormChunking": {
-        "title": "긴 오디오 분할",
+        "title": "긴 녹음 나누기",
         "description": "전사하기 전에 긴 녹음을 쉬는 구간에서 나눕니다. 일반적으로 전사 성능이 향상됩니다. 파일 전사와 긴 재전사는 항상 나누어 처리됩니다."
       },
       "languageDetection": {
@@ -628,7 +628,7 @@
         "downloadingHint": "언어 감지기를 다운로드하는 중입니다. 취소하려면 끄세요"
       },
       "vadBackend": {
-        "title": "음성 활동 감지 백엔드",
+        "title": "무음 감지기",
         "description": "무음을 필터링하는 데 사용할 감지기를 선택합니다. Earshot은 실험적 기능입니다. 음성이 잘리거나 소음이 남는 경우 Silero로 되돌리세요.",
         "options": {
           "silero": "Silero",
@@ -1153,7 +1153,7 @@
         "compact": "Compact"
       },
       "overlay": {
-        "title": "Dictation overlay",
+        "title": "받아쓰기 표시",
         "description": "The overlay shown during dictation. Hidden remains available in Advanced.",
         "pill": "Pill",
         "wave": "Wave",
@@ -1172,24 +1172,24 @@
       "reformulationLink": "Open Reformulation settings",
       "modeTitle": "Where should transcription run?",
       "localMode": "On this computer",
-      "localDescription": "Audio is transcribed locally, without a transcription API.",
-      "apiMode": "By API",
+      "localDescription": "오디오는 이 컴퓨터에 남습니다.",
+      "apiMode": "제공업체 사용",
       "apiDescription": "Send audio to a provider. Keep a local model as backup.",
       "apiSummary": "Transcription: {{provider}} · {{model}}",
       "localSummary": "Transcription on this computer: {{model}}",
       "configured": "API configured. Availability will be checked when you dictate.",
       "localSummaryHelp": "Uses the local model below. Text cleanup is configured separately.",
       "loading": "Loading configuration…",
-      "modelMissing": "No API model selected",
+      "modelMissing": "제공업체 모델이 선택되지 않음",
       "localMissing": "No local model available",
       "missingProvider": "Choose a supported transcription provider.",
-      "missingModel": "Choose an API transcription model.",
+      "missingModel": "제공업체 모델을 선택하세요.",
       "missingKey": "Add an API key to use this provider.",
       "usingLocal": "Until then, the local model is used.",
       "noFallback": "No local backup is available. Download and select a model below to cover API failures and sessions that must stay local.",
       "sharedKey": "This key is also used for Reformulation with this provider. Changing it affects both uses.",
       "customKeyHelp": "A local server may not need a key. If provided, this key is shared with Reformulation.",
-      "advanced": "Advanced API settings",
+      "advanced": "제공업체 고급 설정",
       "timeoutTitle": "Wait before local backup (seconds)",
       "serverUrl": "Server base URL (OpenAI compatible)",
       "sharedUrl": "This base URL is shared with Reformulation for the custom provider. Handy Flow adds /audio/transcriptions or /audio/translations.",
@@ -1209,7 +1209,7 @@
       "downloadFallback": "Download and use as local backup",
       "selectLocal": "Use for local transcription",
       "downloadLocal": "Download and use for local transcription",
-      "footerIncomplete": "Transcription API: setup incomplete",
+      "footerIncomplete": "제공업체 설정이 완료되지 않음",
       "footerApi": "API: {{provider}} · {{model}}",
       "footerLocal": "Local: {{model}}",
       "saveError": "This change could not be confirmed. Check the displayed values and try again.",

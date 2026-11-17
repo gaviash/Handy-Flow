@@ -340,7 +340,7 @@
         "pressKeys": "Druk op toetsen...",
         "bindings": {
           "transcribe": {
-            "name": "Sneltoets voor dicteren",
+            "name": "Dicteersneltoets",
             "description": "De sneltoets om je stem op te nemen en te transcriberen."
           },
           "cancel": {
@@ -381,14 +381,14 @@
         "description": "Selecteer de taal voor spraakherkenning. 'Automatisch' detecteert de taal vanzelf, terwijl het kiezen van een specifieke taal de nauwkeurigheid voor die taal kan verbeteren.",
         "searchPlaceholder": "Talen zoeken...",
         "noResults": "Geen talen gevonden",
-        "auto": "Automatisch",
+        "auto": "Taal automatisch herkennen",
         "autoUnavailable": {
-          "title": "Automatisch is uitgeschakeld",
+          "title": "Automatische taalherkenning niet beschikbaar",
           "oneLanguage": "Maar één van je talen werkt met dit model",
           "undetectable": "Niet beschikbaar met {{languages}}",
           "noMatch": "Geen van je talen werkt met dit model"
         },
-        "detectorMissingTitle": "Automatisch heeft een aparte download nodig",
+        "detectorMissingTitle": "Taalherkenning vereist een download",
         "detectorMissing": "Dit model kan niet bepalen welke taal je spreekt. Automatisch heeft een kleine taaldetector nodig om dat uit te zoeken",
         "stopDetectorDownload": "Downloaden van de taaldetector stoppen"
       },
@@ -399,7 +399,7 @@
         "weak": "Geen enkel model herkent {{languages}} al goed."
       },
       "shortcutActivation": {
-        "title": "Gedrag van sneltoets",
+        "title": "Werking van de sneltoets",
         "description": "Kies hoe de sneltoets voor dicteren de opname start en stopt.",
         "options": {
           "holdOrToggle": "Automatisch",
@@ -407,7 +407,7 @@
           "toggle": "Schakelen"
         },
         "descriptions": {
-          "hold_or_toggle": "Houd ingedrukt om op te nemen of tik om te schakelen",
+          "hold_or_toggle": "Houd ingedrukt om op te nemen; tik om te starten of stoppen",
           "push_to_talk": "Neemt op zolang je de sneltoets ingedrukt houdt",
           "toggle": "Tik op de sneltoets om de opname te starten, tik opnieuw om te stoppen"
         }
@@ -452,7 +452,7 @@
         "deleteFailed": "Sommige oude modellen konden niet worden verwijderd. Bekijk het logboek voor details."
       },
       "rescan": {
-        "label": "Opnieuw scannen",
+        "label": "Toegevoegde modellen zoeken",
         "tooltip": "Scannen naar modellen die buiten Handy Flow om zijn toegevoegd aan de modellenmap of Hugging Face-cache"
       }
     },
@@ -534,13 +534,13 @@
           "title": "Overlay",
           "description": "Kies de opname-overlay: 'Geen' verbergt deze, 'Minimaal' toont een compacte balk, 'Live' toont de tekst in realtime tijdens het spreken (alleen voor streaming-modellen). Op Linux wordt 'Geen' aanbevolen.",
           "options": {
-            "none": "Geen",
+            "none": "Verborgen",
             "minimal": "Minimaal",
             "live": "Live"
           }
         },
         "position": {
-          "title": "Overlay-positie",
+          "title": "Positie van indicator",
           "description": "Waar de overlay op het scherm verschijnt tijdens het opnemen en transcriberen.",
           "options": {
             "bottom": "Onderkant",
@@ -549,7 +549,7 @@
         }
       },
       "pasteMethod": {
-        "title": "Plakmethode",
+        "title": "Tekst invoegen",
         "description": "Kies hoe tekst wordt ingevoegd. 'Direct' simuleert typen via het systeem. 'Geen' slaat het plakken over en werkt alleen de geschiedenis en het klembord bij.",
         "options": {
           "clipboard": "Klembord ({{modifier}}+V)",
@@ -569,7 +569,7 @@
         }
       },
       "clipboardHandling": {
-        "title": "Klembordbeheer",
+        "title": "Klembord na dicteren",
         "description": "'Klembord niet aanpassen' behoudt je huidige klembordinhoud na een transcriptie. 'Kopiëren naar klembord' laat de getranscribeerde tekst achter op je klembord.",
         "options": {
           "dontModify": "Klembord niet aanpassen",
@@ -577,7 +577,7 @@
         }
       },
       "autoSubmit": {
-        "title": "Automatisch verzenden",
+        "title": "Verzenden na dicteren",
         "description": "Verzend automatisch de geselecteerde toetsencombinatie na het invoegen van de tekst. Cmd+Enter geldt voor macOS, Windows/Linux gebruiken Super+Enter.",
         "options": {
           "off": "Uit",
@@ -614,11 +614,11 @@
         "duplicate": "\"{{word}}\" bestaat al"
       },
       "voiceActivityDetection": {
-        "title": "Spraakactiviteitsdetectie (VAD)",
+        "title": "Stilte filteren",
         "description": "Filter stilte uit opnames. Streaming-modellen gebruiken een langere VAD-uitloop; het uitschakelen van VAD neemt de ruwe audio op."
       },
       "longFormChunking": {
-        "title": "Lange audio opsplitsen",
+        "title": "Lange opnamen splitsen",
         "description": "Splitst lange opnames bij pauzes op voordat ze worden getranscribeerd, wat de transcriptie doorgaans verbetert. Getranscribeerde bestanden en lange hertranscripties worden altijd opgesplitst."
       },
       "languageDetection": {
@@ -628,7 +628,7 @@
         "downloadingHint": "De taaldetector wordt gedownload. Zet dit uit om te annuleren"
       },
       "vadBackend": {
-        "title": "VAD-backend",
+        "title": "Stiltedetector",
         "description": "Kies de detector die stilte filtert. Earshot is experimenteel; schakel terug naar Silero als spraak wordt afgekapt of ruis behouden blijft.",
         "options": {
           "silero": "Silero",
@@ -1153,7 +1153,7 @@
         "compact": "Compact"
       },
       "overlay": {
-        "title": "Dictation overlay",
+        "title": "Dicteerindicator",
         "description": "The overlay shown during dictation. Hidden remains available in Advanced.",
         "pill": "Pill",
         "wave": "Wave",
@@ -1172,24 +1172,24 @@
       "reformulationLink": "Open Reformulation settings",
       "modeTitle": "Where should transcription run?",
       "localMode": "On this computer",
-      "localDescription": "Audio is transcribed locally, without a transcription API.",
-      "apiMode": "By API",
+      "localDescription": "De audio blijft op deze computer.",
+      "apiMode": "Via een aanbieder",
       "apiDescription": "Send audio to a provider. Keep a local model as backup.",
       "apiSummary": "Transcription: {{provider}} · {{model}}",
       "localSummary": "Transcription on this computer: {{model}}",
       "configured": "API configured. Availability will be checked when you dictate.",
       "localSummaryHelp": "Uses the local model below. Text cleanup is configured separately.",
       "loading": "Loading configuration…",
-      "modelMissing": "No API model selected",
+      "modelMissing": "Geen model van aanbieder geselecteerd",
       "localMissing": "No local model available",
       "missingProvider": "Choose a supported transcription provider.",
-      "missingModel": "Choose an API transcription model.",
+      "missingModel": "Kies een model van de aanbieder.",
       "missingKey": "Add an API key to use this provider.",
       "usingLocal": "Until then, the local model is used.",
       "noFallback": "No local backup is available. Download and select a model below to cover API failures and sessions that must stay local.",
       "sharedKey": "This key is also used for Reformulation with this provider. Changing it affects both uses.",
       "customKeyHelp": "A local server may not need a key. If provided, this key is shared with Reformulation.",
-      "advanced": "Advanced API settings",
+      "advanced": "Geavanceerde aanbiederinstellingen",
       "timeoutTitle": "Wait before local backup (seconds)",
       "serverUrl": "Server base URL (OpenAI compatible)",
       "sharedUrl": "This base URL is shared with Reformulation for the custom provider. Handy Flow adds /audio/transcriptions or /audio/translations.",
@@ -1209,7 +1209,7 @@
       "downloadFallback": "Download and use as local backup",
       "selectLocal": "Use for local transcription",
       "downloadLocal": "Download and use for local transcription",
-      "footerIncomplete": "Transcription API: setup incomplete",
+      "footerIncomplete": "Aanbieder niet volledig ingesteld",
       "footerApi": "API: {{provider}} · {{model}}",
       "footerLocal": "Local: {{model}}",
       "saveError": "This change could not be confirmed. Check the displayed values and try again.",

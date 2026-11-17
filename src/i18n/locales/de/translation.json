@@ -340,7 +340,7 @@
         "pressKeys": "Tasten drücken...",
         "bindings": {
           "transcribe": {
-            "name": "Transkriptions-Tastenkürzel",
+            "name": "Diktierkürzel",
             "description": "Das Tastenkürzel zum Aufnehmen und Transkribieren deiner Stimme."
           },
           "cancel": {
@@ -381,14 +381,14 @@
         "description": "Wähle die Sprache für die Spracherkennung. Auto erkennt die Sprache automatisch, die Auswahl einer bestimmten Sprache kann die Genauigkeit verbessern.",
         "searchPlaceholder": "Sprachen suchen...",
         "noResults": "Keine Sprachen gefunden",
-        "auto": "Automatisch",
+        "auto": "Sprache automatisch erkennen",
         "autoUnavailable": {
-          "title": "Automatisch ist deaktiviert",
+          "title": "Automatische Spracherkennung nicht verfügbar",
           "oneLanguage": "Nur eine deiner Sprachen funktioniert mit diesem Modell",
           "undetectable": "Nicht verfügbar mit {{languages}}",
           "noMatch": "Keine deiner Sprachen funktioniert mit diesem Modell"
         },
-        "detectorMissingTitle": "Automatisch braucht einen separaten Download",
+        "detectorMissingTitle": "Spracherkennung benötigt einen Download",
         "detectorMissing": "Dieses Modell erkennt nicht, welche Sprache du sprichst. Automatisch braucht eine kleine Spracherkennung, die das herausfindet",
         "stopDetectorDownload": "Download der Spracherkennung stoppen"
       },
@@ -399,7 +399,7 @@
         "weak": "Noch kein Modell erkennt {{languages}} gut."
       },
       "shortcutActivation": {
-        "title": "Verhalten der Tastenkombination",
+        "title": "Funktionsweise des Kürzels",
         "description": "Wähle aus, wie das Transkriptions-Tastenkürzel die Aufnahme startet und beendet.",
         "options": {
           "holdOrToggle": "Automatisch",
@@ -407,7 +407,7 @@
           "toggle": "Umschalten"
         },
         "descriptions": {
-          "hold_or_toggle": "Gedrückt halten zum Aufnehmen oder antippen zum Umschalten",
+          "hold_or_toggle": "Zum Aufnehmen halten; zum Starten oder Stoppen tippen",
           "push_to_talk": "Nimmt auf, solange die Tastenkombination gedrückt bleibt",
           "toggle": "Tastenkombination antippen, um die Aufnahme zu starten, erneut antippen zum Stoppen"
         }
@@ -452,7 +452,7 @@
         "deleteFailed": "Einige alte Modelle konnten nicht gelöscht werden. Details findest du im Protokoll."
       },
       "rescan": {
-        "label": "Neu scannen",
+        "label": "Hinzugefügte Modelle suchen",
         "tooltip": "Erneut nach Modellen scannen, die außerhalb von Handy Flow zum Modellordner oder Hugging-Face-Cache hinzugefügt wurden"
       }
     },
@@ -534,13 +534,13 @@
           "title": "Overlay",
           "description": "Wähle das Aufnahme-Overlay: „Keine“ blendet es aus, „Minimal“ zeigt ein kompaktes Element, „Live“ zeigt die Transkription in Echtzeit während des Sprechens an (nur für streamingfähige Modelle – suche nach dem Streaming-Badge in der Modellauswahl). Unter Linux wird „Keine“ empfohlen.",
           "options": {
-            "none": "Keine",
+            "none": "Ausgeblendet",
             "minimal": "Minimal",
             "live": "Live"
           }
         },
         "position": {
-          "title": "Overlay-Position",
+          "title": "Position der Anzeige",
           "description": "Visuelles Feedback-Overlay während Aufnahme und Transkription anzeigen. Unter Linux wird 'Keine' empfohlen.",
           "options": {
             "bottom": "Unten",
@@ -549,7 +549,7 @@
         }
       },
       "pasteMethod": {
-        "title": "Einfügemethode",
+        "title": "Text einfügen",
         "description": "Wähle, wie Text eingefügt wird. Direkt: simuliert Tippen über Systemeingabe. Keine: überspringt Einfügen, aktualisiert nur Verlauf/Zwischenablage.",
         "options": {
           "clipboard": "Zwischenablage ({{modifier}}+V)",
@@ -569,7 +569,7 @@
         }
       },
       "clipboardHandling": {
-        "title": "Zwischenablage-Verhalten",
+        "title": "Zwischenablage nach dem Diktat",
         "description": "Zwischenablage nicht ändern bewahrt den aktuellen Inhalt nach der Transkription. In Zwischenablage kopieren hinterlässt das Transkriptionsergebnis in der Zwischenablage.",
         "options": {
           "dontModify": "Zwischenablage nicht ändern",
@@ -577,7 +577,7 @@
         }
       },
       "autoSubmit": {
-        "title": "Automatisch absenden",
+        "title": "Nach dem Diktat senden",
         "description": "Sendet nach dem Einfügen von Text automatisch die ausgewählte Tastenkombination. Cmd+Enter gilt für macOS, während Windows/Linux Super+Enter verwenden.",
         "options": {
           "off": "Aus",
@@ -614,7 +614,7 @@
         "duplicate": "\"{{word}}\" existiert bereits"
       },
       "voiceActivityDetection": {
-        "title": "Sprachaktivitätserkennung (VAD)",
+        "title": "Stille herausfiltern",
         "description": "Filtert Stille aus Aufnahmen. Streamingfähige Modelle verwenden ein längeres VAD-Ende; das Deaktivieren von VAD nimmt Rohaudio auf."
       },
       "longFormChunking": {
@@ -628,7 +628,7 @@
         "downloadingHint": "Die Spracherkennung wird heruntergeladen. Zum Abbrechen ausschalten"
       },
       "vadBackend": {
-        "title": "VAD-Backend",
+        "title": "Stilleerkennung",
         "description": "Wählt den Detektor zum Herausfiltern von Stille. Earshot ist experimentell; wechseln Sie zurück zu Silero, wenn Sprache abgeschnitten oder Rauschen beibehalten wird.",
         "options": {
           "silero": "Silero",
@@ -1153,7 +1153,7 @@
         "compact": "Compact"
       },
       "overlay": {
-        "title": "Dictation overlay",
+        "title": "Diktieranzeige",
         "description": "The overlay shown during dictation. Hidden remains available in Advanced.",
         "pill": "Pill",
         "wave": "Wave",
@@ -1172,24 +1172,24 @@
       "reformulationLink": "Open Reformulation settings",
       "modeTitle": "Where should transcription run?",
       "localMode": "On this computer",
-      "localDescription": "Audio is transcribed locally, without a transcription API.",
-      "apiMode": "By API",
+      "localDescription": "Die Audiodaten bleiben auf diesem Computer.",
+      "apiMode": "Über einen Anbieter",
       "apiDescription": "Send audio to a provider. Keep a local model as backup.",
       "apiSummary": "Transcription: {{provider}} · {{model}}",
       "localSummary": "Transcription on this computer: {{model}}",
       "configured": "API configured. Availability will be checked when you dictate.",
       "localSummaryHelp": "Uses the local model below. Text cleanup is configured separately.",
       "loading": "Loading configuration…",
-      "modelMissing": "No API model selected",
+      "modelMissing": "Kein Anbietermodell ausgewählt",
       "localMissing": "No local model available",
       "missingProvider": "Choose a supported transcription provider.",
-      "missingModel": "Choose an API transcription model.",
+      "missingModel": "Wähle ein Anbietermodell.",
       "missingKey": "Add an API key to use this provider.",
       "usingLocal": "Until then, the local model is used.",
       "noFallback": "No local backup is available. Download and select a model below to cover API failures and sessions that must stay local.",
       "sharedKey": "This key is also used for Reformulation with this provider. Changing it affects both uses.",
       "customKeyHelp": "A local server may not need a key. If provided, this key is shared with Reformulation.",
-      "advanced": "Advanced API settings",
+      "advanced": "Erweiterte Anbietereinstellungen",
       "timeoutTitle": "Wait before local backup (seconds)",
       "serverUrl": "Server base URL (OpenAI compatible)",
       "sharedUrl": "This base URL is shared with Reformulation for the custom provider. Handy Flow adds /audio/transcriptions or /audio/translations.",
@@ -1209,7 +1209,7 @@
       "downloadFallback": "Download and use as local backup",
       "selectLocal": "Use for local transcription",
       "downloadLocal": "Download and use for local transcription",
-      "footerIncomplete": "Transcription API: setup incomplete",
+      "footerIncomplete": "Anbieter nicht vollständig eingerichtet",
       "footerApi": "API: {{provider}} · {{model}}",
       "footerLocal": "Local: {{model}}",
       "saveError": "This change could not be confirmed. Check the displayed values and try again.",

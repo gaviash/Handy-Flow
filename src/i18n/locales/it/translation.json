@@ -340,7 +340,7 @@
         "pressKeys": "Premi i tasti...",
         "bindings": {
           "transcribe": {
-            "name": "Scorciatoia Trascrizione",
+            "name": "Scorciatoia di dettatura",
             "description": "La scorciatoia da tastiera per registrare e trascrivere la tua voce."
           },
           "cancel": {
@@ -381,14 +381,14 @@
         "description": "Scegli la lingua per il riconoscimento vocale. Auto la determinerà automaticamente, mentre scegliere una lingua specifica può migliorare l'accuratezza per quella lingua.",
         "searchPlaceholder": "Cerca lingue...",
         "noResults": "Nessuna lingua trovata",
-        "auto": "Automatico",
+        "auto": "Rileva la lingua automaticamente",
         "autoUnavailable": {
-          "title": "Automatico è disattivato",
+          "title": "Rilevamento automatico della lingua non disponibile",
           "oneLanguage": "Solo una delle tue lingue funziona con questo modello",
           "undetectable": "Non disponibile con {{languages}}",
           "noMatch": "Nessuna delle tue lingue funziona con questo modello"
         },
-        "detectorMissingTitle": "Automatico richiede un download separato",
+        "detectorMissingTitle": "Il rilevamento della lingua richiede un download",
         "detectorMissing": "Questo modello non riesce a capire quale lingua stai parlando. Automatico ha bisogno di un piccolo rilevatore di lingua per capirlo",
         "stopDetectorDownload": "Interrompi il download del rilevatore di lingua"
       },
@@ -399,7 +399,7 @@
         "weak": "Nessun modello riconosce ancora bene {{languages}}."
       },
       "shortcutActivation": {
-        "title": "Comportamento della scorciatoia",
+        "title": "Come funziona la scorciatoia",
         "description": "Scegli come la scorciatoia di trascrizione avvia e interrompe la registrazione.",
         "options": {
           "holdOrToggle": "Automatico",
@@ -407,7 +407,7 @@
           "toggle": "Alterna"
         },
         "descriptions": {
-          "hold_or_toggle": "Tieni premuto per registrare o tocca per alternare",
+          "hold_or_toggle": "Tieni premuto per registrare; premi per avviare o fermare",
           "push_to_talk": "Registra finché tieni premuta la scorciatoia",
           "toggle": "Tocca la scorciatoia per avviare la registrazione, tocca di nuovo per fermarla"
         }
@@ -452,7 +452,7 @@
         "deleteFailed": "Non è stato possibile eliminare alcuni modelli precedenti. Controlla il log per i dettagli."
       },
       "rescan": {
-        "label": "Riscansiona",
+        "label": "Cerca i modelli aggiunti",
         "tooltip": "Riscansiona per trovare modelli aggiunti alla cartella dei modelli o alla cache di Hugging Face al di fuori di Handy Flow"
       }
     },
@@ -534,13 +534,13 @@
           "title": "Overlay",
           "description": "Scegli l'overlay di registrazione: 'Nessuno' lo nasconde, 'Minimo' mostra una barra compatta, 'In tempo reale' mostra la trascrizione in tempo reale mentre parli (solo per modelli che supportano lo streaming — cerca il badge 'Streaming' nel selettore del modello). Su Linux si raccomanda l'opzione 'Nessuno'.",
           "options": {
-            "none": "Nessuno",
+            "none": "Nascosto",
             "minimal": "Minimo",
             "live": "In tempo reale"
           }
         },
         "position": {
-          "title": "Posizione della Sovrimpressione",
+          "title": "Posizione dell'indicatore",
           "description": "Mostra un feedback visivo in sovrimpressione durante la registrazione e la trascrizione. Su Linux si raccomanda 'Nessuna'.",
           "options": {
             "bottom": "In basso",
@@ -549,7 +549,7 @@
         }
       },
       "pasteMethod": {
-        "title": "Metodo di Incollaggio",
+        "title": "Inserisci il testo",
         "description": "Scegli come viene inserito il testo. Diretto: simula l'input da tastiera. Nessuno: non incolla, aggiorna solo la cronologia/appunti.",
         "options": {
           "clipboard": "Appunti ({{modifier}}+V)",
@@ -569,7 +569,7 @@
         }
       },
       "clipboardHandling": {
-        "title": "Gestione Appunti",
+        "title": "Appunti dopo la dettatura",
         "description": "Non Modificare gli Appunti mantiene il contenuto dei tuoi appunti dopo la trascrizione. Copia negli Appunti lascia il risultato della trascrizione negli appunti dopo aver incollato.",
         "options": {
           "dontModify": "Non Modificare gli Appunti",
@@ -577,7 +577,7 @@
         }
       },
       "autoSubmit": {
-        "title": "Invio automatico",
+        "title": "Invia dopo la dettatura",
         "description": "Invia automaticamente la combinazione di tasti selezionata dopo l'inserimento del testo. Cmd+Enter si applica su macOS, mentre Windows/Linux usano Super+Enter.",
         "options": {
           "off": "Disattivato",
@@ -614,11 +614,11 @@
         "duplicate": "\"{{word}}\" esiste già"
       },
       "voiceActivityDetection": {
-        "title": "Rilevamento dell'attività vocale",
+        "title": "Filtra i silenzi",
         "description": "Filtra il silenzio dalle registrazioni. I modelli che supportano lo streaming utilizzano una coda VAD più lunga; disabilitando la VAD si registra l'audio grezzo."
       },
       "longFormChunking": {
-        "title": "Suddivisione dell'audio lungo",
+        "title": "Dividi le registrazioni lunghe",
         "description": "Suddivide le registrazioni lunghe in corrispondenza delle pause prima della trascrizione, il che di solito migliora le prestazioni della trascrizione. I file trascritti e le ri-trascrizioni lunghe vengono sempre suddivisi."
       },
       "languageDetection": {
@@ -628,7 +628,7 @@
         "downloadingHint": "Download del rilevatore di lingua in corso. Disattiva per annullare"
       },
       "vadBackend": {
-        "title": "Backend di rilevamento vocale",
+        "title": "Rilevatore del silenzio",
         "description": "Scegli il rilevatore usato per filtrare il silenzio. Earshot è sperimentale; torna a Silero se il parlato viene tagliato o il rumore viene mantenuto.",
         "options": {
           "silero": "Silero",
@@ -1153,7 +1153,7 @@
         "compact": "Compact"
       },
       "overlay": {
-        "title": "Dictation overlay",
+        "title": "Indicatore di dettatura",
         "description": "The overlay shown during dictation. Hidden remains available in Advanced.",
         "pill": "Pill",
         "wave": "Wave",
@@ -1172,24 +1172,24 @@
       "reformulationLink": "Open Reformulation settings",
       "modeTitle": "Where should transcription run?",
       "localMode": "On this computer",
-      "localDescription": "Audio is transcribed locally, without a transcription API.",
-      "apiMode": "By API",
+      "localDescription": "L’audio rimane su questo computer.",
+      "apiMode": "Tramite un fornitore",
       "apiDescription": "Send audio to a provider. Keep a local model as backup.",
       "apiSummary": "Transcription: {{provider}} · {{model}}",
       "localSummary": "Transcription on this computer: {{model}}",
       "configured": "API configured. Availability will be checked when you dictate.",
       "localSummaryHelp": "Uses the local model below. Text cleanup is configured separately.",
       "loading": "Loading configuration…",
-      "modelMissing": "No API model selected",
+      "modelMissing": "Nessun modello del fornitore selezionato",
       "localMissing": "No local model available",
       "missingProvider": "Choose a supported transcription provider.",
-      "missingModel": "Choose an API transcription model.",
+      "missingModel": "Scegli un modello del fornitore.",
       "missingKey": "Add an API key to use this provider.",
       "usingLocal": "Until then, the local model is used.",
       "noFallback": "No local backup is available. Download and select a model below to cover API failures and sessions that must stay local.",
       "sharedKey": "This key is also used for Reformulation with this provider. Changing it affects both uses.",
       "customKeyHelp": "A local server may not need a key. If provided, this key is shared with Reformulation.",
-      "advanced": "Advanced API settings",
+      "advanced": "Impostazioni avanzate del fornitore",
       "timeoutTitle": "Wait before local backup (seconds)",
       "serverUrl": "Server base URL (OpenAI compatible)",
       "sharedUrl": "This base URL is shared with Reformulation for the custom provider. Handy Flow adds /audio/transcriptions or /audio/translations.",
@@ -1209,7 +1209,7 @@
       "downloadFallback": "Download and use as local backup",
       "selectLocal": "Use for local transcription",
       "downloadLocal": "Download and use for local transcription",
-      "footerIncomplete": "Transcription API: setup incomplete",
+      "footerIncomplete": "Configurazione del fornitore incompleta",
       "footerApi": "API: {{provider}} · {{model}}",
       "footerLocal": "Local: {{model}}",
       "saveError": "This change could not be confirmed. Check the displayed values and try again.",

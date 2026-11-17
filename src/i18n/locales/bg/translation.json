@@ -340,7 +340,7 @@
         "pressKeys": "Натиснете клавишите...",
         "bindings": {
           "transcribe": {
-            "name": "Бърз клавиш за транскрипция",
+            "name": "Клавишна комбинация за диктовка",
             "description": "Клавишната комбинация за запис и транскрибиране на гласа ви."
           },
           "cancel": {
@@ -381,14 +381,14 @@
         "description": "Изберете езика за разпознаване на реч. „Автоматично“ определя езика сам, а изборът на конкретен език може да подобри точността за него.",
         "searchPlaceholder": "Търсене на езици...",
         "noResults": "Няма намерени езици",
-        "auto": "Автоматично",
+        "auto": "Автоматично разпознаване на езика",
         "autoUnavailable": {
-          "title": "Автоматично е изключено",
+          "title": "Автоматичното разпознаване на езика не е налично",
           "oneLanguage": "Само един от вашите езици работи с този модел",
           "undetectable": "Не е налично с {{languages}}",
           "noMatch": "Нито един от вашите езици не работи с този модел"
         },
-        "detectorMissingTitle": "Автоматично изисква отделно изтегляне",
+        "detectorMissingTitle": "Разпознаването на езика изисква изтегляне",
         "detectorMissing": "Този модел не може да разпознае на какъв език говорите. Автоматично се нуждае от малък детектор на език, за да го разпознае",
         "stopDetectorDownload": "Спри изтеглянето на детектора на език"
       },
@@ -399,7 +399,7 @@
         "weak": "Все още няма модел, който разпознава добре {{languages}}."
       },
       "shortcutActivation": {
-        "title": "Поведение на клавишната комбинация",
+        "title": "Как работи комбинацията",
         "description": "Изберете как бързият клавиш за транскрипция стартира и спира записа.",
         "options": {
           "holdOrToggle": "Автоматично",
@@ -407,7 +407,7 @@
           "toggle": "Превключване"
         },
         "descriptions": {
-          "hold_or_toggle": "Задръжте за запис или натиснете кратко за превключване",
+          "hold_or_toggle": "Задръжте за запис; натиснете за начало или край",
           "push_to_talk": "Записва, докато държите комбинацията натисната",
           "toggle": "Натиснете кратко комбинацията, за да започне записът, и отново, за да спре"
         }
@@ -452,7 +452,7 @@
         "deleteFailed": "Някои стари модели не можаха да бъдат изтрити. Проверете журнала за подробности."
       },
       "rescan": {
-        "label": "Сканиране отново",
+        "label": "Търсене на добавени модели",
         "tooltip": "Сканиране отново за модели, добавени в папката с модели или кеша на Hugging Face извън Handy Flow"
       }
     },
@@ -534,13 +534,13 @@
           "title": "Наслагване",
           "description": "Изберете наслагването при запис: «Няма» го скрива, «Минимално» показва компактен индикатор, «На живо» показва транскрипцията в реално време, докато говорите (само модели с поддръжка на стрийминг — потърсете етикета «Стрийминг» в избора на модел). На Linux се препоръчва «Няма».",
           "options": {
-            "none": "Няма",
+            "none": "Скрит",
             "minimal": "Минимално",
             "live": "На живо"
           }
         },
         "position": {
-          "title": "Позиция на наслагването",
+          "title": "Позиция на индикатора",
           "description": "Показване на визуална обратна връзка при запис и транскрипция. На Linux се препоръчва „Няма“.",
           "options": {
             "bottom": "Долу",
@@ -549,7 +549,7 @@
         }
       },
       "pasteMethod": {
-        "title": "Начин на поставяне",
+        "title": "Вмъкване на текст",
         "description": "Изберете как се вмъква текстът. Директно: симулира писане чрез системния вход. Няма: пропуска поставянето, актуализира само историята/клипборда.",
         "options": {
           "clipboard": "Клипборд ({{modifier}}+V)",
@@ -569,7 +569,7 @@
         }
       },
       "clipboardHandling": {
-        "title": "Работа с клипборда",
+        "title": "Клипборд след диктовка",
         "description": "„Без промяна на клипборда“ запазва съдържанието на клипборда след транскрипция. „Копиране в клипборда“ оставя резултата в клипборда след поставяне.",
         "options": {
           "dontModify": "Без промяна на клипборда",
@@ -577,7 +577,7 @@
         }
       },
       "autoSubmit": {
-        "title": "Автоматично изпращане",
+        "title": "Изпращане след диктовка",
         "description": "Автоматично изпращане на избраната клавишна комбинация след вмъкване на текста. Cmd+Enter важи за macOS, а Windows/Linux използват Super+Enter.",
         "options": {
           "off": "Изкл.",
@@ -614,11 +614,11 @@
         "duplicate": "„{{word}}“ вече съществува"
       },
       "voiceActivityDetection": {
-        "title": "Откриване на гласова активност",
+        "title": "Филтриране на тишината",
         "description": "Филтрира тишината от записите. Моделите с поддръжка на стрийминг използват по-дълга опашка на VAD; изключването на VAD записва необработен звук."
       },
       "longFormChunking": {
-        "title": "Разделяне на дълго аудио",
+        "title": "Разделяне на дълги записи",
         "description": "Разделя дългите записи на паузите преди транскрибиране, което обикновено подобрява качеството на транскрипцията. Транскрибираните файлове и дългите повторни транскрипции винаги се разделят."
       },
       "languageDetection": {
@@ -628,7 +628,7 @@
         "downloadingHint": "Детекторът на език се изтегля. Изключете, за да откажете"
       },
       "vadBackend": {
-        "title": "Бекенд за откриване на глас",
+        "title": "Детектор за тишина",
         "description": "Изберете детектора, използван за филтриране на тишината. Earshot е експериментален; върнете се към Silero, ако речта се отрязва или шумът се запазва.",
         "options": {
           "silero": "Silero",
@@ -1153,7 +1153,7 @@
         "compact": "Compact"
       },
       "overlay": {
-        "title": "Dictation overlay",
+        "title": "Индикатор за диктовка",
         "description": "The overlay shown during dictation. Hidden remains available in Advanced.",
         "pill": "Pill",
         "wave": "Wave",
@@ -1172,24 +1172,24 @@
       "reformulationLink": "Open Reformulation settings",
       "modeTitle": "Where should transcription run?",
       "localMode": "On this computer",
-      "localDescription": "Audio is transcribed locally, without a transcription API.",
-      "apiMode": "By API",
+      "localDescription": "Аудиото остава на този компютър.",
+      "apiMode": "Чрез доставчик",
       "apiDescription": "Send audio to a provider. Keep a local model as backup.",
       "apiSummary": "Transcription: {{provider}} · {{model}}",
       "localSummary": "Transcription on this computer: {{model}}",
       "configured": "API configured. Availability will be checked when you dictate.",
       "localSummaryHelp": "Uses the local model below. Text cleanup is configured separately.",
       "loading": "Loading configuration…",
-      "modelMissing": "No API model selected",
+      "modelMissing": "Няма избран модел от доставчика",
       "localMissing": "No local model available",
       "missingProvider": "Choose a supported transcription provider.",
-      "missingModel": "Choose an API transcription model.",
+      "missingModel": "Изберете модел от доставчика.",
       "missingKey": "Add an API key to use this provider.",
       "usingLocal": "Until then, the local model is used.",
       "noFallback": "No local backup is available. Download and select a model below to cover API failures and sessions that must stay local.",
       "sharedKey": "This key is also used for Reformulation with this provider. Changing it affects both uses.",
       "customKeyHelp": "A local server may not need a key. If provided, this key is shared with Reformulation.",
-      "advanced": "Advanced API settings",
+      "advanced": "Допълнителни настройки на доставчика",
       "timeoutTitle": "Wait before local backup (seconds)",
       "serverUrl": "Server base URL (OpenAI compatible)",
       "sharedUrl": "This base URL is shared with Reformulation for the custom provider. Handy Flow adds /audio/transcriptions or /audio/translations.",
@@ -1209,7 +1209,7 @@
       "downloadFallback": "Download and use as local backup",
       "selectLocal": "Use for local transcription",
       "downloadLocal": "Download and use for local transcription",
-      "footerIncomplete": "Transcription API: setup incomplete",
+      "footerIncomplete": "Настройката на доставчика е непълна",
       "footerApi": "API: {{provider}} · {{model}}",
       "footerLocal": "Local: {{model}}",
       "saveError": "This change could not be confirmed. Check the displayed values and try again.",

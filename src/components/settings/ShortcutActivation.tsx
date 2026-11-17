@@ -18,24 +18,19 @@ export const ShortcutActivationSetting: React.FC<ShortcutActivationProps> =
     const options = [
       {
         value: "hold_or_toggle",
-        label: t("settings.general.shortcutActivation.options.holdOrToggle"),
-        description: t(
+        label: t(
           "settings.general.shortcutActivation.descriptions.hold_or_toggle",
         ),
       },
       {
         value: "push_to_talk",
-        label: t("settings.general.shortcutActivation.options.pushToTalk"),
-        description: t(
+        label: t(
           "settings.general.shortcutActivation.descriptions.push_to_talk",
         ),
       },
       {
         value: "toggle",
-        label: t("settings.general.shortcutActivation.options.toggle"),
-        description: t(
-          "settings.general.shortcutActivation.descriptions.toggle",
-        ),
+        label: t("settings.general.shortcutActivation.descriptions.toggle"),
       },
     ];
 
@@ -51,6 +46,7 @@ export const ShortcutActivationSetting: React.FC<ShortcutActivationProps> =
       >
         <Dropdown
           options={options}
+          className="w-64 max-w-full [&>button>span]:whitespace-normal"
           menuClassName="right-0 w-80 max-w-[calc(100vw-2rem)]"
           selectedValue={selected}
           onSelect={(value) =>
