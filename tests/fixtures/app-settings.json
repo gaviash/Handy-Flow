@@ -138,6 +138,7 @@
   "lazy_stream_close": false,
   "learned_sound_enabled": true,
   "learning_enabled": true,
+  "learning_judge_enabled": true,
   "log_level": "debug",
   "long_form_chunking": true,
   "model_unload_timeout": "min5",

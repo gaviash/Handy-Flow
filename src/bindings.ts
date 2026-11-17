@@ -249,6 +249,17 @@ async changeLearningEnabledSetting(enabled: boolean) : Promise<Result<null, stri
     else return { status: "error", error: e  as any };
 }
 },
+async changeLearningJudgeEnabledSetting(enabled: boolean) : Promise<Result<null, string>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("change_learning_judge_enabled_setting", { enabled }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+async getJudgeProvider() : Promise<string | null> {
+    return await TAURI_INVOKE("get_judge_provider");
+},
 async changeLearnedSoundEnabledSetting(enabled: boolean) : Promise<Result<null, string>> {
     try {
     return { status: "ok", data: await TAURI_INVOKE("change_learned_sound_enabled_setting", { enabled }) };
@@ -1400,6 +1411,11 @@ learning_enabled?: boolean;
  * The system notification sound when a word is learned.
  */
 learned_sound_enabled?: boolean; 
+/**
+ * The judge sends a correction (before and after) to an LLM to learn
+ * style rules and technical words.
+ */
+learning_judge_enabled?: boolean; 
 /**
  * Handy Adaptive (spec §7): what the ASR model is told before it listens.
  */

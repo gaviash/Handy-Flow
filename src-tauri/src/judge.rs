@@ -143,6 +143,49 @@ fn schema() -> serde_json::Value {
 
 /// Asks the judge about one correction and records what it finds. Groq only,
 /// no retry, 15 s at most: a failure just learns nothing.
+/// Who judges: Groq with its small model when it has a key, else the active
+/// rewrite provider with its own model and key (a custom endpoint may be
+/// keyless). `None` when neither can be called.
+pub fn judge_target(
+    s: &crate::settings::AppSettings,
+) -> Option<(crate::settings::PostProcessProvider, String, String)> {
+    let key = |id: &str| {
+        s.post_process_api_keys
+            .get(id)
+            .map(|k| k.trim().to_string())
+            .unwrap_or_default()
+    };
+    if let Some(groq) = s
+        .post_process_provider("groq")
+        .filter(|_| !key("groq").is_empty())
+    {
+        return Some((
+            groq.clone(),
+            key("groq"),
+            crate::adaptive::GROQ_SPARE_MODEL.to_string(),
+        ));
+    }
+    let p = s.active_post_process_provider()?;
+    let model = s
+        .post_process_models
+        .get(&p.id)
+        .cloned()
+        .unwrap_or_default();
+    let k = key(&p.id);
+    (!model.trim().is_empty() && (!k.is_empty() || p.id == "custom")).then(|| (p.clone(), k, model))
+}
+
+/// The judge's provider name for Settings, or `None` when it is off or has
+/// no provider it can call.
+#[tauri::command]
+#[specta::specta]
+pub fn get_judge_provider(app: AppHandle) -> Option<String> {
+    let s = crate::settings::get_settings(&app);
+    s.learning_judge_enabled
+        .then(|| judge_target(&s).map(|(p, ..)| p.label))
+        .flatten()
+}
+
 pub async fn run(
     app: AppHandle,
     inserted: String,
@@ -152,22 +195,9 @@ pub async fn run(
 ) {
     let skip = |reason: &str| log::debug!("Learning: judge skipped ({reason})");
     let settings = crate::settings::get_settings(&app);
-    let Some(provider) = settings
-        .post_process_providers
-        .iter()
-        .find(|p| p.id == "groq")
-        .cloned()
-    else {
-        return skip("no groq provider");
+    let Some((provider, key, model)) = judge_target(&settings) else {
+        return skip("no provider");
     };
-    let key = settings
-        .post_process_api_keys
-        .get("groq")
-        .cloned()
-        .unwrap_or_default();
-    if key.trim().is_empty() {
-        return skip("no groq key");
-    }
     let rules = crate::learning::all_rules(&app);
     let past = {
         use tauri::Manager;
@@ -181,7 +211,7 @@ pub async fn run(
     let call = crate::llm_client::send_chat_completion_with_schema(
         &provider,
         key,
-        crate::adaptive::GROQ_SPARE_MODEL,
+        &model,
         message,
         Some(JUDGE_PROMPT.to_string()),
         Some(schema()),
@@ -206,6 +236,25 @@ pub async fn run(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn judge_falls_back_to_the_active_provider() {
+        let mut s = crate::settings::get_default_settings();
+        s.post_process_api_keys.clear();
+        s.post_process_provider_id = "openai".into();
+        s.post_process_api_keys
+            .insert("openai".into(), "sk-x".into());
+        s.post_process_models
+            .insert("openai".into(), "gpt-4.1-mini".into());
+        let (p, _, model) = judge_target(&s).unwrap();
+        assert_eq!((p.id.as_str(), model.as_str()), ("openai", "gpt-4.1-mini"));
+        // Groq first when it has a key.
+        s.post_process_api_keys.insert("groq".into(), "gsk".into());
+        assert_eq!(judge_target(&s).unwrap().0.id, "groq");
+        // No key anywhere: no judge.
+        s.post_process_api_keys.clear();
+        assert!(judge_target(&s).is_none());
+    }
 
     #[test]
     fn invalid_replies_learn_nothing() {
