@@ -188,7 +188,13 @@ fn parse_memory(json: &[u8]) -> Memory {
 /// unseen as long, then the least used and oldest entries over the caps.
 pub(crate) fn prune(m: &mut Memory, now: i64) {
     let expired = now - PENDING_DAYS * 86_400;
-    m.words.retain(|w| w.last_seen >= expired);
+    // Grammar fixes learned before 0.2.6 as misheard words leave.
+    for w in m.words.iter_mut().filter(|w| w.kind == WordKind::Misheard) {
+        let term = w.term.clone();
+        w.heard.retain(|h| !is_grammar_change(h, &term));
+    }
+    m.words
+        .retain(|w| w.last_seen >= expired && !w.heard.is_empty());
     m.rules.retain(|r| r.active || r.last_seen >= expired);
     if m.words.len() > WORDS_MAX {
         m.words
@@ -347,6 +353,8 @@ pub fn candidates(inserted: &str, fin: &str) -> Vec<Candidate> {
             Err("too_long")
         } else if has_meaning_word(&hk) || has_meaning_word(&tk) {
             Err("meaning_word")
+        } else if is_grammar_change(&hk, &tk) {
+            Err("grammar")
         } else if d <= MISHEARD_DISTANCE {
             Ok(WordKind::Misheard)
         } else {
@@ -503,6 +511,46 @@ const MEANING_WORDS: &[&str] = &[
     "december",
 ];
 
+/// Pairs a user fixes for grammar, not because the recognizer misheard.
+const GRAMMAR_PAIRS: &[(&str, &str)] = &[
+    ("their", "they're"),
+    ("there", "their"),
+    ("there", "they're"),
+    ("then", "than"),
+    ("your", "you're"),
+    ("were", "where"),
+    ("quand", "quant"),
+    ("peut", "peux"),
+    ("voie", "voix"),
+    ("près", "prêt"),
+    ("leur", "leurs"),
+    ("quel", "quelle"),
+];
+
+/// French verb endings, longest first: "envoyer" and "envoyé" share "envoy".
+const VERB_ENDINGS: &[&str] = &[
+    "aient", "ées", "ais", "ait", "ant", "ée", "és", "er", "ez", "ai", "é",
+];
+
+/// A grammar fix, never a misheard word: a word under 4 letters (et/est,
+/// ces/ses, le/la), the same verb with another ending, or a known pair.
+fn is_grammar_change(heard: &str, term: &str) -> bool {
+    let (h, t) = (heard.to_lowercase(), term.to_lowercase());
+    let stem = |w: &str| {
+        VERB_ENDINGS
+            .iter()
+            .find_map(|e| w.strip_suffix(e).filter(|s| !s.is_empty()))
+            .unwrap_or(w)
+            .to_string()
+    };
+    letters(&h).chars().count() < 4
+        || letters(&t).chars().count() < 4
+        || stem(&h) == stem(&t)
+        || GRAMMAR_PAIRS
+            .iter()
+            .any(|&(a, b)| (h == a && t == b) || (h == b && t == a))
+}
+
 fn has_meaning_word(s: &str) -> bool {
     s.split_whitespace()
         .any(|w| MEANING_WORDS.contains(&w) || crate::adaptive::FR_COMMON_NAMES.contains(&w))
@@ -521,6 +569,7 @@ fn close_pair(heard: &str, term: &str, max: f64) -> bool {
         && h != t
         && !has_meaning_word(&h)
         && !has_meaning_word(&t)
+        && !is_grammar_change(&h, &t)
         && distance(&h, &t) <= max
 }
 
@@ -1356,13 +1405,59 @@ mod tests {
     }
 
     #[test]
+    fn grammar_changes_are_never_misheard() {
+        for (a, b) in [
+            ("Il et parti hier soir.", "Il est parti hier soir."),
+            ("Il a pris ces affaires.", "Il a pris ses affaires."),
+            ("Je vais le voir demain.", "Je vais la voir demain."),
+            ("On se voit ce soir.", "On se voit se soir."),
+            ("Je l'ai envoyer hier.", "Je l'ai envoyé hier."),
+            ("I think their right.", "I think they're right."),
+            ("It was better then that.", "It was better than that."),
+        ] {
+            assert!(super::candidates(a, b).is_empty(), "{a} -> {b}");
+        }
+        // A misheard common word of 4+ letters still counts.
+        assert_eq!(
+            super::candidates("ouvre le fichier conflig", "ouvre le fichier config").len(),
+            1
+        );
+        // Accepted trade-off: words under 4 letters are no longer learned.
+        assert!(
+            super::candidates("regarde le gag du serveur", "regarde le log du serveur").is_empty()
+        );
+    }
+
+    #[test]
+    fn purge_drops_grammar_pairs_already_learned() {
+        let now = 1_000_000;
+        let word = |term: &str, heard: &str, kind| Learned {
+            term: term.into(),
+            heard: vec![heard.into()],
+            count: 2,
+            last_seen: now,
+            kind,
+            active: true,
+        };
+        let mut m = Memory::default();
+        m.words.push(word("est", "et", WordKind::Misheard));
+        m.words.push(word("Qwen", "Quen", WordKind::Term));
+        prune(&mut m, now);
+        let terms: Vec<&str> = m.words.iter().map(|w| w.term.as_str()).collect();
+        assert_eq!(terms, ["Qwen"]);
+    }
+
+    #[test]
     fn misheard_common_word_is_learned_after_two_corrections() {
-        let c = super::candidates("regarde le gag du serveur", "regarde le log du serveur");
+        let c = super::candidates(
+            "regarde le conflig du serveur",
+            "regarde le config du serveur",
+        );
         assert_eq!(
             c,
             vec![Candidate {
-                term: "log".into(),
-                heard: "gag".into(),
+                term: "config".into(),
+                heard: "conflig".into(),
                 kind: WordKind::Misheard
             }]
         );
@@ -1379,7 +1474,7 @@ mod tests {
         assert!(super::candidates("je dis oui merci", "je dis non merci").is_empty());
         assert!(super::candidates("on part à deux", "on part à trois").is_empty());
         assert!(!is_misheard_pair("mardi", "jeudi"));
-        assert!(is_misheard_pair("gag", "log"));
+        assert!(is_misheard_pair("conflig", "config"));
     }
 
     #[test]
@@ -1461,8 +1556,8 @@ mod tests {
             &mut m,
             &[v(
                 VerdictKind::Misheard,
-                Some("gag"),
-                Some("log"),
+                Some("conflig"),
+                Some("config"),
                 None,
                 None,
                 true,
@@ -1571,10 +1666,10 @@ mod tests {
 
     #[test]
     fn a_word_fixed_twice_in_one_dictation_is_learned() {
-        // "chef" → "jev" alone is too far (0.75); with "jeff" → "jev" it counts.
+        // "chefo" → "jevu" alone is too far (0.8); with "jeffu" → "jevu" it counts.
         let c = super::candidates(
-            "le chef est prêt et le jeff aussi",
-            "le jev est prêt et le jev aussi",
+            "le chefo est prêt et le jeffu aussi",
+            "le jevu est prêt et le jevu aussi",
         );
         assert_eq!(c.len(), 2, "{c:?}");
         let mut m = Memory::default();
@@ -1583,15 +1678,15 @@ mod tests {
         }
         assert_eq!(m.words.len(), 1);
         assert!(m.words[0].active);
-        assert_eq!(m.words[0].heard, vec!["jeff", "chef"]);
-        // Alone, "chef" → "jev" still learns nothing.
-        assert!(super::candidates("le chef est prêt", "le jev est prêt").is_empty());
+        assert_eq!(m.words[0].heard, vec!["jeffu", "chefo"]);
+        // Alone, "chefo" → "jevu" still learns nothing.
+        assert!(super::candidates("le chefo est prêt", "le jevu est prêt").is_empty());
         // Case doesn't split a word in two.
         record_word(
             &mut m,
             &Candidate {
-                term: "Jev".into(),
-                heard: "jef".into(),
+                term: "Jevu".into(),
+                heard: "jefu".into(),
                 kind: WordKind::Misheard,
             },
             1,
@@ -1605,7 +1700,7 @@ mod tests {
         let v = |heard: &str, technical| Verdict {
             kind: VerdictKind::Misheard,
             heard: Some(heard.into()),
-            term: Some("jev".into()),
+            term: Some("jevu".into()),
             rule: None,
             same_as: None,
             consistent_with_history: false,
@@ -1613,20 +1708,20 @@ mod tests {
         };
         // Not technical: one correction stays pending.
         let mut m = Memory::default();
-        apply_verdicts(&mut m, &[v("jeff", false)], &[], "Code", 0);
+        apply_verdicts(&mut m, &[v("jeffu", false)], &[], "Code", 0);
         assert!(!m.words[0].active);
-        // Technical: usable at once, even a farther form ("chef", 0.75).
+        // Technical: usable at once, even a farther form ("chefo", 0.8).
         let mut m = Memory::default();
-        let news = apply_verdicts(&mut m, &[v("chef", true)], &[], "Code", 0);
+        let news = apply_verdicts(&mut m, &[v("chefo", true)], &[], "Code", 0);
         assert!(m.words[0].active);
-        assert_eq!(news, vec!["jev".to_string()]);
+        assert_eq!(news, vec!["jevu".to_string()]);
         // Found locally this dictation: not counted twice, only promoted.
-        let local = super::candidates("le jeff est prêt", "le jev est prêt");
+        let local = super::candidates("le jeffu est prêt", "le jevu est prêt");
         let mut m = Memory::default();
         record_word(&mut m, &local[0], 0);
-        apply_verdicts(&mut m, &[v("jeff", false)], &local, "Code", 0);
+        apply_verdicts(&mut m, &[v("jeffu", false)], &local, "Code", 0);
         assert!(!m.words[0].active && m.words[0].count == 1);
-        apply_verdicts(&mut m, &[v("jeff", true)], &local, "Code", 0);
+        apply_verdicts(&mut m, &[v("jeffu", true)], &local, "Code", 0);
         assert!(m.words[0].active && m.words[0].count == 1);
         // Still no meaning change, technical or not.
         let mut m = Memory::default();
@@ -1641,7 +1736,7 @@ mod tests {
         let day = 86_400;
         let mut m = Memory::default();
         m.words
-            .push(word("log", "gag", 1, 0, WordKind::Misheard, false));
+            .push(word("config", "conflig", 1, 0, WordKind::Misheard, false));
         m.words
             .push(word("Qwen", "Quen", 1, 0, WordKind::Term, true));
         m.words.push(word(
@@ -1675,20 +1770,20 @@ mod tests {
         m.words
             .push(word("Node.js", "node jay s", 1, 0, WordKind::Term, true));
         m.words
-            .push(word("log", "gag", 1, 0, WordKind::Misheard, false));
+            .push(word("config", "conflig", 1, 0, WordKind::Misheard, false));
         m.words
             .push(word("art", "hart", 1, 0, WordKind::Term, true));
 
         assert!(mark_used(
             &mut m,
-            "J'utilise qwen et Node.js, le log dit partir.",
+            "J'utilise qwen et Node.js, le config dit partir.",
             9
         ));
         let seen = |t: &str| m.words.iter().find(|w| w.term == t).unwrap().last_seen;
         assert_eq!(seen("Qwen"), 9);
         assert_eq!(seen("Node.js"), 9);
         // Pending: dictating it proves nothing. Inside "partir": not the word.
-        assert_eq!(seen("log"), 0);
+        assert_eq!(seen("config"), 0);
         assert_eq!(seen("art"), 0);
         assert!(!mark_used(&mut m, "rien ici", 10));
     }
