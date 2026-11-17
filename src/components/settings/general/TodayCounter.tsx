@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { listen } from "@tauri-apps/api/event";
 import { commands, events } from "@/bindings";
 import { prefersReducedMotion } from "@/lib/utils/motion";
 
@@ -57,9 +58,12 @@ export const TodayCounter: React.FC = () => {
       if (e.payload.action === "added" || e.payload.action === "updated")
         load(true);
     });
+    // Back from the tray, possibly on a new day: count again.
+    const unlistenShown = listen("main-window-shown", () => load(false));
     return () => {
       alive = false;
       unlisten.then((f) => f());
+      unlistenShown.then((f) => f());
     };
   }, []);
 

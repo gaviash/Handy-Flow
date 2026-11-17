@@ -935,7 +935,10 @@
       "stats": {
         "title": "Last 30 days: {{dictations}} dictations, {{words}} words, {{learned}} learned words",
         "apps": "Most used: {{apps}}"
-      }
+      },
+      "viewChanges": "See the edits",
+      "hideChanges": "Hide the edits",
+      "changesTooDifferent": "Rewritten too much to compare word by word."
     },
     "debug": {
       "title": "Debug",
@@ -1334,7 +1337,22 @@
     "processing": "Processing...",
     "loadingModel": "Loading model...",
     "recording": "Listening",
-    "pasted": "Pasted"
+    "pasted": "Pasted",
+    "register": {
+      "email": "Email",
+      "work_chat": "Work chat",
+      "personal_chat": "Chat",
+      "ai": "AI prompt",
+      "document": "Document",
+      "code": "Code",
+      "other": "Other"
+    },
+    "tone": {
+      "formal": "Formal",
+      "casual": "Casual",
+      "very_casual": "Very casual",
+      "excited": "Excited"
+    }
   },
   "secureInput": {
     "blockedWithCulprit_one": "{{name}} may be blocking 1 shortcut",

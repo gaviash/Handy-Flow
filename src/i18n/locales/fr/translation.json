@@ -935,7 +935,10 @@
       "stats": {
         "title": "30 derniers jours : {{dictations}} dictées, {{words}} mots, {{learned}} mots appris",
         "apps": "Les plus utilisées : {{apps}}"
-      }
+      },
+      "viewChanges": "Voir les retouches",
+      "hideChanges": "Masquer les retouches",
+      "changesTooDifferent": "Trop réécrit pour comparer mot à mot."
     },
     "debug": {
       "title": "Débogage",
@@ -1334,7 +1337,22 @@
     "processing": "Traitement...",
     "loadingModel": "Chargement du modèle...",
     "recording": "À l’écoute",
-    "pasted": "Collé"
+    "pasted": "Collé",
+    "register": {
+      "email": "Courriel",
+      "work_chat": "Chat pro",
+      "personal_chat": "Chat",
+      "ai": "Prompt IA",
+      "document": "Document",
+      "code": "Code",
+      "other": "Autre"
+    },
+    "tone": {
+      "formal": "Formel",
+      "casual": "Détendu",
+      "very_casual": "Très détendu",
+      "excited": "Enjoué"
+    }
   },
   "secureInput": {
     "blockedWithCulprit_one": "{{name}} bloque peut-être 1 raccourci",

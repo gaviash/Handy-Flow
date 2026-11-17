@@ -7,6 +7,7 @@ import {
   type ReactNode,
 } from "react";
 import { useTranslation } from "react-i18next";
+import { prefersReducedMotion } from "@/lib/utils/motion";
 import { platform } from "@tauri-apps/plugin-os";
 import {
   checkAccessibilityPermission,
@@ -123,6 +124,25 @@ function App() {
 
   useEffect(() => {
     checkOnboardingStatus();
+  }, []);
+
+  // Back from the tray: the page settles in again, a touch slower than a
+  // section change, so the window feels woken rather than just uncovered.
+  const pageRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const unlisten = listen("main-window-shown", () => {
+      if (prefersReducedMotion()) return;
+      pageRef.current?.animate(
+        [
+          { opacity: 0, translate: "0 10px", filter: "blur(2px)" },
+          { opacity: 1, translate: "0 0", filter: "blur(0)" },
+        ],
+        { duration: 420, easing: "cubic-bezier(0.22, 1, 0.36, 1)" },
+      );
+    });
+    return () => {
+      unlisten.then((f) => f());
+    };
   }, []);
 
   // Handy Adaptive (F95): learned words, grouped, with an undo.
@@ -379,6 +399,7 @@ function App() {
             <div ref={settingsScrollRef} className="flex-1 overflow-y-auto">
               <div
                 key={currentSection}
+                ref={pageRef}
                 className="flex flex-col items-center p-4 gap-4 animate-rise"
               >
                 {!["general", "appearance", "about", "models"].includes(
