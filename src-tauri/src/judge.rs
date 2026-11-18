@@ -141,46 +141,71 @@ fn schema() -> serde_json::Value {
     })
 }
 
-/// Asks the judge about one correction and records what it finds. Groq only,
-/// no retry, 15 s at most: a failure just learns nothing.
-/// Who judges: Groq with its small model when it has a key, else the active
-/// rewrite provider with its own model and key (a custom endpoint may be
-/// keyless) while rewriting is on. `None` when neither can be called.
-pub fn judge_target(
-    s: &crate::settings::AppSettings,
-) -> Option<(crate::settings::PostProcessProvider, String, String)> {
-    let key = |id: &str| {
-        s.post_process_api_keys
-            .get(id)
-            .map(|k| k.trim().to_string())
-            .unwrap_or_default()
+type Target = (crate::settings::PostProcessProvider, String, String);
+
+/// The provider with its key and model, when the judge can call it: OpenAI
+/// format (the judge posts to /chat/completions), keyed (a custom endpoint may
+/// be keyless), and a model: Groq's small one, else the rewrite model.
+fn usable(s: &crate::settings::AppSettings, id: &str) -> Option<Target> {
+    let p = s
+        .post_process_provider(id)
+        .filter(|p| p.api_format == crate::settings::PostProcessApiFormat::OpenAi)?;
+    let key = s
+        .post_process_api_keys
+        .get(id)
+        .map(|k| k.trim().to_string())
+        .unwrap_or_default();
+    let model = if id == "groq" {
+        crate::adaptive::GROQ_SPARE_MODEL.to_string()
+    } else {
+        s.post_process_models.get(id).cloned().unwrap_or_default()
     };
-    if let Some(groq) = s
-        .post_process_provider("groq")
-        .filter(|_| !key("groq").is_empty())
-    {
-        return Some((
-            groq.clone(),
-            key("groq"),
-            crate::adaptive::GROQ_SPARE_MODEL.to_string(),
-        ));
+    ((!key.is_empty() || id == "custom") && !model.trim().is_empty())
+        .then(|| (p.clone(), key, model))
+}
+
+/// Who judges: the provider the user chose, when it can be called (choosing
+/// it is consent, even with rewriting off). Else Automatic: Groq when it has a
+/// key, else the active rewrite provider while rewriting is on.
+pub fn judge_target(s: &crate::settings::AppSettings) -> Option<Target> {
+    if !s.learning_judge_provider_id.is_empty() {
+        if let Some(t) = usable(s, &s.learning_judge_provider_id) {
+            return Some(t);
+        }
+    }
+    if let Some(t) = usable(s, "groq") {
+        return Some(t);
     }
     // Rewriting off: the user chose no LLM traffic; only a Groq key, set for
     // learning, still calls one.
     if !s.post_process_enabled {
         return None;
     }
-    // The judge calls /chat/completions: an Anthropic-format provider can't answer.
-    let p = s
-        .active_post_process_provider()
-        .filter(|p| p.api_format == crate::settings::PostProcessApiFormat::OpenAi)?;
-    let model = s
-        .post_process_models
-        .get(&p.id)
-        .cloned()
-        .unwrap_or_default();
-    let k = key(&p.id);
-    (!model.trim().is_empty() && (!k.is_empty() || p.id == "custom")).then(|| (p.clone(), k, model))
+    usable(s, &s.post_process_provider_id)
+}
+
+#[derive(serde::Serialize, specta::Type)]
+pub struct JudgeChoice {
+    pub id: String,
+    pub label: String,
+}
+
+fn choices(s: &crate::settings::AppSettings) -> Vec<JudgeChoice> {
+    s.post_process_providers
+        .iter()
+        .filter(|p| usable(s, &p.id).is_some())
+        .map(|p| JudgeChoice {
+            id: p.id.clone(),
+            label: p.label.clone(),
+        })
+        .collect()
+}
+
+/// The providers the judge can call, for the dropdown in Settings.
+#[tauri::command]
+#[specta::specta]
+pub fn get_judge_choices(app: AppHandle) -> Vec<JudgeChoice> {
+    choices(&crate::settings::get_settings(&app))
 }
 
 /// Whether a correction may go to the judge at all: learning, the judge and
@@ -310,6 +335,51 @@ mod tests {
         // No key anywhere: no judge.
         s.post_process_api_keys.clear();
         assert!(judge_target(&s).is_none());
+    }
+
+    fn keyed(ids: &[(&str, &str)]) -> crate::settings::AppSettings {
+        let mut s = crate::settings::get_default_settings();
+        s.post_process_api_keys.clear();
+        s.post_process_enabled = true;
+        for (id, model) in ids {
+            s.post_process_api_keys.insert((*id).into(), "k".into());
+            s.post_process_models.insert((*id).into(), (*model).into());
+        }
+        s
+    }
+
+    #[test]
+    fn judge_uses_the_chosen_provider() {
+        let mut s = keyed(&[("groq", ""), ("openai", "gpt-4.1-mini")]);
+        s.learning_judge_provider_id = "openai".into();
+        let (p, _, model) = judge_target(&s).unwrap();
+        assert_eq!((p.id.as_str(), model.as_str()), ("openai", "gpt-4.1-mini"));
+    }
+
+    #[test]
+    fn an_unusable_choice_falls_back_to_automatic() {
+        let mut s = keyed(&[("groq", ""), ("openai", "gpt-4.1-mini")]);
+        s.learning_judge_provider_id = "openai".into();
+        s.post_process_api_keys.remove("openai");
+        assert_eq!(judge_target(&s).unwrap().0.id, "groq");
+    }
+
+    #[test]
+    fn an_explicit_choice_runs_with_rewriting_off() {
+        let mut s = keyed(&[("openai", "gpt-4.1-mini")]);
+        s.post_process_provider_id = "openai".into();
+        s.post_process_enabled = false;
+        s.learning_judge_provider_id = "openai".into();
+        assert!(judge_target(&s).is_some());
+        s.learning_judge_provider_id = String::new();
+        assert!(judge_target(&s).is_none());
+    }
+
+    #[test]
+    fn judge_choices_exclude_anthropic() {
+        let s = keyed(&[("anthropic", "claude-x"), ("openai", "gpt-4.1-mini")]);
+        let ids: Vec<String> = choices(&s).into_iter().map(|c| c.id).collect();
+        assert_eq!(ids, ["openai"]);
     }
 
     #[test]
