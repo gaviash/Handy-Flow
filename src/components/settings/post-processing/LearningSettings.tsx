@@ -15,6 +15,7 @@ import { Dropdown } from "../../ui/Dropdown";
 import { useSettings } from "../../../hooks/useSettings";
 import { AsrContextSettings } from "./AsrContextSettings";
 import { notify } from "@/stores/noticeStore";
+import { useSettingsStore } from "@/stores/settingsStore";
 import { EmptyMascot } from "../../shared/Mascot";
 
 // Mirrors learning.rs: a word unused for 30 days is forgotten.
@@ -70,10 +71,21 @@ export const LearningSettings: React.FC = () => {
   const judgeOn = getSetting("learning_judge_enabled") ?? true;
   const judgeChoice = getSetting("learning_judge_provider_id") ?? "";
   const [choices, setChoices] = useState<JudgeChoice[]>([]);
+  // A key, model or provider change can switch the judge: re-read it once
+  // every write has reached Rust (the store updates before it does).
+  const settings = useSettingsStore((s) => s.settings);
+  const saving = useSettingsStore((s) =>
+    Object.values(s.isUpdating).some(Boolean),
+  );
   useEffect(() => {
-    commands.getJudgeProvider().then(setJudge);
-    commands.getJudgeChoices().then(setChoices);
-  }, [judgeOn, judgeChoice]);
+    if (saving) return;
+    let live = true;
+    commands.getJudgeProvider().then((p) => live && setJudge(p));
+    commands.getJudgeChoices().then((c) => live && setChoices(c));
+    return () => {
+      live = false;
+    };
+  }, [settings, saving]);
 
   return (
     <>
@@ -123,7 +135,10 @@ export const LearningSettings: React.FC = () => {
               },
               ...choices.map((c) => ({ value: c.id, label: c.label })),
             ]}
-            selectedValue={judgeChoice}
+            // A choice it can no longer call falls back to Automatic.
+            selectedValue={
+              choices.some((c) => c.id === judgeChoice) ? judgeChoice : ""
+            }
             onSelect={(v) => updateSetting("learning_judge_provider_id", v)}
             disabled={isUpdating("learning_judge_provider_id")}
           />

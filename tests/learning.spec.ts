@@ -137,3 +137,37 @@ test("the status shows what is really used", async ({ page }) => {
   await expect(page.getByText("Judge Provider")).toBeVisible();
   await expect(page.getByText("Uses Groq")).toBeVisible();
 });
+
+test("an unusable choice shows Automatic", async ({ page }) => {
+  await mockTauri(page, {
+    settings: { learning_judge_provider_id: "openai" },
+    results: {
+      get_judge_provider: "Groq",
+      get_judge_choices: [{ id: "groq", label: "Groq" }],
+    },
+  });
+  await openLearning(page);
+  await expect(
+    page.getByRole("button", { name: "Automatic", exact: true }),
+  ).toBeVisible();
+});
+
+test("the judge status is re-read after another setting is saved", async ({
+  page,
+}) => {
+  const mock = await mockTauri(page, {
+    results: { get_judge_provider: "Groq" },
+  });
+  await openLearning(page);
+  await expect(page.getByText("Uses Groq")).toBeVisible();
+  const reads = async () =>
+    (await mock.calls()).filter((c) => c.cmd === "get_judge_provider").length;
+  const before = await reads();
+  // A key, model or provider change can switch the judge: any saved setting re-reads it.
+  const sound = page.getByRole("checkbox", {
+    name: "Sound When a Word Is Learned",
+  });
+  await sound.scrollIntoViewIfNeeded();
+  await sound.click({ force: true });
+  await expect.poll(reads).toBeGreaterThan(before);
+});
