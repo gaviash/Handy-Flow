@@ -798,6 +798,8 @@ pub(crate) fn apply_verdicts(
     now: i64,
 ) -> Vec<LearnedNews> {
     let (inserted, kept) = (unify(inserted).to_lowercase(), unify(kept).to_lowercase());
+    // A rule repeated within one reply is still one sighting.
+    let mut counted_rules: Vec<usize> = Vec::new();
     use crate::judge::VerdictKind;
     let mut news = Vec::new();
     for v in verdicts {
@@ -871,9 +873,13 @@ pub(crate) fn apply_verdicts(
                         .iter()
                         .position(|r| r.rule.trim().eq_ignore_ascii_case(t))
                 });
-                let existing = v.same_as.or(same_text).and_then(|i| m.rules.get_mut(i));
-                match existing {
+                let index = v.same_as.or(same_text);
+                if index.is_some_and(|i| counted_rules.contains(&i)) {
+                    continue;
+                }
+                match index.and_then(|i| m.rules.get_mut(i)) {
                     Some(r) => {
+                        counted_rules.extend(index);
                         r.count += 1;
                         r.last_seen = now;
                         // Two sightings, whatever the judge says about history.
@@ -896,6 +902,7 @@ pub(crate) fn apply_verdicts(
                             last_seen: now,
                             apps: Vec::new(),
                         });
+                        counted_rules.push(m.rules.len() - 1);
                     }
                 }
             }
@@ -1312,10 +1319,7 @@ pub fn observe(
             // misheard words the local layer couldn't tell).
             let settings = crate::settings::get_settings(&app);
             if let Some(fin) = last.as_ref().filter(|fin| *fin != &inserted) {
-                if settings.learning_enabled
-                    && settings.learning_judge_enabled
-                    && settings.context_send_enabled
-                {
+                if crate::judge::judge_allowed(&settings) {
                     tauri::async_runtime::spawn(crate::judge::run(
                         app.clone(),
                         inserted.clone(),
@@ -1673,6 +1677,24 @@ mod tests {
         apply_verdicts(&mut m, &[v], &[], "a", "b", 1);
         assert_eq!(m.rules.len(), 1);
         assert!(m.rules[0].active);
+    }
+
+    #[test]
+    fn one_reply_counts_a_rule_once() {
+        use crate::judge::{Verdict, VerdictKind};
+        let v = Verdict {
+            kind: VerdictKind::StyleRule,
+            heard: None,
+            term: None,
+            rule: Some("Toujours vouvoyer.".into()),
+            same_as: None,
+            consistent_with_history: false,
+            technical: false,
+        };
+        let mut m = Memory::default();
+        apply_verdicts(&mut m, &[v.clone(), v], &[], "a", "b", 0);
+        assert_eq!((m.rules.len(), m.rules[0].count), (1, 1));
+        assert!(!m.rules[0].active);
     }
 
     #[test]
