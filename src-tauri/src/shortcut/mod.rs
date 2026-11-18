@@ -1074,6 +1074,18 @@ pub fn change_learning_judge_enabled_setting(app: AppHandle, enabled: bool) -> R
 
 #[tauri::command]
 #[specta::specta]
+pub fn change_learning_judge_provider_setting(
+    app: AppHandle,
+    provider_id: String,
+) -> Result<(), String> {
+    let mut settings = settings::get_settings(&app);
+    settings.learning_judge_provider_id = provider_id;
+    settings::write_settings(&app, settings);
+    Ok(())
+}
+
+#[tauri::command]
+#[specta::specta]
 pub fn change_learning_enabled_setting(app: AppHandle, enabled: bool) -> Result<(), String> {
     let mut settings = settings::get_settings(&app);
     settings.learning_enabled = enabled;

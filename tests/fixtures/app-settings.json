@@ -139,6 +139,7 @@
   "learned_sound_enabled": true,
   "learning_enabled": true,
   "learning_judge_enabled": true,
+  "learning_judge_provider_id": "",
   "log_level": "debug",
   "long_form_chunking": true,
   "model_unload_timeout": "min5",

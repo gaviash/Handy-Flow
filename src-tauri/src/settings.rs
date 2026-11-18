@@ -571,6 +571,10 @@ pub struct AppSettings {
     /// style rules and technical words.
     #[serde(default = "default_true")]
     pub learning_judge_enabled: bool,
+    /// The provider the judge uses; empty is Automatic (Groq if keyed, else
+    /// the rewrite provider while rewriting is on).
+    #[serde(default)]
+    pub learning_judge_provider_id: String,
     /// Handy Adaptive (spec §7): what the ASR model is told before it listens.
     #[serde(default)]
     pub asr_context: crate::asr_context::AsrContextSettings,
@@ -1358,6 +1362,7 @@ pub fn get_default_settings() -> AppSettings {
         learning_enabled: true,
         learned_sound_enabled: true,
         learning_judge_enabled: true,
+        learning_judge_provider_id: String::new(),
         asr_context: Default::default(),
         rewrite_context: Default::default(),
         transform_context: Default::default(),
