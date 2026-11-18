@@ -257,6 +257,17 @@ async changeLearningJudgeEnabledSetting(enabled: boolean) : Promise<Result<null,
     else return { status: "error", error: e  as any };
 }
 },
+async changeLearningJudgeProviderSetting(providerId: string) : Promise<Result<null, string>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("change_learning_judge_provider_setting", { providerId }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+async getJudgeChoices() : Promise<JudgeChoice[]> {
+    return await TAURI_INVOKE("get_judge_choices");
+},
 async getJudgeProvider() : Promise<string | null> {
     return await TAURI_INVOKE("get_judge_provider");
 },
@@ -1429,6 +1440,11 @@ learned_sound_enabled?: boolean;
  */
 learning_judge_enabled?: boolean; 
 /**
+ * The provider the judge uses; empty is Automatic (Groq if keyed, else
+ * the rewrite provider while rewriting is on).
+ */
+learning_judge_provider_id?: string; 
+/**
  * Handy Adaptive (spec §7): what the ASR model is told before it listens.
  */
 asr_context?: AsrContextSettings; 
@@ -1809,6 +1825,7 @@ export type LanguageStatus =
  * a style rule.
  */
 export type LearnedNews = { kind: "word"; term: string } | { kind: "form"; term: string; heard: string } | { kind: "rule"; rule: string }
+export type JudgeChoice = { id: string; label: string }
 export type Learned = { term: string; heard: string[]; count: number; 
 /**
  * Unix seconds.

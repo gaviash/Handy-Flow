@@ -862,7 +862,12 @@
           "label": "Juge des corrections",
           "description": "Envoie votre correction (avant et après) à une IA pour apprendre des règles de style et des mots techniques.",
           "status": "Utilise {{provider}}",
-          "none": "Inactif : aucune clé d'API pour Groq ni pour votre fournisseur de réécriture."
+          "none": "Inactif : aucune clé d'API pour Groq ni pour votre fournisseur de réécriture.",
+          "provider": {
+            "label": "Fournisseur du juge",
+            "description": "L'IA qui lit vos corrections. Automatique utilise Groq s'il a une clé, sinon votre fournisseur de réécriture.",
+            "auto": "Automatique"
+          }
         }
       },
       "styles": {

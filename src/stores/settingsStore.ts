@@ -264,6 +264,8 @@ const settingUpdaters: {
     commands.changeLearnedSoundEnabledSetting(value as boolean),
   learning_judge_enabled: (value) =>
     commands.changeLearningJudgeEnabledSetting(value as boolean),
+  learning_judge_provider_id: (value) =>
+    commands.changeLearningJudgeProviderSetting(value as string),
   asr_context: (value) =>
     commands.changeAsrContextSetting(value as AsrContextSettings),
   rewrite_context: (value) =>
