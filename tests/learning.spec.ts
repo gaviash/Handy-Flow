@@ -97,3 +97,43 @@ test("without a provider the judge says it is inactive", async ({ page }) => {
   await openLearning(page);
   await expect(page.getByText(/Inactive: no API key/)).toBeVisible();
 });
+
+test("the judge provider can be chosen", async ({ page }) => {
+  const mock = await mockTauri(page, {
+    results: {
+      get_judge_provider: "Groq",
+      get_judge_choices: [
+        { id: "groq", label: "Groq" },
+        { id: "openai", label: "OpenAI" },
+      ],
+    },
+  });
+  await openLearning(page);
+  const auto = page.getByRole("button", { name: "Automatic", exact: true });
+  await auto.scrollIntoViewIfNeeded();
+  await auto.click();
+  // The rewrite provider's dropdown also reads "OpenAI": pick the menu item.
+  await page
+    .locator("button:not([aria-expanded])", { hasText: /^OpenAI$/ })
+    .click();
+  await expect
+    .poll(async () =>
+      (await mock.calls()).find(
+        (c) => c.cmd === "change_learning_judge_provider_setting",
+      ),
+    )
+    .toMatchObject({ args: { providerId: "openai" } });
+});
+
+test("the status shows what is really used", async ({ page }) => {
+  await mockTauri(page, {
+    settings: { learning_judge_provider_id: "openai" },
+    results: {
+      get_judge_provider: "Groq",
+      get_judge_choices: [{ id: "groq", label: "Groq" }],
+    },
+  });
+  await openLearning(page);
+  await expect(page.getByText("Judge Provider")).toBeVisible();
+  await expect(page.getByText("Uses Groq")).toBeVisible();
+});

@@ -862,7 +862,12 @@
           "label": "Correction Judge",
           "description": "Sends your correction (before and after) to an AI to learn style rules and technical words.",
           "status": "Uses {{provider}}",
-          "none": "Inactive: no API key for Groq or your rewrite provider."
+          "none": "Inactive: no API key for Groq or your rewrite provider.",
+          "provider": {
+            "label": "Judge Provider",
+            "description": "Which AI reads your corrections. Automatic uses Groq when it has a key, else your rewrite provider.",
+            "auto": "Automatic"
+          }
         }
       },
       "styles": {

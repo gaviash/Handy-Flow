@@ -2,10 +2,16 @@ import React, { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { ask, save } from "@tauri-apps/plugin-dialog";
 import { listen } from "@tauri-apps/api/event";
-import { commands, type Learned, type StyleRule } from "@/bindings";
+import {
+  commands,
+  type JudgeChoice,
+  type Learned,
+  type StyleRule,
+} from "@/bindings";
 import { ToggleSwitch } from "../../ui/ToggleSwitch";
 import { SettingContainer } from "../../ui/SettingContainer";
 import { Button } from "../../ui/Button";
+import { Dropdown } from "../../ui/Dropdown";
 import { useSettings } from "../../../hooks/useSettings";
 import { AsrContextSettings } from "./AsrContextSettings";
 import { notify } from "@/stores/noticeStore";
@@ -62,9 +68,12 @@ export const LearningSettings: React.FC = () => {
   // Which provider the correction judge calls; null = it can't run.
   const [judge, setJudge] = useState<string | null>(null);
   const judgeOn = getSetting("learning_judge_enabled") ?? true;
+  const judgeChoice = getSetting("learning_judge_provider_id") ?? "";
+  const [choices, setChoices] = useState<JudgeChoice[]>([]);
   useEffect(() => {
     commands.getJudgeProvider().then(setJudge);
-  }, [judgeOn]);
+    commands.getJudgeChoices().then(setChoices);
+  }, [judgeOn, judgeChoice]);
 
   return (
     <>
@@ -95,6 +104,31 @@ export const LearningSettings: React.FC = () => {
         descriptionMode="tooltip"
         grouped={true}
       />
+      {judgeOn && (
+        <SettingContainer
+          title={t("settings.postProcessing.learning.judge.provider.label")}
+          description={t(
+            "settings.postProcessing.learning.judge.provider.description",
+          )}
+          descriptionMode="tooltip"
+          grouped={true}
+        >
+          <Dropdown
+            options={[
+              {
+                value: "",
+                label: t(
+                  "settings.postProcessing.learning.judge.provider.auto",
+                ),
+              },
+              ...choices.map((c) => ({ value: c.id, label: c.label })),
+            ]}
+            selectedValue={judgeChoice}
+            onSelect={(v) => updateSetting("learning_judge_provider_id", v)}
+            disabled={isUpdating("learning_judge_provider_id")}
+          />
+        </SettingContainer>
+      )}
       {judgeOn && (
         <p className="row-setting px-4 pb-3 -mt-2 text-xs text-ink-3">
           {judge
