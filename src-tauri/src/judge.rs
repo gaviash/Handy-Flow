@@ -170,7 +170,10 @@ pub fn judge_target(
     if !s.post_process_enabled {
         return None;
     }
-    let p = s.active_post_process_provider()?;
+    // The judge calls /chat/completions: an Anthropic-format provider can't answer.
+    let p = s
+        .active_post_process_provider()
+        .filter(|p| p.api_format == crate::settings::PostProcessApiFormat::OpenAi)?;
     let model = s
         .post_process_models
         .get(&p.id)
@@ -180,13 +183,25 @@ pub fn judge_target(
     (!model.trim().is_empty() && (!k.is_empty() || p.id == "custom")).then(|| (p.clone(), k, model))
 }
 
-/// The judge's provider name for Settings, or `None` when it is off or has
-/// no provider it can call.
+/// Whether a correction may go to the judge at all: learning, the judge and
+/// context sending all on.
+pub fn judge_allowed(s: &crate::settings::AppSettings) -> bool {
+    s.learning_enabled && s.learning_judge_enabled && s.context_send_enabled
+}
+
+/// Strict JSON where the provider takes it (Groq's small model does, though
+/// Groq as a rewrite provider is flagged without it); else plain JSON asked
+/// by the prompt, which `parse_verdicts` reads.
+fn judge_schema(p: &crate::settings::PostProcessProvider) -> Option<serde_json::Value> {
+    (p.id == "groq" || p.supports_structured_output).then(schema)
+}
+
+/// The judge's provider name for Settings, or `None` when it won't run.
 #[tauri::command]
 #[specta::specta]
 pub fn get_judge_provider(app: AppHandle) -> Option<String> {
     let s = crate::settings::get_settings(&app);
-    s.learning_judge_enabled
+    judge_allowed(&s)
         .then(|| judge_target(&s).map(|(p, ..)| p.label))
         .flatten()
 }
@@ -219,7 +234,7 @@ pub async fn run(
         &model,
         message,
         Some(JUDGE_PROMPT.to_string()),
-        Some(schema()),
+        judge_schema(&provider),
         true,
     );
     let reply = match tokio::time::timeout(TIMEOUT, call).await {
@@ -243,9 +258,40 @@ mod tests {
     use super::*;
 
     #[test]
+    fn the_judge_only_uses_what_a_provider_can_answer() {
+        let mut s = crate::settings::get_default_settings();
+        s.post_process_api_keys.clear();
+        s.post_process_enabled = true;
+        // Anthropic speaks its own API: never the judge's /chat/completions.
+        s.post_process_provider_id = "anthropic".into();
+        s.post_process_api_keys
+            .insert("anthropic".into(), "sk-ant".into());
+        s.post_process_models
+            .insert("anthropic".into(), "claude-x".into());
+        assert!(judge_target(&s).is_none());
+        // Strict JSON only where the provider takes it; Groq's small model does.
+        let p = |id: &str| s.post_process_provider(id).unwrap().clone();
+        assert!(judge_schema(&p("groq")).is_some());
+        assert!(judge_schema(&p("openai")).is_some());
+        assert!(judge_schema(&p("cloudflare")).is_none());
+    }
+
+    #[test]
+    fn the_judge_runs_only_with_learning_and_context_on() {
+        let mut s = crate::settings::get_default_settings();
+        assert!(judge_allowed(&s));
+        s.context_send_enabled = false;
+        assert!(!judge_allowed(&s));
+        s.context_send_enabled = true;
+        s.learning_enabled = false;
+        assert!(!judge_allowed(&s));
+    }
+
+    #[test]
     fn judge_falls_back_to_the_active_provider() {
         let mut s = crate::settings::get_default_settings();
         s.post_process_api_keys.clear();
+        s.post_process_enabled = true; // off by default outside Windows
         s.post_process_provider_id = "openai".into();
         s.post_process_api_keys
             .insert("openai".into(), "sk-x".into());
