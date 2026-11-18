@@ -14,9 +14,18 @@
 
 **Tech Stack :** Tauri 2, Rust, React 18 + Tailwind 4, Zustand (`settingsStore`, `noticeStore`), i18next, Playwright (headless, IPC Tauri simulé, dossier `tests/`).
 
+## Révision du 2026-11-18 (après le plan B, choix du fournisseur du juge)
+
+L'audit date d'avant le juge des corrections (0.2.6) et d'avant le plan B. Ce qu'il ajoute à l'UI, et que ce plan range désormais :
+- `learning_judge_enabled` (interrupteur « Juge des corrections »), `learning_judge_provider_id` (menu « Fournisseur du juge » : Automatique + `get_judge_choices`) et la ligne d'état (`get_judge_provider` : « Utilise {fournisseur} » ou « Inactif »). Tout est dans `S/post-processing/LearningSettings.tsx` → rangé en **Vocabulaire · carte Juge des corrections** (Task 8).
+- Deux comportements du plan B à **garder tels quels** en déplaçant ce bloc : la relecture du juge après chaque écriture terminée (garde `saving` sur `isUpdating` du store, réponses périmées ignorées) et l'affichage « Automatique » quand le choix enregistré n'est plus utilisable.
+- Tests existants à suivre : `tests/learning.spec.ts` (6 tests juge) ouvre la page par le bouton « Post Process ». Ils doivent ouvrir Vocabulaire puis la carte Juge (Task 8).
+- Les clés `settings.postProcessing.learning.judge.provider.*` n'existent qu'en `en` et `fr` : les ajouter aux 24 autres locales en Task 15. `bun run check:translations` échoue déjà à la base (1/25 langues), à noter en Task 0.
+
 ## Global Constraints
 
-- **Branche :** créer `feat/ui-refonte` depuis `feat/handy-flow-brand` **locale** (elle a 2 commits non poussés, la 0.2.4 : ne pas la réinitialiser sur `origin`). Ne jamais pousser vers `upstream`. Pousser vers `origin` seulement si l'utilisateur le demande.
+- **Branche :** créer `feat/ui-refonte` depuis `feat/handy-flow-brand` (poussée sur `origin` le 2026-11-18, plan B compris). Ne jamais pousser vers `upstream`.
+- **Machine :** sur ce PC, `bunx` n'existe pas et Playwright le lance (`playwright.config.ts`). Mettre sur le `PATH` un `bunx.cmd` contenant `@bun x %*` (dans le scratchpad, sans toucher au repo). Il n'y a pas non plus de `Desktop\Handy Flow` installé : avant chaque étape « remplacer Handy Flow », demander à l'utilisateur le dossier cible. Pousser vers `origin` seulement si l'utilisateur le demande.
 - **Tests :** logique Rust pure avec `cargo test --release --lib` (dans `src-tauri`). Logique TS avec un petit script `bun` à asserts, comme `src/lib/utils/appearance.test.ts`. UI avec Playwright headless (`bun run test:playwright`).
 - **Builds :** `bun run tauri build --no-bundle -- --profile fast` → `src-tauri/target/fast/handy.exe`. **Deux builds au total**, un par incrément (voir plus bas). Ne jamais modifier les sources pendant un build.
 - **Après chaque build :** remplacer `C:\Users\gavri\Desktop\Handy Flow\Handy Flow.exe`, les DLL de `src-tauri/transcribe-libs` et `resources\`. Sauvegarder d'abord `Data\` et l'ancien exe, fermer `Handy Flow.exe`, puis relancer. **Ne jamais toucher `Data\`** ni `Desktop\Handy`.
@@ -38,6 +47,7 @@
 - **Apparence reste un onglet.** Elle vient d'être livrée par la branche brand. L'audit proposait de la ranger dans Général, on ne le fait pas.
 - **Snippets → onglet Vocabulaire** (comme dans l'audit), alors que la maquette les montrait dans Amélioration.
 - Libellé FR de l'onglet `postprocessing` : **« Amélioration »**, qui remplace « Post-traitement ».
+- **Juge des corrections → Vocabulaire, en carte** (pas en Expert). Il envoie les corrections à une IA : c'est un choix de confidentialité, donc visible, avec sa description affichée.
 
 ## Navigation cible
 
@@ -45,7 +55,7 @@
 Général       raccourcis · langues · micro · audio · démarrage
 Modèles       transcription locale / API (structure actuelle conservée) + Expert moteur
 Amélioration  état · Fournisseur · Ton · Transformations · Nettoyage · Expert (prompt, délai, secours, format/URL)
-Vocabulaire   NOUVEAU — mots perso · mots appris · règles de style · snippets · aide à la reconnaissance
+Vocabulaire   NOUVEAU — mots perso · mots appris · règles de style · juge des corrections · snippets · aide à la reconnaissance
 Contexte      NOUVEAU — lecture / envoi · exclusions · ce qui a été envoyé · Expert (sources, budget, VS Code)
 Historique    (inchangé) + carte Conservation
 Apparence     (inchangé)
@@ -61,6 +71,7 @@ Débogage      (si debug_mode) + backend clavier, Expérimental, logs
 3. **Échec d'une sauvegarde** : la valeur revient à l'ancienne et une notice d'erreur s'affiche. Testé en Task 2.
 4. **Suppression d'historique puis « Annuler »** : l'entrée et son WAV sont intacts. Testé en Task 4.
 5. **Réglages conditionnels** (Linux, macOS, multicanal, chinois, Apple Intelligence) : leurs gardes sont conservées après déplacement. Vérifié en Task 16 (grep des gardes avant/après).
+6. **Juge des corrections déplacé** : choisir OpenAI appelle `change_learning_judge_provider_setting`, la ligne d'état suit ce que le juge utilise vraiment (après une clé supprimée, après un choix devenu inutilisable). Testé en Task 8.
 
 ---
 
@@ -69,7 +80,7 @@ Débogage      (si debug_mode) + backend clavier, Expérimental, logs
 ### Task 0 : Préparer la branche
 
 - [ ] `git switch feat/handy-flow-brand && git switch -c feat/ui-refonte`
-- [ ] `bun install`, puis `bun run build` et `bun run test:playwright` pour enregistrer l'état de départ (noter les tests déjà en échec, s'il y en a).
+- [ ] `bun install`, puis `bun run build`, `bun run check:translations` et `bun run test:playwright` pour enregistrer l'état de départ. Noter les échecs déjà présents : au 2026-11-18, `check:translations` échoue (1/25 langues) et Playwright passe à 84/84.
 
 ### Task 1 : Rétention « 30 jours » acceptée
 
@@ -149,7 +160,7 @@ S'appuyer sur ce qui existe : le bloc d'état de `S/models/ModelsSettings.tsx:~1
 - [ ] `ExpertSection` « prompt, délai, secours, format » : `PostProcessTimeout`, carte **Prompt** (sous-page `PromptEditor`). Le prompt maison reste en lecture seule et le dernier prompt reste non supprimable.
 
 Sous-pages :
-- [ ] **Fournisseur** : fournisseur, clé, modèle avec rafraîchissement. Dans une `ExpertSection` : format API (custom), URL (si `allow_base_url_edit`), fournisseur de secours. Sous la clé, ajouter un texte visible : « Cette clé sert aussi à la transcription par API (onglet Modèles). » quand le fournisseur est `groq`, `openai` ou `custom`. Doublon voulu, désormais annoncé.
+- [ ] **Fournisseur** : fournisseur, clé, modèle avec rafraîchissement. Dans une `ExpertSection` : format API (custom), URL (si `allow_base_url_edit`), fournisseur de secours. Sous la clé, ajouter un texte visible : « Cette clé sert aussi à la transcription par API (onglet Modèles). » quand le fournisseur est `groq`, `openai` ou `custom`. Doublon voulu, désormais annoncé. Pour `groq`, ajouter : « En Automatique, le juge des corrections l'utilise aussi. » Changer une clé ou un modèle ici peut changer le juge : la carte Juge (Task 8) relit son état, rien à câbler de plus.
 - [ ] **Ton** : une ligne par catégorie (`email`, `work`, `personal`, `other`) avec icône, libellé et `Segmented` à 5 tons. Le composant existe et gère déjà les flèches, Home et End (`U/Segmented.tsx`). On remplace les 4 `Dropdown`. Si 5 options débordent à la largeur minimale de la fenêtre, laisser le `Segmented` passer à la ligne (`flex-wrap`) plutôt que revenir au menu déroulant.
 - [ ] **Transformations** : `TransformSettings` tel quel.
 - [ ] Supprimer de cette page ce qui part ailleurs : `StyleSettings` hors sous-page Ton, `SnippetSettings`, `ContextSettings` et `LearningSettings` (→ Tasks 8 et 9).
@@ -170,11 +181,13 @@ Sous-pages :
   - **Mots personnels** (`BookA`) → « {n} mots » → `CustomWords`, retiré d'Avancé
   - **Mots appris** (`Sparkles`) → « {m} mots, dont {k} en attente » → liste avec supprimer, actualiser, exporter, effacer (confirmation conservée)
   - **Règles de style** (`PenLine`) → « {r} règles apprises » → liste avec suppression
+  - **Juge des corrections** (`Gavel`) → résumé selon le cas, dans cet ordre : « Désactivé » (`learning_judge_enabled` faux) ; « Inactif : apprentissage coupé » (`learning_enabled` faux) ; « Inactif : envoi du contexte coupé (onglet Contexte) » (`context_send_enabled` faux) ; « Utilise {fournisseur} » (`get_judge_provider`) ; sinon « Inactif : aucune clé utilisable ». Aujourd'hui, les deux cas « coupé » affichent à tort « aucune clé » : ce test sur des réglages déjà lus côté front corrige ce défaut sans toucher au Rust. Sous-page : `ToggleSwitch` `learning_judge_enabled` (description **visible**), menu « Fournisseur du juge », ligne d'état. Le bloc vient de `LearningSettings.tsx` avec sa logique (voir « Révision du 2026-11-18 »).
   - **Snippets** (`TextQuote`) → « {s} snippets » → `SnippetSettings`
   - **Aide à la reconnaissance** (`AudioLines`) → « Activée · mots appris + expressions » → toggles ASR `enabled`, `learned_words`, `expressions`, liste repliable d'expressions et ligne de compatibilité du modèle (`support`)
 - [ ] `ExpertSection` : son du mot appris (`learned_sound_enabled`) et seuil de correction (`WordCorrectionThreshold`, retiré de Debug).
 - [ ] Les composants déplacés gardent leurs clés i18n actuelles (`settings.postProcessing.learning.*`…). On ne renomme pas les clés dans ce plan, seulement les valeurs FR si le texte change.
 - [ ] Test Playwright : la page s'affiche, la carte Mots personnels ouvre la sous-page et un ajout appelle l'update `custom_words`.
+- [ ] `tests/learning.spec.ts` : `openLearning` ouvre l'onglet Vocabulaire, et les tests du juge ouvrent la carte Juge. Les 6 tests juge restent verts sans changer leurs attentes. Ajouter un test : avec `context_send_enabled: false`, la carte dit « envoi du contexte coupé ».
 - [ ] Commit.
 
 ### Task 9 : Page Contexte (nouvelle)
@@ -198,7 +211,7 @@ Sous-pages :
 - [ ] `bun run lint && bun run format:check && bun run build && bun run check:translations && bun run check:themes && bun run test:playwright` : tout est vert, sauf les échecs notés en Task 0.
 - [ ] `cd src-tauri && cargo test --release --lib && cargo clippy`.
 - [ ] Captures Playwright headless des onglets Amélioration (vue et sous-page Ton), Vocabulaire et Contexte, en clair et en sombre. Les joindre au handoff.
-- [ ] **Revue Codex** de l'incrément : `codex exec -s read-only --skip-git-repo-check -o <scratch>/review1.md "Revois le diff git feat/handy-flow-brand..HEAD : réglage perdu, garde plateforme cassée, clé i18n manquante, contrôle sans nom accessible, sauvegarde silencieuse. Fichier:ligne."` Corriger les constats confirmés.
+- [ ] **Revue Codex** de l'incrément : `codex exec -m gpt-6.1-terra -c model_reasoning_effort="medium" --dangerously-bypass-approvals-and-sandbox --skip-git-repo-check -o <scratch>/review1.md "Revois le diff git feat/handy-flow-brand..HEAD : réglage perdu, garde plateforme cassée, clé i18n manquante, contrôle sans nom accessible, sauvegarde silencieuse. Fichier:ligne."` Corriger les constats confirmés. Mode bypass exigé par l'utilisateur ; `-s read-only` échoue de toute façon sous Windows (erreur 1223). Le brief dit « ne modifie aucun fichier ».
 - [ ] Build `fast` (1/2), remplacer Handy Flow (règles des Global Constraints) et demander à l'utilisateur de tester. Lui donner une liste de 5 points à vérifier au maximum.
 
 ---
@@ -262,6 +275,7 @@ Sous-pages :
 - [ ] Relier les labels aux champs (`htmlFor`/`id`, ou `aria-label`) : `SettingContainer.tsx:87`, `HistoryLimit.tsx:37`, champ nom, `PromptEditor`.
 - [ ] Overlay : remplacer les `div onClick` de fermeture des notices par des `<button aria-label>` (`RecordingOverlay.tsx:432,501`).
 - [ ] `SettingContainer` : passer `descriptionMode` à `"inline"` par défaut **uniquement** dans les nouvelles pages (prop explicite). Ne pas changer le défaut global.
+- [ ] Ajouter `settings.postProcessing.learning.judge.provider.{label,description,auto}` et les nouveaux résumés de la carte Juge, avec la valeur anglaise, aux 24 locales sans traduction.
 - [ ] `bun run check:translations` passe.
 - [ ] Commit.
 
