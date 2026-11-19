@@ -22,9 +22,20 @@ pub struct AsrSources {
     /// Learned terms alone (no "heard as"), most relevant first.
     pub learned: Vec<String>,
     pub expressions: Vec<String>,
+    /// Names and terms seen around the cursor (spec R10, Wispr E140).
+    pub screen_terms: Vec<String>,
     pub app: Option<String>,
     pub before: Option<String>,
     pub language: Option<String>,
+}
+
+/// What the screen gives the ASR: the app, the text before the cursor and
+/// the names and terms around it. Never from a private capture.
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+pub struct AsrScreen {
+    pub app: String,
+    pub before: String,
+    pub terms: Vec<String>,
 }
 
 /// User settings (Settings → Learning → Transcription context).
@@ -46,7 +57,8 @@ impl Default for AsrContextSettings {
             enabled: true,
             learned_words: true,
             expressions: true,
-            screen: false,
+            // Wispr uses the screen by default (E140).
+            screen: true,
             max_terms: 50,
             capture_wait_ms: 150,
         }
@@ -97,7 +109,9 @@ pub fn build(caps: AsrCaps, src: &AsrSources, cfg: &AsrContextSettings) -> AsrCo
     }
     let mut terms: Vec<String> = Vec::new();
     let learned = src.learned.iter().filter(|_| cfg.learned_words);
-    for t in src.custom_words.iter().chain(learned) {
+    let screen = src.screen_terms.iter().filter(|_| cfg.screen);
+    // Spec R10: the user's words, then the screen's, then the learned ones.
+    for t in src.custom_words.iter().chain(screen).chain(learned) {
         let t = t.trim();
         if !t.is_empty() && !terms.iter().any(|x| x.eq_ignore_ascii_case(t)) {
             terms.push(t.to_string());
@@ -150,7 +164,20 @@ fn prompt(
     };
     let mut parts = Vec::new();
     if !terms.is_empty() {
-        parts.push(format!("{vocab} : {}.", terms.join(", ")));
+        // Whole terms only: a cut name ("Kasimir Zbig") would bias wrong.
+        let mut list = String::new();
+        for t in terms {
+            let next = if list.is_empty() {
+                t.clone()
+            } else {
+                format!("{list}, {t}")
+            };
+            if next.chars().count() + vocab.chars().count() + 4 > PROMPT_MAX_CHARS {
+                break;
+            }
+            list = next;
+        }
+        parts.push(format!("{vocab} : {list}."));
     }
     if !expressions.is_empty() {
         let quoted: Vec<String> = expressions.iter().map(|e| format!("« {e} »")).collect();
@@ -193,6 +220,7 @@ mod tests {
             custom_words: vec!["Handy".into()],
             learned: vec!["log".into(), "Claude".into()],
             expressions: vec!["de manière claire et concise".into()],
+            screen_terms: Vec::new(),
             app: Some("slack.exe".into()),
             before: Some("on regarde le serveur".into()),
             language: Some("fr".into()),
@@ -223,12 +251,79 @@ mod tests {
     }
 
     #[test]
-    fn context_prompt_cites_terms_and_expressions_but_not_the_screen_by_default() {
+    fn screen_terms_come_after_custom_words_and_before_learned() {
+        let mut s = src();
+        s.screen_terms = vec!["Kasimir Zbignowski".into(), "handy".into()];
+        let caps = AsrCaps {
+            vocabulary: true,
+            ..Default::default()
+        };
+        let c = build(caps, &s, &AsrContextSettings::default());
+        assert_eq!(
+            c.vocabulary,
+            vec!["Handy", "Kasimir Zbignowski", "log", "Claude"]
+        );
+    }
+
+    #[test]
+    fn screen_terms_are_left_out_when_screen_is_off() {
+        let mut s = src();
+        s.screen_terms = vec!["Kasimir Zbignowski".into()];
+        let caps = AsrCaps {
+            vocabulary: true,
+            ..Default::default()
+        };
+        let cfg = AsrContextSettings {
+            screen: false,
+            ..Default::default()
+        };
+        assert_eq!(
+            build(caps, &s, &cfg).vocabulary,
+            vec!["Handy", "log", "Claude"]
+        );
+    }
+
+    #[test]
+    fn the_prompt_is_cut_at_a_whole_term() {
+        let mut s = src();
+        s.learned = (0..200).map(|i| format!("Nom{i} Prenom{i}")).collect();
+        let cfg = AsrContextSettings {
+            max_terms: 200,
+            ..Default::default()
+        };
         let caps = AsrCaps {
             context_prompt: true,
             ..Default::default()
         };
-        let c = build(caps, &src(), &AsrContextSettings::default());
+        let AsrPrompt::Context(p) = build(caps, &s, &cfg).prompt else {
+            panic!()
+        };
+        assert!(p.chars().count() <= PROMPT_MAX_CHARS, "{p}");
+        let vocab = p
+            .split(". ")
+            .next()
+            .unwrap()
+            .trim_start_matches("Vocabulaire : ");
+        for item in vocab.trim_end_matches('.').split(", ").skip(1) {
+            assert_eq!(
+                item.split(' ').count(),
+                2,
+                "cut inside a term: {item:?} in {p}"
+            );
+        }
+    }
+
+    #[test]
+    fn context_prompt_cites_terms_and_expressions_but_not_the_screen_when_off() {
+        let caps = AsrCaps {
+            context_prompt: true,
+            ..Default::default()
+        };
+        let off = AsrContextSettings {
+            screen: false,
+            ..Default::default()
+        };
+        let c = build(caps, &src(), &off);
         let AsrPrompt::Context(p) = c.prompt else {
             panic!("context prompt expected")
         };

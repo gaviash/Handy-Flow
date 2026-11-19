@@ -1,4 +1,4 @@
-use crate::asr_context::{AsrCaps, AsrContext, AsrPrompt, AsrSources};
+use crate::asr_context::{AsrCaps, AsrContext, AsrPrompt, AsrScreen, AsrSources};
 use crate::audio_toolkit::chunking;
 use crate::audio_toolkit::{
     apply_custom_words, detect_output_language, normalize_transcription_output,
@@ -284,7 +284,7 @@ pub struct TranscriptionManager {
     language_detector: Arc<LanguageDetector>,
     /// Handy Adaptive (spec §7): the app and text before the cursor for the
     /// next run's ASR context, set by the dictation when the user allows it.
-    asr_screen: Arc<Mutex<Option<(String, String)>>>,
+    asr_screen: Arc<Mutex<Option<AsrScreen>>>,
     /// Frequent expressions, recomputed at most every 5 minutes.
     asr_expressions: ExpressionsCache,
     /// The last run's model took ASR context and the setting allowed it.
@@ -1286,7 +1286,7 @@ impl TranscriptionManager {
 
     /// Handy Adaptive (spec §7): the app and the text before the cursor for
     /// the next run's ASR context; taken by that run.
-    pub fn set_asr_screen(&self, screen: Option<(String, String)>) {
+    pub fn set_asr_screen(&self, screen: Option<AsrScreen>) {
         *self.asr_screen.lock().unwrap_or_else(|e| e.into_inner()) = screen;
     }
 
@@ -1308,9 +1308,10 @@ impl TranscriptionManager {
         }
         src.learned = crate::learning::plain_terms(&self.app_handle);
         src.expressions = self.frequent_expressions();
-        if let Some((app, before)) = screen {
-            src.app = Some(app);
-            src.before = Some(before);
+        if let Some(screen) = screen {
+            src.app = Some(screen.app);
+            src.before = Some(screen.before);
+            src.screen_terms = screen.terms;
         }
         src
     }

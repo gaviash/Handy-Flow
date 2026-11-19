@@ -1040,9 +1040,11 @@ impl ShortcutAction for TranscribeAction {
         // destination. Read it now, alongside the transcription. The WAV save
         // waits only for the password check (F79: nothing kept).
         let (sensitive_tx, sensitive_rx) = std::sync::mpsc::channel::<bool>();
-        // Handy Adaptive (spec §7): the app and text before the cursor, for an
-        // ASR model that takes context. Never from a password or excluded field.
-        let (screen_tx, screen_rx) = std::sync::mpsc::channel::<Option<(String, String)>>();
+        // Handy Adaptive (spec §7): the app, the text before the cursor and the
+        // names around it, for an ASR model that takes context. Never from a
+        // password, an excluded field or an unchecked one.
+        let (screen_tx, screen_rx) =
+            std::sync::mpsc::channel::<Option<crate::asr_context::AsrScreen>>();
         // The speech API never hears a password or an excluded app's field.
         let (private_tx, private_rx) = std::sync::mpsc::channel::<bool>();
         let ctx_settings = get_settings(app);
@@ -1056,14 +1058,24 @@ impl ShortcutAction for TranscribeAction {
             // Windows: a password check that didn't happen counts as private.
             let unchecked = cfg!(target_os = "windows") && !capture.password_checked;
             let _ = private_tx.send(capture.sensitive || capture.excluded || unchecked);
-            let screen = (!capture.sensitive && !capture.excluded).then(|| {
+            let screen = (!capture.sensitive && !capture.excluded && !unchecked).then(|| {
                 let before = capture
                     .field
                     .as_ref()
                     .filter(|f| f.caret_known)
                     .map(|f| crate::context::redact(&crate::context::tail(&f.before, 200)))
                     .unwrap_or_default();
-                (capture.process.clone(), before)
+                crate::asr_context::AsrScreen {
+                    app: capture.process.clone(),
+                    before,
+                    // Spec R10 / Wispr E140: the window's names bias the ASR.
+                    terms: capture
+                        .names
+                        .iter()
+                        .chain(&capture.terms)
+                        .cloned()
+                        .collect(),
+                }
             });
             let _ = screen_tx.send(screen);
             capture
@@ -1170,6 +1182,8 @@ impl ShortcutAction for TranscribeAction {
                         cloud = None;
                     }
                     let mut screen_waited = None;
+                    // Kept for the local model when the speech API fails.
+                    let mut screen_kept = None;
                     let wants_context = match &cloud {
                         Some(_) => asr.enabled,
                         None => tm.asr_context_wanted(),
@@ -1178,7 +1192,8 @@ impl ShortcutAction for TranscribeAction {
                         let wait = Duration::from_millis(asr.capture_wait_ms);
                         let screen = screen_rx.recv_timeout(wait).ok();
                         screen_waited = Some(screen.is_some());
-                        tm.set_asr_screen(screen.flatten());
+                        screen_kept = screen.flatten();
+                        tm.set_asr_screen(screen_kept.clone());
                     }
                     let transcription_time = Instant::now();
                     let mut cloud_report = None;
@@ -1215,9 +1230,7 @@ impl ShortcutAction for TranscribeAction {
                                     // Speech may still be there: the local model decides.
                                     warn!("Speech API '{label}' returned no text; using the local model");
                                     report.cloud_error = Some("empty result".into());
-                                    tm.set_asr_screen(
-                                        report.app.clone().zip(report.before.clone()),
-                                    );
+                                    tm.set_asr_screen(screen_kept.clone());
                                 } else {
                                     // The live decode, if any, is no longer needed.
                                     tm.cancel_stream();
@@ -1226,7 +1239,7 @@ impl ShortcutAction for TranscribeAction {
                             }
                             Some(Err(e)) => {
                                 warn!("Speech API '{label}' failed ({e}); using the local model");
-                                tm.set_asr_screen(report.app.clone().zip(report.before.clone()));
+                                tm.set_asr_screen(screen_kept.clone());
                                 report.cloud_error = Some(e);
                             }
                         }
