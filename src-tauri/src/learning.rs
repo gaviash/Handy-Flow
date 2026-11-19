@@ -1254,6 +1254,63 @@ pub fn locate(text: &str, inserted: &str, caret: usize) -> Option<(String, Strin
     ))
 }
 
+/// Chars kept on each side of a terminal dictation as its anchors.
+const TERMINAL_ANCHOR: usize = 200;
+
+/// A terminal's caret offset doesn't map to the tail it is read from, so a
+/// terminal is watched by its text alone.
+fn can_observe(caret_known: bool, terminal: bool) -> bool {
+    caret_known || terminal
+}
+
+/// The anchors of a terminal dictation in the tail of its buffer: up to 200
+/// chars each side of its only occurrence. Twice or more (scrollback, output
+/// printed since): `None` (spec R6, anchor_ambiguous).
+pub fn locate_tail(text: &str, inserted: &str) -> Option<(String, String)> {
+    let mut found = text.match_indices(inserted).map(|(i, _)| i);
+    let i = found.next().filter(|_| !inserted.is_empty())?;
+    if found.next().is_some() {
+        return None;
+    }
+    let before: Vec<char> = text[..i].chars().collect();
+    let before: String = before[before.len().saturating_sub(TERMINAL_ANCHOR)..]
+        .iter()
+        .collect();
+    let after: String = text[i + inserted.len()..]
+        .chars()
+        .take(TERMINAL_ANCHOR)
+        .collect();
+    Some((before, after))
+}
+
+/// A terminal dictation's region in a tail read: after the only occurrence of
+/// `before`, up to `after`, or `lines` lines when nothing followed it, so
+/// output printed below never joins the region.
+pub fn region_near<'a>(text: &'a str, before: &str, after: &str, lines: usize) -> Option<&'a str> {
+    if before.is_empty() && after.is_empty() {
+        return None;
+    }
+    let start = if before.is_empty() {
+        0
+    } else {
+        let mut at = text.match_indices(before).map(|(i, _)| i);
+        let i = at.next()?;
+        if at.next().is_some() {
+            return None;
+        }
+        i + before.len()
+    };
+    let rest = &text[start..];
+    let end = if after.is_empty() {
+        rest.match_indices('\n')
+            .nth(lines.max(1) - 1)
+            .map_or(rest.len(), |(i, _)| i)
+    } else {
+        rest.find(after)?
+    };
+    Some(&rest[..end]).filter(|r| !r.trim().is_empty())
+}
+
 /// F80–F83: watches the field the text was pasted into, then learns from the
 /// last reading whose anchors still hold.
 pub fn observe(
@@ -1262,16 +1319,18 @@ pub fn observe(
     inserted: &str,
     history_id: Option<i64>,
     app_name: String,
+    terminal: bool,
 ) {
     if !crate::settings::get_settings(app).learning_enabled {
         return;
     }
-    if !field.caret_known {
+    if !can_observe(field.caret_known, terminal) {
         log::debug!("Learning: not observing, the field's caret position is unknown");
         return;
     }
     let caret = field.before.chars().count();
     let inserted = unify(inserted.trim());
+    let lines = inserted.lines().count().max(1);
     let id = OBSERVATION.fetch_add(1, Ordering::SeqCst) + 1;
     let app = app.clone();
     let _ = std::thread::Builder::new()
@@ -1293,11 +1352,15 @@ pub fn observe(
                     ended = "a newer dictation started";
                     break;
                 }
-                match crate::context::read_watched().map(|t| unify(&t)) {
+                match crate::context::read_watched(terminal).map(|t| unify(&t)) {
                     // An empty field was sent or cleared: keep the last reading.
                     Some(text) if !text.trim().is_empty() => {
                         if anchors.is_none() {
-                            anchors = locate(&text, &inserted, caret);
+                            anchors = if terminal {
+                                locate_tail(&text, &inserted)
+                            } else {
+                                locate(&text, &inserted, caret)
+                            };
                         }
                         match &anchors {
                             // The paste can take a moment to show up.
@@ -1307,7 +1370,11 @@ pub fn observe(
                                 log::debug!("Learning: {}", mismatch(&text, &inserted));
                                 break;
                             }
-                            Some((before, after)) => match region(&text, before, after) {
+                            Some((before, after)) => match if terminal {
+                                region_near(&text, before, after, lines)
+                            } else {
+                                region(&text, before, after)
+                            } {
                                 Some(r) => last = Some(r.trim().to_string()),
                                 // Text typed outside the dictation (Wispr: anchor_mismatch).
                                 None => {
@@ -1536,6 +1603,69 @@ mod tests {
             .filter(|c| c.kind == WordKind::Term)
             .map(|c| (c.term, c.heard))
             .collect()
+    }
+
+    #[test]
+    fn a_terminal_region_is_found_near_its_anchors_while_output_scrolls() {
+        let before = "PS C:\\> claude\n> ";
+        let after = "\n  ? for shortcuts";
+        let field = format!("old output\nmore output\n{before}merci Jev{after}");
+        assert_eq!(region_near(&field, before, after, 1), Some("merci Jev"));
+    }
+
+    #[test]
+    fn an_ambiguous_terminal_anchor_ends_the_observation() {
+        assert_eq!(region_near("> a\n> merci Jev\n?", "> ", "\n?", 1), None);
+    }
+
+    #[test]
+    fn an_empty_after_anchor_takes_as_many_lines_as_were_pasted() {
+        assert_eq!(
+            region_near("out\n> merci Jev", "out\n> ", "", 1),
+            Some("merci Jev")
+        );
+        // Output printed after the dictation is never part of the region.
+        assert_eq!(
+            region_near("out\n> merci Jev\nCompiling handy", "out\n> ", "", 1),
+            Some("merci Jev")
+        );
+    }
+
+    #[test]
+    fn an_empty_before_anchor_takes_the_start_of_the_read() {
+        assert_eq!(
+            region_near("merci Jev\n  ? for shortcuts", "", "\n  ?", 1),
+            Some("merci Jev")
+        );
+    }
+
+    #[test]
+    fn two_empty_anchors_never_make_a_region() {
+        assert_eq!(region_near("anything printed", "", "", 1), None);
+    }
+
+    #[test]
+    fn the_terminal_dictation_must_appear_once_in_the_tail() {
+        let (b, a) = locate_tail("out\n> merci Jeff", "merci Jeff").unwrap();
+        assert_eq!((b.as_str(), a.as_str()), ("out\n> ", ""));
+        // Twice (scrollback, or output printed after the paste): abandon, spec R6.
+        assert_eq!(
+            locate_tail("> merci Jeff\nok\n> merci Jeff", "merci Jeff"),
+            None
+        );
+        // Anchors keep at most 200 chars on each side.
+        let long = format!("{}> merci Jeff", "x".repeat(500));
+        assert_eq!(
+            locate_tail(&long, "merci Jeff").unwrap().0.chars().count(),
+            200
+        );
+    }
+
+    #[test]
+    fn a_terminal_is_observed_without_a_known_caret() {
+        assert!(can_observe(false, true));
+        assert!(!can_observe(false, false));
+        assert!(can_observe(true, false));
     }
 
     const A05_PASTED: &str =

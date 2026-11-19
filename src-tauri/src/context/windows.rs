@@ -518,18 +518,38 @@ pub fn watch_focused() -> bool {
     .unwrap_or(false)
 }
 
-pub fn read_watched() -> Option<String> {
-    run(DEADLINE, |_| {
+/// `tail`: the last `WATCH_CHARS` instead of the first (a terminal's
+/// dictation sits at the bottom of its scrollback).
+pub fn read_watched(tail: bool) -> Option<String> {
+    run(DEADLINE, move |_| {
         WATCHED.with(|w| {
             let el = w.borrow().clone()?;
             // SAFETY: live COM interfaces on the worker thread.
             // TextPattern first, as the capture whose anchors are matched here
             // (and as Wispr); ValuePattern only when there's none.
             unsafe {
+                let tail_of = |r: IUIAutomationTextRange| -> Option<IUIAutomationTextRange> {
+                    if tail {
+                        r.MoveEndpointByRange(
+                            TextPatternRangeEndpoint_Start,
+                            &r,
+                            TextPatternRangeEndpoint_End,
+                        )
+                        .ok()?;
+                        r.MoveEndpointByUnit(
+                            TextPatternRangeEndpoint_Start,
+                            TextUnit_Character,
+                            -WATCH_CHARS,
+                        )
+                        .ok()?;
+                    }
+                    Some(r)
+                };
                 if let Some(text) = el
                     .GetCurrentPatternAs::<IUIAutomationTextPattern>(UIA_TextPatternId)
                     .ok()
                     .and_then(|tp| tp.DocumentRange().ok())
+                    .and_then(tail_of)
                     .and_then(|r| r.GetText(WATCH_CHARS).ok())
                 {
                     return Some(normalize_newlines(&text.to_string()));
