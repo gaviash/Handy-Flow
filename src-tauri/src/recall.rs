@@ -20,10 +20,14 @@ const STOPWORDS: &[&str] = &[
     "you", "that", "this", "with", "are", "not", "but", "have", "was",
 ];
 
-/// Learned words a dictated word sounds like, for the rewrite: a name as
-/// `term (heard as "a")`, a common word as `term (maybe heard as "a")`.
-/// Pending words never.
-pub fn relevant_terms(words: &[Learned], transcription: &str, max: usize) -> Vec<String> {
+/// The learned dictionary for the rewrite (Wispr `dictionary_context`, E50):
+/// first the words a dictated word sounds like, a name as
+/// `term (heard as "a")`, a common word as `term (maybe heard as "a")`; then
+/// every other active name as its bare spelling, newest first by Wispr's
+/// buckets (≤ 24 h, ≤ 14 days, older, E79) then most used. A bare term has
+/// no mapping, so a heard form is never forced outside its context (E226).
+/// Pending words never; at most `max`.
+pub fn relevant_terms(words: &[Learned], transcription: &str, now: i64, max: usize) -> Vec<String> {
     let said: Vec<String> = transcription.split_whitespace().map(key).collect();
     // "cloud code" also matches a heard "Cloudcode".
     let pairs = said.windows(2).map(|w| format!("{}{}", w[0], w[1]));
@@ -34,22 +38,38 @@ pub fn relevant_terms(words: &[Learned], transcription: &str, max: usize) -> Vec
             said.iter().any(|s| distance(&h, s) <= HEARD_DISTANCE)
         })
     };
-    // Only words heard in this dictation: an unrelated learned word in the
-    // prompt only invites a wrong substitution.
-    let mut heard: Vec<&Learned> = words.iter().filter(|l| l.active && heard_now(l)).collect();
+    let (mut heard, rest): (Vec<&Learned>, Vec<&Learned>) = words
+        .iter()
+        .filter(|l| l.active)
+        .partition(|l| heard_now(l));
     heard.sort_by(|a, b| b.count.cmp(&a.count).then(b.last_seen.cmp(&a.last_seen)));
-    heard
+    let bucket = |l: &Learned| match now - l.last_seen {
+        age if age <= DAY => 0,
+        age if age <= 14 * DAY => 1,
+        _ => 2,
+    };
+    // A common word without its heard form says nothing to the rewrite.
+    let mut rest: Vec<&Learned> = rest
         .into_iter()
+        .filter(|l| l.kind == WordKind::Term)
+        .collect();
+    rest.sort_by(|a, b| {
+        bucket(a)
+            .cmp(&bucket(b))
+            .then(b.used.cmp(&a.used))
+            .then(b.count.cmp(&a.count))
+    });
+    let mapped = heard.into_iter().map(|l| {
+        let forms: Vec<String> = l.heard.iter().map(|h| format!("\"{h}\"")).collect();
+        let label = match l.kind {
+            WordKind::Term => "heard as",
+            WordKind::Misheard => "maybe heard as",
+        };
+        format!("{} ({label} {})", l.term, forms.join(", "))
+    });
+    mapped
+        .chain(rest.into_iter().map(|l| l.term.clone()))
         .take(max)
-        .map(|l| {
-            let forms: Vec<String> = l.heard.iter().map(|h| format!("\"{h}\"")).collect();
-            // A name is forced; a common word only when nothing else fits.
-            let label = match l.kind {
-                WordKind::Term => "heard as",
-                WordKind::Misheard => "maybe heard as",
-            };
-            format!("{} ({label} {})", l.term, forms.join(", "))
-        })
         .collect()
 }
 
@@ -186,49 +206,73 @@ fn cut(text: &str, max: usize) -> String {
 mod tests {
     use super::*;
 
-    #[test]
-    fn a_term_heard_in_the_dictation_comes_first() {
-        let w = |t: &str, h: &str, c| Learned {
-            term: t.into(),
-            heard: vec![h.into()],
-            count: c,
-            last_seen: 0,
-            kind: WordKind::Term,
+    const NOW: i64 = 100 * 86_400;
+
+    fn w(term: &str, heard: &str, kind: WordKind, count: u32, used: u32, age_days: i64) -> Learned {
+        Learned {
+            term: term.into(),
+            heard: vec![heard.into()],
+            count,
+            last_seen: NOW - age_days * 86_400,
+            kind,
             active: true,
-            used: 0,
-        };
-        let words = vec![w("Postgres", "PostGer", 9), w("Claude", "Cloud", 1)];
-        let out = relevant_terms(&words, "ouvre cloud code", 1);
-        assert_eq!(out, vec![r#"Claude (heard as "Cloud")"#]);
-        // Without a match, nothing is sent: no "most used" filler.
-        assert!(relevant_terms(&words, "bonjour", 5).is_empty());
+            used,
+        }
     }
 
     #[test]
-    fn misheard_words_are_hints_terms_are_forced() {
-        let w = |term: &str, heard: &str, kind| Learned {
-            term: term.into(),
-            heard: vec![heard.into()],
-            count: 3,
-            last_seen: 0,
-            kind,
-            active: true,
-            used: 0,
-        };
-        let words = [
-            w("Qwen", "Quen", WordKind::Term),
-            w("config", "conflig", WordKind::Misheard),
-            w("Kubernetes", "cube", WordKind::Term),
+    fn every_active_term_is_sent_heard_ones_first() {
+        let mut pending = w("specs", "spikes", WordKind::Misheard, 1, 0, 0);
+        pending.active = false;
+        let words = vec![
+            w("Postgres", "PostGer", WordKind::Term, 9, 0, 0),
+            w("Claude", "Cloud", WordKind::Term, 1, 0, 0),
+            pending,
         ];
-        let got = relevant_terms(&words, "on teste quen sur le conflig", 40);
+        let out = relevant_terms(&words, "ouvre cloud code", NOW, 80);
+        assert_eq!(out, vec![r#"Claude (heard as "Cloud")"#, "Postgres"]);
+        assert!(!out.iter().any(|t| t.starts_with("specs")));
+    }
+
+    #[test]
+    fn unheard_terms_have_no_mapping() {
+        let words = vec![w("Claude", "Cloud", WordKind::Term, 3, 0, 0)];
+        let out = relevant_terms(&words, "bonjour", NOW, 80);
+        assert_eq!(out, vec!["Claude"]);
+    }
+
+    #[test]
+    fn unheard_terms_follow_wispr_recency_buckets() {
+        let words = vec![
+            w("Old", "old", WordKind::Term, 9, 50, 20),
+            w("Week", "week", WordKind::Term, 1, 9, 3),
+            w("Recent", "recent", WordKind::Term, 1, 1, 0),
+            w("Recent2", "recentb", WordKind::Term, 1, 4, 0),
+        ];
         assert_eq!(
-            got,
+            relevant_terms(&words, "", NOW, 80),
+            vec!["Recent2", "Recent", "Week", "Old"]
+        );
+        assert_eq!(
+            relevant_terms(&words, "", NOW, 2),
+            vec!["Recent2", "Recent"]
+        );
+    }
+
+    #[test]
+    fn an_unheard_misheard_word_is_not_sent() {
+        let words = [
+            w("Qwen", "Quen", WordKind::Term, 3, 0, 0),
+            w("config", "conflig", WordKind::Misheard, 3, 0, 0),
+        ];
+        assert_eq!(
+            relevant_terms(&words, "on teste quen sur le conflig", NOW, 40),
             [
                 r#"Qwen (heard as "Quen")"#,
                 r#"config (maybe heard as "conflig")"#
             ]
         );
-        assert!(relevant_terms(&words, "bonjour à tous", 40).is_empty());
+        assert_eq!(relevant_terms(&words, "bonjour à tous", NOW, 40), ["Qwen"]);
     }
 
     #[test]

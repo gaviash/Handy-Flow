@@ -781,11 +781,12 @@ fn save(app: &AppHandle, m: &mut Memory) {
     }
 }
 
-/// Learned spellings for the rewrite of `transcription`: those it sounds
-/// like first, then the most used (≤ 40).
+/// The learned dictionary for the rewrite of `transcription` (≤ 80): the
+/// words it sounds like with their heard forms, then every other active name.
 pub fn terms_for(app: &AppHandle, transcription: &str) -> Vec<String> {
+    let now = chrono::Utc::now().timestamp();
     with_memory(app, |m| {
-        crate::recall::relevant_terms(&m.words, transcription, 40)
+        crate::recall::relevant_terms(&m.words, transcription, now, 80)
     })
 }
 
