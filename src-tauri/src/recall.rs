@@ -195,6 +195,7 @@ mod tests {
             last_seen: 0,
             kind: WordKind::Term,
             active: true,
+            used: 0,
         };
         let words = vec![w("Postgres", "PostGer", 9), w("Claude", "Cloud", 1)];
         let out = relevant_terms(&words, "ouvre cloud code", 1);
@@ -212,6 +213,7 @@ mod tests {
             last_seen: 0,
             kind,
             active: true,
+            used: 0,
         };
         let words = [
             w("Qwen", "Quen", WordKind::Term),
