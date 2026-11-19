@@ -751,6 +751,12 @@ async fn post_process_transcription(
     }
 }
 
+/// Spec §6 rule 5: the learned names are applied locally only when no
+/// rewrite came out, for a plain dictation, never in a private field.
+fn learned_fallback(rewrote: bool, instruct: bool, snippet: bool, private: bool) -> bool {
+    !rewrote && !instruct && !snippet && !private
+}
+
 pub(crate) struct ProcessedTranscription {
     pub final_text: String,
     pub post_processed_text: Option<String>,
@@ -1321,6 +1327,8 @@ impl ShortcutAction for TranscribeAction {
                             // F79: a password field gets the raw transcript, nothing sent or kept.
                             let sensitive = capture.sensitive;
                             let excluded = capture.excluded;
+                            // Windows: a password check that didn't happen counts as private.
+                            let unchecked = cfg!(windows) && !capture.password_checked;
                             let (field, terminal) = (capture.field.clone(), capture.terminal);
                             let ctx_settings = get_settings(&ah);
                             // F120: a trigger said on its own inserts its snippet as is.
@@ -1465,6 +1473,27 @@ impl ShortcutAction for TranscribeAction {
                                 set_tray_state(&ah, TrayIconState::Idle);
                                 return;
                             }
+
+                            // Spec §6 rule 5: no rewrite came out (not asked, failed,
+                            // skipped, rejected, timed out), so the confirmed learned
+                            // names are applied locally. A plain dictation only, never
+                            // a private field.
+                            let processed = if learned_fallback(
+                                processed.post_processed_text.is_some(),
+                                instruct,
+                                snippet.is_some(),
+                                sensitive || excluded || unchecked,
+                            ) {
+                                ProcessedTranscription {
+                                    final_text: crate::learning::apply_learned(
+                                        &ah,
+                                        &processed.final_text,
+                                    ),
+                                    ..processed
+                                }
+                            } else {
+                                processed
+                            };
 
                             // Handy Adaptive: the observation records what the user kept.
                             let observed_app = app_label.clone();
@@ -1822,10 +1851,26 @@ pub static ACTION_MAP: Lazy<HashMap<String, Arc<dyn ShortcutAction>>> = Lazy::ne
 #[cfg(test)]
 mod tests {
     use super::{
-        complete_unless_cancelled, house_framing, is_blank_transcription,
+        complete_unless_cancelled, house_framing, is_blank_transcription, learned_fallback,
         non_blank_post_processed_text, post_process_transcription, should_use_streaming_overlay,
         strip_invisible_chars, strip_think_block, transform_text, PostProcessOutcome,
     };
+
+    #[test]
+    fn fallback_runs_after_a_rejected_rewrite() {
+        // No rewrite text came out (failed, skipped, rejected, timed out, not asked).
+        assert!(learned_fallback(false, false, false, false));
+        // A rewrite came out: the LLM already checked the context.
+        assert!(!learned_fallback(true, false, false, false));
+    }
+
+    #[test]
+    fn no_fallback_for_a_password_field() {
+        assert!(!learned_fallback(false, false, false, true));
+        // Nor for an instruction or a snippet.
+        assert!(!learned_fallback(false, true, false, false));
+        assert!(!learned_fallback(false, false, true, false));
+    }
 
     #[test]
     fn prompts_without_output_placeholder_get_house_framing() {

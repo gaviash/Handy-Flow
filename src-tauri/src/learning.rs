@@ -1254,6 +1254,43 @@ pub fn locate(text: &str, inserted: &str, caret: usize) -> Option<(String, Strin
     ))
 }
 
+/// A heard form that can't be an ordinary word: a capital after its first
+/// char, a digit or `_` ("RandyFlow", "jf2").
+fn no_real_word(form: &str) -> bool {
+    form.chars().skip(1).any(char::is_uppercase)
+        || form.chars().any(|c| c.is_ascii_digit() || c == '_')
+}
+
+/// Spec §6 rule 5, §9.4: when no rewrite ran, a confirmed name replaces its
+/// heard forms, as whole words, case-insensitively.
+/// shortcut: no lexicon (spec R11), so only forms that can't be a real word
+/// are replaced ("cloud", "Jeff" are left to the rewrite's context check);
+/// a frequency list would let rare plain forms through.
+pub(crate) fn replace_heard(text: &str, words: &[Learned]) -> String {
+    let mut out = text.to_string();
+    for w in words
+        .iter()
+        .filter(|w| w.active && w.kind == WordKind::Term && w.count + w.used >= 2)
+    {
+        for h in w.heard.iter().filter(|h| no_real_word(h)) {
+            let re = regex::Regex::new(&format!(r"(?i)(^|[^\w]){}($|[^\w])", regex::escape(h)));
+            if let Ok(re) = re {
+                out = re
+                    .replace_all(&out, |c: &regex::Captures| {
+                        format!("{}{}{}", &c[1], w.term, &c[2])
+                    })
+                    .into_owned();
+            }
+        }
+    }
+    out
+}
+
+/// [`replace_heard`] with the user's learned words.
+pub fn apply_learned(app: &AppHandle, text: &str) -> String {
+    with_memory(app, |m| replace_heard(text, &m.words))
+}
+
 /// Chars kept on each side of a terminal dictation as its anchors.
 const TERMINAL_ANCHOR: usize = 200;
 
@@ -1603,6 +1640,46 @@ mod tests {
             .filter(|c| c.kind == WordKind::Term)
             .map(|c| (c.term, c.heard))
             .collect()
+    }
+
+    #[test]
+    fn a_confirmed_term_replaces_a_heard_form_that_is_no_real_word() {
+        let words = [word("Handy Flow", "RandyFlow", 2, 0, WordKind::Term, true)];
+        assert_eq!(
+            replace_heard("Ouvre RandyFlow.", &words),
+            "Ouvre Handy Flow."
+        );
+        assert_eq!(replace_heard("ouvre randyflow", &words), "ouvre Handy Flow");
+    }
+
+    #[test]
+    fn a_heard_form_that_is_a_real_word_is_never_replaced_blindly() {
+        // Without the LLM there is no context check: "cloud", "Jeff" stay.
+        let words = [
+            word("Claude", "Cloud", 5, 0, WordKind::Term, true),
+            word("Jev", "Jeff", 5, 0, WordKind::Term, true),
+        ];
+        assert_eq!(
+            replace_heard("On héberge ça dans le cloud. Merci Jeff.", &words),
+            "On héberge ça dans le cloud. Merci Jeff."
+        );
+    }
+
+    #[test]
+    fn pending_misheard_or_once_seen_words_never_replace() {
+        let words = [
+            word("Handy Flow", "RandyFlow", 1, 0, WordKind::Term, true),
+            word("SuperApp", "SuprApp2", 3, 0, WordKind::Misheard, true),
+            word("Broker Name", "BrokerName", 3, 0, WordKind::Term, false),
+        ];
+        let t = "RandyFlow SuprApp2 BrokerName";
+        assert_eq!(replace_heard(t, &words), t);
+    }
+
+    #[test]
+    fn only_whole_words_are_replaced() {
+        let words = [word("Handy Flow", "RandyFlow", 2, 0, WordKind::Term, true)];
+        assert_eq!(replace_heard("RandyFlows", &words), "RandyFlows");
     }
 
     #[test]
