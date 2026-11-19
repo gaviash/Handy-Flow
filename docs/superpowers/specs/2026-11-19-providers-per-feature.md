@@ -58,6 +58,22 @@ Au premier démarrage de la nouvelle version :
 
 Les anciens champs sont lus pour migrer, puis ignorés : ils ne sont pas supprimés tout de suite, pour pouvoir revenir à une version précédente.
 
+### 1.4 Niveau de raisonnement par fonction (demande du 2026-11-19)
+
+Aujourd'hui, **tous** les appels LLM désactivent le raisonnement (`llm_client::reasoning_disable_params`, et le juge passe `disable_reasoning = true` à `send_chat_completion_with_schema`). C'est bon pour la reformulation, qui doit être rapide. C'est mauvais pour le validateur, qui doit juger finement si une correction est un nom, un terme technique ou un changement de sens.
+
+- `ModelEntry` gagne `reasoning: bool` : le modèle sait raisonner. Valeur proposée d'après le nom (`gpt-oss*`, `o1*`, `o3*`, `o4*`, `gpt-5*`, `*-r1*`, `qwq*`, `qwen3*`, `deepseek-reasoner`, `magistral*`, `gemini-2.5*`, `claude-*` récents), modifiable par une case « raisonnement » dans la fiche du fournisseur.
+- `FeatureModel` gagne `reasoning: Reasoning` ∈ {`Off`, `Low`, `Medium`, `High`}. Il n'est proposé que si le modèle choisi a `reasoning: true`, sinon il est forcé à `Off`.
+- **Valeurs par défaut** : reformulation, secours et transcription → `Off`. Validateur → `Medium` si le modèle sait raisonner.
+- **Envoi** : le paramètre propre à chaque fournisseur remplace la désactivation actuelle.
+  - OpenAI et compatibles, Groq (`gpt-oss`) : `reasoning_effort: "low" | "medium" | "high"`.
+  - OpenRouter : `reasoning: { effort, exclude: true }`.
+  - DeepSeek : `thinking: { type: "enabled" }`.
+  - Cloudflare Workers AI : `chat_template_kwargs: { enable_thinking: true }`.
+  - `Off` garde exactement le comportement actuel.
+  - Le texte de raisonnement est toujours retiré de la réponse (`strip_think_block`, `exclude`).
+- **Délai** : le validateur tourne en arrière-plan. Son délai passe de 15 s à 45 s quand le raisonnement est actif.
+
 ## 2. Interface (Réglages)
 
 ### 2.1 Onglet « Modèles » → section **Fournisseurs**
@@ -71,7 +87,13 @@ Les anciens champs sont lus pour migrer, puis ignorés : ils ne sont pas supprim
 
 ### 2.2 Section **Utilisation par fonction**
 
-Une ligne par fonction, avec deux menus (fournisseur, puis modèle de ce fournisseur) et une ligne d'état :
+Une ligne par fonction, avec deux menus (fournisseur, puis modèle de ce fournisseur), un troisième menu **Raisonnement** (Désactivé / Faible / Moyen / Élevé) quand le modèle sait raisonner, et une ligne d'état.
+
+**Modèles qui raisonnent en premier** : dans le menu des modèles du **validateur**, les modèles `reasoning: true` sont listés en tête, sous un intertitre « Raisonnement (recommandé) » avec un badge. Pour la reformulation, l'ordre reste alphabétique, avec le même badge. Phrases d'aide **visibles** sous chaque ligne :
+- Validateur : « Le validateur décide si une correction doit être apprise. Un modèle qui raisonne se trompe moins : choisis-en un, avec un raisonnement moyen. Il tourne en arrière-plan, la lenteur ne se voit pas. »
+- Reformulation : « La reformulation doit être rapide. Laisse le raisonnement désactivé, sauf si la qualité compte plus que l'attente. »
+
+Les lignes de fonction :
 
 | Fonction | Choix | État affiché |
 |---|---|---|
@@ -96,6 +118,14 @@ Les pages Amélioration et Vocabulaire (carte Juge) gardent un **résumé** et u
 4. Supprimer un fournisseur utilisé est refusé, avec la liste des fonctions concernées.
 5. Tests Playwright : configurer deux fournisseurs, affecter chaque fonction, recharger : les choix sont conservés. Les 6 tests Juge existants sont adaptés à la nouvelle ligne Validateur.
 6. Aucune clé n'apparaît dans `settings_store.json`, dans les logs ou dans `bindings.ts`.
+7. **Raisonnement** :
+   - le validateur réglé sur `Medium` avec un modèle `gpt-oss` envoie `reasoning_effort: "medium"` ;
+   - la reformulation sur `Off` envoie la désactivation actuelle ;
+   - un modèle sans raisonnement n'envoie aucun paramètre ;
+   - le texte de raisonnement n'apparaît jamais dans la réponse utilisée.
+
+   Tests Rust sur le corps de requête, comme les tests existants de `llm_client.rs`.
+8. Dans le menu des modèles du validateur, les modèles qui raisonnent sont listés en premier (test Playwright).
 
 ## 5. Hors périmètre
 
