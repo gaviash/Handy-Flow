@@ -1273,13 +1273,10 @@ pub(crate) fn replace_heard(text: &str, words: &[Learned]) -> String {
         .filter(|w| w.active && w.kind == WordKind::Term && w.count + w.used >= 2)
     {
         for h in w.heard.iter().filter(|h| no_real_word(h)) {
-            let re = regex::Regex::new(&format!(r"(?i)(^|[^\w]){}($|[^\w])", regex::escape(h)));
+            // `\b` does not consume the separator: "RandyFlow RandyFlow" both match.
+            let re = regex::Regex::new(&format!(r"(?i)\b{}\b", regex::escape(h)));
             if let Ok(re) = re {
-                out = re
-                    .replace_all(&out, |c: &regex::Captures| {
-                        format!("{}{}{}", &c[1], w.term, &c[2])
-                    })
-                    .into_owned();
+                out = re.replace_all(&out, regex::NoExpand(&w.term)).into_owned();
             }
         }
     }
@@ -1324,12 +1321,12 @@ pub fn locate_tail(text: &str, inserted: &str) -> Option<(String, String)> {
 /// `before`, up to `after`, or `lines` lines when nothing followed it, so
 /// output printed below never joins the region.
 pub fn region_near<'a>(text: &'a str, before: &str, after: &str, lines: usize) -> Option<&'a str> {
-    if before.is_empty() && after.is_empty() {
+    // Without a before-anchor, output scrolled into place could pass for the
+    // dictation (spec R6): the region can't be trusted.
+    if before.is_empty() {
         return None;
     }
-    let start = if before.is_empty() {
-        0
-    } else {
+    let start = {
         let mut at = text.match_indices(before).map(|(i, _)| i);
         let i = at.next()?;
         if at.next().is_some() {
@@ -1709,10 +1706,28 @@ mod tests {
     }
 
     #[test]
-    fn an_empty_before_anchor_takes_the_start_of_the_read() {
+    fn an_empty_before_anchor_never_makes_a_terminal_region() {
+        // Pasted at the very start of the read: scrolled output could take its
+        // place under the same after-anchor, so the region can't be trusted.
         assert_eq!(
-            region_near("merci Jev\n  ? for shortcuts", "", "\n  ?", 1),
-            Some("merci Jev")
+            region_near(
+                "merci Jev
+footer",
+                "",
+                "
+footer",
+                1
+            ),
+            None
+        );
+    }
+
+    #[test]
+    fn adjacent_heard_forms_are_all_replaced() {
+        let words = [word("Handy Flow", "RandyFlow", 2, 0, WordKind::Term, true)];
+        assert_eq!(
+            replace_heard("RandyFlow RandyFlow", &words),
+            "Handy Flow Handy Flow"
         );
     }
 
