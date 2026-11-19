@@ -258,12 +258,15 @@ pub fn candidates(inserted: &str, fin: &str) -> Vec<Candidate> {
     let a: Vec<&str> = inserted.split_whitespace().collect();
     let b: Vec<&str> = fin.split_whitespace().collect();
     let tags = align(&a, &b);
+    // Dictated words that changed; text typed after the dictation (Ins) is
+    // no rewrite of it.
     let edited = tags
         .iter()
-        .filter(|t| t.0 != Tag::Same && t.0 != Tag::Case)
+        .filter(|t| matches!(t.0, Tag::Sub | Tag::Del))
         .count();
-    // A rewrite, not a correction.
-    if edited * 2 > a.len().max(b.len()) {
+    // A rewrite, not a correction (spec §8.7: > 30 words; or most of a
+    // dictation long enough to tell).
+    if edited > 30 || (a.len() >= 4 && edited * 2 > a.len()) {
         reject("rewrite");
         return Vec::new();
     }
@@ -343,9 +346,12 @@ pub fn candidates(inserted: &str, fin: &str) -> Vec<Candidate> {
         let looks_like_term = capital(&term, term_opens)
             || capital(&heard, heard_opens)
             || term.chars().any(|c| c.is_ascii_digit() || c == '_');
-        // Truncation, plural, conjugation: one form extends the other.
-        let affix =
-            hk.starts_with(&tk) || tk.starts_with(&hk) || hk.ends_with(&tk) || tk.ends_with(&hk);
+        // Truncation, plural, conjugation: one form extends the other. A name
+        // may lengthen what was heard (Jordan → Jordane, E218), never shorten
+        // it (E227).
+        let truncated = hk.starts_with(&tk) || hk.ends_with(&tk);
+        let extended = tk.starts_with(&hk) || tk.ends_with(&hk);
+        let affix = truncated || (extended && !looks_like_term);
         let d = distance(&hk, &tk);
         let kind = if term.is_empty() {
             Err("no_substitution")
@@ -1530,6 +1536,81 @@ mod tests {
             .filter(|c| c.kind == WordKind::Term)
             .map(|c| (c.term, c.heard))
             .collect()
+    }
+
+    const A05_PASTED: &str =
+        "Nous allons organiser une réunion la semaine prochaine pour parler du budget.";
+    const A05_EDITED: &str =
+        "Finalement on annule tout et on reprend le dossier en janvier avec une autre equipe.";
+
+    #[test]
+    fn golden_alignment_cases() {
+        let pair = |t: &str, h: &str| vec![(t.to_string(), h.to_string())];
+        assert_eq!(
+            candidates(
+                "Nous installons Corvanti ce soir.",
+                "Nous installons Quorvantis ce soir."
+            ),
+            pair("Quorvantis", "Corvanti")
+        ); // A01
+        assert_eq!(
+            candidates(
+                "Le dossier est suivi par Aurélie Kenen.",
+                "Le dossier est suivi par Aurélie Quennehen."
+            ),
+            pair("Quennehen", "Kenen")
+        ); // A03
+        assert!(super::candidates("Je pars à Paris demain.", "Je pars à PARIS demain.").is_empty()); // A04
+        assert!(super::candidates(A05_PASTED, A05_EDITED).is_empty()); // A05
+    }
+
+    #[test]
+    fn golden_a02_a_two_word_name_is_learned_as_one_phrase() {
+        // Handy keeps phrase mode on (spec §9.2.0), unlike this Wispr account.
+        assert_eq!(
+            candidates(
+                "Je travaille avec Kazimierz Bignowski sur le projet.",
+                "Je travaille avec Kasimir Zbignowski sur le projet."
+            ),
+            vec![(
+                "Kasimir Zbignowski".to_string(),
+                "Kazimierz Bignowski".to_string()
+            )]
+        );
+    }
+
+    #[test]
+    fn a_one_word_dictation_can_be_corrected() {
+        // Internal capital: a term even at the start of the field.
+        assert_eq!(
+            candidates("Postgre", "PostgreSQL"),
+            vec![("PostgreSQL".to_string(), "Postgre".to_string())]
+        );
+    }
+
+    #[test]
+    fn typing_after_the_dictation_is_not_a_rewrite() {
+        assert_eq!(
+            candidates(
+                "Merci Jeff.",
+                "Merci Jev. Et voici une longue suite tapée ensuite au clavier"
+            ),
+            vec![("Jev".to_string(), "Jeff".to_string())]
+        );
+    }
+
+    #[test]
+    fn a_name_may_extend_what_was_heard_but_not_truncate_it() {
+        // L01 (E218): Wispr learns Jordane←Jordan. E227: a truncated name is refused.
+        assert_eq!(
+            candidates("Merci Jordan, à demain.", "Merci Jordane, à demain."),
+            vec![("Jordane".to_string(), "Jordan".to_string())]
+        );
+        assert!(
+            super::candidates("Merci Jordane, à demain.", "Merci Jordan, à demain.").is_empty()
+        );
+        // A common word keeps the plural/conjugation guard (L05).
+        assert!(super::candidates("Le projet avance bien.", "Le projets avance bien.").is_empty());
     }
 
     #[test]
