@@ -154,6 +154,34 @@ export async function mockTauri(page: Page, opts: MockOptions = {}) {
             return null;
           }
           calls.push({ cmd, args });
+          const settings = results.get_app_settings as typeof DEFAULT_SETTINGS;
+          const featureKeys: Record<string, string> = {
+            Rewrite: "rewrite",
+            RewriteFallback: "rewrite_fallback",
+            LearningValidator: "learning_validator",
+            TranscriptionApi: "transcription_api",
+          };
+          const persist = () =>
+            sessionStorage.setItem("mock.settings", JSON.stringify(settings));
+          if (cmd === "set_feature_model") {
+            settings.features[featureKeys[args.feature]] = args.choice;
+            persist();
+            return null;
+          }
+          if (cmd === "remove_custom_provider") {
+            const used = Object.keys(featureKeys).filter(
+              (feature) =>
+                settings.features[featureKeys[feature]].provider_id ===
+                args.providerId,
+            );
+            if (used.length) throw used;
+            settings.post_process_providers =
+              settings.post_process_providers.filter(
+                (provider: { id: string }) => provider.id !== args.providerId,
+              );
+            persist();
+            return null;
+          }
           const appearanceCommands: Record<string, [string, string]> = {
             change_pill_tone_setting: ["pill_tone", "tone"],
             change_palette_setting: ["palette", "palette"],

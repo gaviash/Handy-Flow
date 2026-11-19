@@ -14,6 +14,8 @@ import { ModelRow } from "./ModelRow";
 import { Legend } from "./Legend";
 import { useModelEntries } from "./modelEntries";
 import { CloudAsrSettings } from "./CloudAsrSettings";
+import { FeatureModelsCard } from "./FeatureModelsCard";
+import { ProvidersCard } from "./ProvidersCard";
 import { ModelSettingsCard } from "./ModelSettingsCard";
 import { useSettings } from "@/hooks/useSettings";
 import { getTranscriptionConfig } from "@/lib/utils/transcriptionConfig";
@@ -178,6 +180,8 @@ export const ModelsSettings: React.FC<ModelsSettingsProps> = ({
           </p>
         )}
       </div>
+      <ProvidersCard />
+      <FeatureModelsCard />
       <CloudAsrSettings />
       <section className="space-y-3" aria-labelledby="local-model-title">
         <div className="flex flex-wrap items-center justify-between gap-3">

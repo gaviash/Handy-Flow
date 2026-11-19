@@ -326,6 +326,90 @@
     "lockedWhileTranscribing": "Model będzie można zmienić po zakończeniu transkrypcji w Historii."
   },
   "settings": {
+    "providers": {
+      "title": "Providers",
+      "keyed": "Key saved",
+      "missingKey": "API key missing",
+      "refused": "Key rejected",
+      "optional": "No key required",
+      "modelCount": "Models: {{count}}",
+      "addProvider": "Add OpenAI-compatible provider",
+      "name": "Provider name",
+      "url": "Base URL",
+      "add": "Add provider",
+      "key": "API key",
+      "replaceKey": "Enter a replacement key",
+      "enterKey": "Enter an API key",
+      "clearKey": "Remove key",
+      "addModel": "Find or add a model by ID",
+      "useModel": "Add {{model}}",
+      "speech": "Speech",
+      "test": "Test connection",
+      "testOk": "Connection verified",
+      "testError": "Connection test failed",
+      "refresh": "Fetch available models",
+      "available": "Available models: {{count}}",
+      "refreshError": "Could not fetch available models",
+      "removeProvider": "Remove provider",
+      "removeModel": "Remove",
+      "removeModelNamed": "Remove {{model}}",
+      "saveError": "Could not save the provider change",
+      "providerInUse": "Provider in use by {{features}}",
+      "formatInUse": "Choose another provider for the validator or Speech API before changing the format.",
+      "modelInUse": "Change the model in Usage by feature before changing its type.",
+      "resetFeatures": "Model removed. Selection reset for {{features}}."
+    },
+    "features": {
+      "title": "Usage by feature",
+      "name": {
+        "Rewrite": "Rewrite",
+        "RewriteFallback": "Rewrite fallback",
+        "LearningValidator": "Learning validator",
+        "TranscriptionApi": "Speech API"
+      },
+      "empty": {
+        "Rewrite": "Configure rewrite",
+        "RewriteFallback": "None",
+        "LearningValidator": "Automatic",
+        "TranscriptionApi": "Local model only"
+      },
+      "problem": {
+        "NotChosen": "Choose a provider",
+        "NoProvider": "Inactive · provider unavailable",
+        "NoKey": "Inactive · API key missing",
+        "NoModel": "Inactive · no usable model",
+        "RewriteOff": "Inactive · rewriting is off",
+        "LearningOff": "Inactive · learning is off",
+        "ValidatorOff": "Validator off",
+        "ContextOff": "Inactive · context sharing is off",
+        "NotSpeechModel": "Inactive · select a speech model",
+        "NotChatModel": "Inactive · select a chat model",
+        "UnsupportedProvider": "Inactive · incompatible provider"
+      },
+      "level": {
+        "Off": "Off",
+        "Low": "Low",
+        "Medium": "Medium",
+        "High": "High"
+      },
+      "help": {
+        "Rewrite": "Rewriting needs to be fast. Leave reasoning off unless quality matters more than waiting.",
+        "LearningValidator": "The validator decides whether to learn a correction. Reasoning models make fewer mistakes. Choose one with medium reasoning. It works in the background, so it won't slow down dictation."
+      },
+      "provider": "Provider",
+      "model": "Model",
+      "reasoning": "Reasoning",
+      "reasoningStatus": "reasoning {{level}}",
+      "reasoningModel": "{{model}} · reasoning",
+      "recommended": "Reasoning (recommended)",
+      "chooseModel": "Choose a model",
+      "noModels": "Add a model under Providers",
+      "automaticUse": "Automatic · {{provider}} · {{model}}",
+      "uses": "Uses {{provider}} · {{model}}",
+      "changeInModels": "Change in Models",
+      "saveError": "Could not save the model choice",
+      "speechOptions": "Speech API options"
+    },
     "modelSettings": {
       "title": "Ustawienia {{model}}"
     },
@@ -822,7 +906,9 @@
           "delete": "Delete",
           "clear": "Clear All",
           "export": "Export",
-          "confirmClear": "Clear all learned words?"
+          "confirmClear": "Clear all learned words?",
+          "expires": "Forgotten on {{date}} unless you dictate it again",
+          "exportError": "Couldn't export what Handy Flow learned."
         },
         "notice": "Learned: {{terms}}",
         "undo": "Undo",
@@ -834,7 +920,9 @@
         "rules": {
           "label": "Reguły stylu",
           "description": "Preferencje sformułowań, które Handy Flow wyciąga z Twoich poprawek i stosuje w kolejnych dyktowaniach.",
-          "empty": "Brak reguł."
+          "empty": "Brak reguł.",
+          "clear": "Clear All",
+          "confirmClear": "Clear all style rules?"
         },
         "asr": {
           "label": "Kontekst transkrypcji",
@@ -853,6 +941,10 @@
             "description": "Phrases of 2 to 4 words said in at least 3 dictations over 30 days: what the speech model gets.",
             "count": "{{count}} expressions"
           }
+        },
+        "judge": {
+          "label": "Learning Validator",
+          "description": "Sends your correction (before and after) to an AI to learn style rules and technical words."
         }
       },
       "styles": {
@@ -870,6 +962,14 @@
           "very_casual": "Very Casual",
           "excited": "Excited",
           "default": "Default"
+        },
+        "exampleLabel": "Example for {{category}} · {{tone}}",
+        "examples": {
+          "formal": "Hello Marie, I confirm our meeting tomorrow at 10 a.m. Thank you for your patience.",
+          "casual": "Hi Marie, all good for tomorrow at 10, thanks for waiting",
+          "very_casual": "hey marie all good for tomorrow at 10, thanks",
+          "excited": "Hi Marie, all set for tomorrow at 10, can't wait!",
+          "default": "Hi Marie, I confirm our meeting tomorrow at 10. Thanks for waiting."
         }
       },
       "snippets": {
@@ -877,7 +977,9 @@
         "description": "Say the trigger on its own to insert its text as is, for example your address. A trigger inside a sentence stays a normal dictation.",
         "trigger": "Trigger",
         "text": "Text to insert",
-        "add": "Add Snippet"
+        "add": "Add Snippet",
+        "preview": "Preview",
+        "previewSay": "Say “{{trigger}}” on its own and Handy Flow types:"
       },
       "transforms": {
         "title": "Transform Selected Text",
@@ -924,7 +1026,10 @@
       "stats": {
         "title": "Last 30 days: {{dictations}} dictations, {{words}} words, {{learned}} learned words",
         "apps": "Most used: {{apps}}"
-      }
+      },
+      "viewChanges": "See the edits",
+      "hideChanges": "Hide the edits",
+      "changesTooDifferent": "Rewritten too much to compare word by word."
     },
     "debug": {
       "title": "Debugowanie",
@@ -1323,7 +1428,22 @@
     "processing": "Przetwarzanie...",
     "loadingModel": "Wczytywanie modelu...",
     "recording": "Listening",
-    "pasted": "Wklejono"
+    "pasted": "Wklejono",
+    "register": {
+      "email": "Email",
+      "work_chat": "Work chat",
+      "personal_chat": "Chat",
+      "ai": "AI prompt",
+      "document": "Document",
+      "code": "Code",
+      "other": "Other"
+    },
+    "tone": {
+      "formal": "Formal",
+      "casual": "Casual",
+      "very_casual": "Very casual",
+      "excited": "Excited"
+    }
   },
   "secureInput": {
     "blockedWithCulprit_one": "{{name}} może blokować 1 skrót",

@@ -8,7 +8,13 @@ use serde::Deserialize;
 use std::time::Duration;
 use tauri::AppHandle;
 
-const TIMEOUT: Duration = Duration::from_secs(15);
+fn validator_timeout(reasoning: crate::features::Reasoning) -> Duration {
+    Duration::from_secs(if reasoning == crate::features::Reasoning::Off {
+        15
+    } else {
+        45
+    })
+}
 
 pub const JUDGE_PROMPT: &str = "You study how a user corrected a dictated text, to learn their preferences. \
 The user message holds the text that was pasted (<pasted>), the text the user kept after editing it (<kept>), \
@@ -141,71 +147,8 @@ fn schema() -> serde_json::Value {
     })
 }
 
-type Target = (crate::settings::PostProcessProvider, String, String);
-
-/// The provider with its key and model, when the judge can call it: OpenAI
-/// format (the judge posts to /chat/completions), keyed (a custom endpoint may
-/// be keyless), and a model: Groq's small one, else the rewrite model.
-fn usable(s: &crate::settings::AppSettings, id: &str) -> Option<Target> {
-    let p = s
-        .post_process_provider(id)
-        .filter(|p| p.api_format == crate::settings::PostProcessApiFormat::OpenAi)?;
-    let key = s
-        .post_process_api_keys
-        .get(id)
-        .map(|k| k.trim().to_string())
-        .unwrap_or_default();
-    let model = if id == "groq" {
-        crate::adaptive::GROQ_SPARE_MODEL.to_string()
-    } else {
-        s.post_process_models.get(id).cloned().unwrap_or_default()
-    };
-    ((!key.is_empty() || id == "custom") && !model.trim().is_empty())
-        .then(|| (p.clone(), key, model))
-}
-
-/// Who judges: the provider the user chose, when it can be called (choosing
-/// it is consent, even with rewriting off). Else Automatic: Groq when it has a
-/// key, else the active rewrite provider while rewriting is on.
-pub fn judge_target(s: &crate::settings::AppSettings) -> Option<Target> {
-    if !s.learning_judge_provider_id.is_empty() {
-        if let Some(t) = usable(s, &s.learning_judge_provider_id) {
-            return Some(t);
-        }
-    }
-    if let Some(t) = usable(s, "groq") {
-        return Some(t);
-    }
-    // Rewriting off: the user chose no LLM traffic; only a Groq key, set for
-    // learning, still calls one.
-    if !s.post_process_enabled {
-        return None;
-    }
-    usable(s, &s.post_process_provider_id)
-}
-
-#[derive(serde::Serialize, specta::Type)]
-pub struct JudgeChoice {
-    pub id: String,
-    pub label: String,
-}
-
-fn choices(s: &crate::settings::AppSettings) -> Vec<JudgeChoice> {
-    s.post_process_providers
-        .iter()
-        .filter(|p| usable(s, &p.id).is_some())
-        .map(|p| JudgeChoice {
-            id: p.id.clone(),
-            label: p.label.clone(),
-        })
-        .collect()
-}
-
-/// The providers the judge can call, for the dropdown in Settings.
-#[tauri::command]
-#[specta::specta]
-pub fn get_judge_choices(app: AppHandle) -> Vec<JudgeChoice> {
-    choices(&crate::settings::get_settings(&app))
+pub fn judge_target(s: &crate::settings::AppSettings) -> Option<crate::features::Target> {
+    crate::features::feature_target(s, crate::features::Feature::LearningValidator)
 }
 
 /// Whether a correction may go to the judge at all: learning, the judge and
@@ -217,18 +160,12 @@ pub fn judge_allowed(s: &crate::settings::AppSettings) -> bool {
 /// Strict JSON where the provider takes it (Groq's small model does, though
 /// Groq as a rewrite provider is flagged without it); else plain JSON asked
 /// by the prompt, which `parse_verdicts` reads.
-fn judge_schema(p: &crate::settings::PostProcessProvider) -> Option<serde_json::Value> {
-    (p.id == "groq" || p.supports_structured_output).then(schema)
-}
-
-/// The judge's provider name for Settings, or `None` when it won't run.
-#[tauri::command]
-#[specta::specta]
-pub fn get_judge_provider(app: AppHandle) -> Option<String> {
-    let s = crate::settings::get_settings(&app);
-    judge_allowed(&s)
-        .then(|| judge_target(&s).map(|(p, ..)| p.label))
-        .flatten()
+fn judge_schema(
+    p: &crate::settings::PostProcessProvider,
+    model: &str,
+) -> Option<serde_json::Value> {
+    let groq_gpt_oss = p.id == "groq" && model.starts_with("openai/gpt-oss-");
+    (groq_gpt_oss || p.supports_structured_output).then(schema)
 }
 
 pub async fn run(
@@ -240,7 +177,10 @@ pub async fn run(
 ) {
     let skip = |reason: &str| log::debug!("Learning: judge skipped ({reason})");
     let settings = crate::settings::get_settings(&app);
-    let Some((provider, key, model)) = judge_target(&settings) else {
+    if !judge_allowed(&settings) {
+        return skip("disabled");
+    }
+    let Some((provider, key, model, reasoning)) = judge_target(&settings) else {
         return skip("no provider");
     };
     let rules = crate::learning::all_rules(&app);
@@ -259,10 +199,10 @@ pub async fn run(
         &model,
         message,
         Some(JUDGE_PROMPT.to_string()),
-        judge_schema(&provider),
-        true,
+        judge_schema(&provider, &model),
+        Some(reasoning),
     );
-    let reply = match tokio::time::timeout(TIMEOUT, call).await {
+    let reply = match tokio::time::timeout(validator_timeout(reasoning), call).await {
         Err(_) => return skip("timeout"),
         Ok(Err(e)) => {
             return skip(&format!(
@@ -293,12 +233,14 @@ mod tests {
             .insert("anthropic".into(), "sk-ant".into());
         s.post_process_models
             .insert("anthropic".into(), "claude-x".into());
+        crate::features::migrate(&mut s);
         assert!(judge_target(&s).is_none());
         // Strict JSON only where the provider takes it; Groq's small model does.
         let p = |id: &str| s.post_process_provider(id).unwrap().clone();
-        assert!(judge_schema(&p("groq")).is_some());
-        assert!(judge_schema(&p("openai")).is_some());
-        assert!(judge_schema(&p("cloudflare")).is_none());
+        assert!(judge_schema(&p("groq"), crate::adaptive::GROQ_SPARE_MODEL).is_some());
+        assert!(judge_schema(&p("groq"), "llama-3.3-70b-versatile").is_none());
+        assert!(judge_schema(&p("openai"), "gpt-4o-mini").is_some());
+        assert!(judge_schema(&p("cloudflare"), "model").is_none());
     }
 
     #[test]
@@ -313,73 +255,13 @@ mod tests {
     }
 
     #[test]
-    fn judge_falls_back_to_the_active_provider() {
-        let mut s = crate::settings::get_default_settings();
-        s.post_process_api_keys.clear();
-        s.post_process_enabled = true; // off by default outside Windows
-        s.post_process_provider_id = "openai".into();
-        s.post_process_api_keys
-            .insert("openai".into(), "sk-x".into());
-        s.post_process_models
-            .insert("openai".into(), "gpt-4.1-mini".into());
-        let (p, _, model) = judge_target(&s).unwrap();
-        assert_eq!((p.id.as_str(), model.as_str()), ("openai", "gpt-4.1-mini"));
-        // Groq first when it has a key.
-        s.post_process_api_keys.insert("groq".into(), "gsk".into());
-        assert_eq!(judge_target(&s).unwrap().0.id, "groq");
-        // Rewriting off: a non-Groq provider is never called for the judge.
-        s.post_process_api_keys.remove("groq");
-        s.post_process_enabled = false;
-        assert!(judge_target(&s).is_none());
-        s.post_process_enabled = true;
-        // No key anywhere: no judge.
-        s.post_process_api_keys.clear();
-        assert!(judge_target(&s).is_none());
-    }
-
-    fn keyed(ids: &[(&str, &str)]) -> crate::settings::AppSettings {
-        let mut s = crate::settings::get_default_settings();
-        s.post_process_api_keys.clear();
-        s.post_process_enabled = true;
-        for (id, model) in ids {
-            s.post_process_api_keys.insert((*id).into(), "k".into());
-            s.post_process_models.insert((*id).into(), (*model).into());
-        }
-        s
-    }
-
-    #[test]
-    fn judge_uses_the_chosen_provider() {
-        let mut s = keyed(&[("groq", ""), ("openai", "gpt-4.1-mini")]);
-        s.learning_judge_provider_id = "openai".into();
-        let (p, _, model) = judge_target(&s).unwrap();
-        assert_eq!((p.id.as_str(), model.as_str()), ("openai", "gpt-4.1-mini"));
-    }
-
-    #[test]
-    fn an_unusable_choice_falls_back_to_automatic() {
-        let mut s = keyed(&[("groq", ""), ("openai", "gpt-4.1-mini")]);
-        s.learning_judge_provider_id = "openai".into();
-        s.post_process_api_keys.remove("openai");
-        assert_eq!(judge_target(&s).unwrap().0.id, "groq");
-    }
-
-    #[test]
-    fn an_explicit_choice_runs_with_rewriting_off() {
-        let mut s = keyed(&[("openai", "gpt-4.1-mini")]);
-        s.post_process_provider_id = "openai".into();
-        s.post_process_enabled = false;
-        s.learning_judge_provider_id = "openai".into();
-        assert!(judge_target(&s).is_some());
-        s.learning_judge_provider_id = String::new();
-        assert!(judge_target(&s).is_none());
-    }
-
-    #[test]
-    fn judge_choices_exclude_anthropic() {
-        let s = keyed(&[("anthropic", "claude-x"), ("openai", "gpt-4.1-mini")]);
-        let ids: Vec<String> = choices(&s).into_iter().map(|c| c.id).collect();
-        assert_eq!(ids, ["openai"]);
+    fn validator_timeout_grows_with_reasoning() {
+        use crate::features::Reasoning;
+        assert_eq!(validator_timeout(Reasoning::Off), Duration::from_secs(15));
+        assert_eq!(
+            validator_timeout(Reasoning::Medium),
+            Duration::from_secs(45)
+        );
     }
 
     #[test]

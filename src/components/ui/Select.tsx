@@ -18,6 +18,7 @@ type BaseProps = {
   value: string | null;
   options: SelectOption[];
   placeholder?: string;
+  ariaLabel?: string;
   disabled?: boolean;
   isLoading?: boolean;
   isClearable?: boolean;
@@ -121,6 +122,7 @@ export const Select: React.FC<SelectProps> = React.memo(
     value,
     options,
     placeholder,
+    ariaLabel,
     disabled,
     isLoading,
     isClearable = true,
@@ -152,6 +154,7 @@ export const Select: React.FC<SelectProps> = React.memo(
       options,
       onChange: handleChange,
       placeholder,
+      "aria-label": ariaLabel,
       isDisabled: disabled,
       isLoading,
       onBlur,

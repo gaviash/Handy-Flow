@@ -177,6 +177,30 @@
     "openrouter": "",
     "zai": ""
   },
+  "features": {
+    "rewrite": {
+      "provider_id": "",
+      "model": "",
+      "reasoning": "Off"
+    },
+    "rewrite_fallback": {
+      "provider_id": "",
+      "model": "",
+      "reasoning": "Off"
+    },
+    "learning_validator": {
+      "provider_id": "",
+      "model": "",
+      "reasoning": "Off"
+    },
+    "transcription_api": {
+      "provider_id": "",
+      "model": "",
+      "reasoning": "Off"
+    }
+  },
+  "provider_models": {},
+  "features_migrated": false,
   "post_process_prompts": [
     {
       "id": "adaptive_house",

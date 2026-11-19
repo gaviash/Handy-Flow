@@ -1,21 +1,15 @@
+import { FeatureSummary } from "../models/FeatureModelsCard";
 import React, { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { ask, save } from "@tauri-apps/plugin-dialog";
 import { listen } from "@tauri-apps/api/event";
-import {
-  commands,
-  type JudgeChoice,
-  type Learned,
-  type StyleRule,
-} from "@/bindings";
+import { commands, type Learned, type StyleRule } from "@/bindings";
 import { ToggleSwitch } from "../../ui/ToggleSwitch";
 import { SettingContainer } from "../../ui/SettingContainer";
 import { Button } from "../../ui/Button";
-import { Dropdown } from "../../ui/Dropdown";
 import { useSettings } from "../../../hooks/useSettings";
 import { AsrContextSettings } from "./AsrContextSettings";
 import { notify } from "@/stores/noticeStore";
-import { useSettingsStore } from "@/stores/settingsStore";
 import { EmptyMascot } from "../../shared/Mascot";
 
 // Mirrors learning.rs: a word unused for 30 days is forgotten.
@@ -30,7 +24,9 @@ const inkLeft = (lastSeen: number) => {
 };
 
 /** Handy Adaptive (F96, F97, F113): learned spellings, delete, clear, export. */
-export const LearningSettings: React.FC = () => {
+export const LearningSettings: React.FC<{ onShowModels?: () => void }> = ({
+  onShowModels,
+}) => {
   const { t, i18n } = useTranslation();
   const { getSetting, updateSetting, isUpdating } = useSettings();
   const [words, setWords] = useState<Learned[]>([]);
@@ -66,26 +62,7 @@ export const LearningSettings: React.FC = () => {
         title: t("settings.postProcessing.learning.words.exportError"),
       });
   };
-  // Which provider the correction judge calls; null = it can't run.
-  const [judge, setJudge] = useState<string | null>(null);
   const judgeOn = getSetting("learning_judge_enabled") ?? true;
-  const judgeChoice = getSetting("learning_judge_provider_id") ?? "";
-  const [choices, setChoices] = useState<JudgeChoice[]>([]);
-  // A key, model or provider change can switch the judge: re-read it once
-  // every write has reached Rust (the store updates before it does).
-  const settings = useSettingsStore((s) => s.settings);
-  const saving = useSettingsStore((s) =>
-    Object.values(s.isUpdating).some(Boolean),
-  );
-  useEffect(() => {
-    if (saving) return;
-    let live = true;
-    commands.getJudgeProvider().then((p) => live && setJudge(p));
-    commands.getJudgeChoices().then((c) => live && setChoices(c));
-    return () => {
-      live = false;
-    };
-  }, [settings, saving]);
 
   return (
     <>
@@ -116,43 +93,7 @@ export const LearningSettings: React.FC = () => {
         descriptionMode="tooltip"
         grouped={true}
       />
-      {judgeOn && (
-        <SettingContainer
-          title={t("settings.postProcessing.learning.judge.provider.label")}
-          description={t(
-            "settings.postProcessing.learning.judge.provider.description",
-          )}
-          descriptionMode="tooltip"
-          grouped={true}
-        >
-          <Dropdown
-            options={[
-              {
-                value: "",
-                label: t(
-                  "settings.postProcessing.learning.judge.provider.auto",
-                ),
-              },
-              ...choices.map((c) => ({ value: c.id, label: c.label })),
-            ]}
-            // A choice it can no longer call falls back to Automatic.
-            selectedValue={
-              choices.some((c) => c.id === judgeChoice) ? judgeChoice : ""
-            }
-            onSelect={(v) => updateSetting("learning_judge_provider_id", v)}
-            disabled={isUpdating("learning_judge_provider_id")}
-          />
-        </SettingContainer>
-      )}
-      {judgeOn && (
-        <p className="row-setting px-4 pb-3 -mt-2 text-xs text-ink-3">
-          {judge
-            ? t("settings.postProcessing.learning.judge.status", {
-                provider: judge,
-              })
-            : t("settings.postProcessing.learning.judge.none")}
-        </p>
-      )}
+      <FeatureSummary feature="LearningValidator" onShowModels={onShowModels} />
       <SettingContainer
         title={t("settings.postProcessing.learning.words.label")}
         description={t("settings.postProcessing.learning.words.description")}

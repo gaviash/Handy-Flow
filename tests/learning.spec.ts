@@ -85,85 +85,84 @@ test("a failed export says so", async ({ page }) => {
   ).toBeVisible();
 });
 
-test("the judge shows which provider it uses", async ({ page }) => {
-  await mockTauri(page, { results: { get_judge_provider: "OpenAI" } });
-  await openLearning(page);
-  await expect(page.getByText("Correction Judge")).toBeVisible();
-  await expect(page.getByText("Uses OpenAI")).toBeVisible();
-});
+function status(
+  problem: string | null = null,
+  automatic = false,
+  provider_label = "Groq",
+) {
+  return {
+    feature: "LearningValidator",
+    provider_label,
+    model: "gpt-oss",
+    automatic,
+    problem,
+    reasoning: "Medium",
+    model_reasons: true,
+  };
+}
 
-test("without a provider the judge says it is inactive", async ({ page }) => {
-  await mockTauri(page, { results: { get_judge_provider: null } });
-  await openLearning(page);
-  await expect(page.getByText(/Inactive: no API key/)).toBeVisible();
-});
-
-test("the judge provider can be chosen", async ({ page }) => {
-  const mock = await mockTauri(page, {
-    results: {
-      get_judge_provider: "Groq",
-      get_judge_choices: [
-        { id: "groq", label: "Groq" },
-        { id: "openai", label: "OpenAI" },
-      ],
-    },
-  });
-  await openLearning(page);
-  const auto = page.getByRole("button", { name: "Automatic", exact: true });
-  await auto.scrollIntoViewIfNeeded();
-  await auto.click();
-  // The rewrite provider's dropdown also reads "OpenAI": pick the menu item.
-  await page
-    .locator("button:not([aria-expanded])", { hasText: /^OpenAI$/ })
-    .click();
-  await expect
-    .poll(async () =>
-      (await mock.calls()).find(
-        (c) => c.cmd === "change_learning_judge_provider_setting",
-      ),
-    )
-    .toMatchObject({ args: { providerId: "openai" } });
-});
-
-test("the status shows what is really used", async ({ page }) => {
+test("the validator shows the effective provider and model", async ({
+  page,
+}) => {
   await mockTauri(page, {
-    settings: { learning_judge_provider_id: "openai" },
-    results: {
-      get_judge_provider: "Groq",
-      get_judge_choices: [{ id: "groq", label: "Groq" }],
-    },
+    results: { get_feature_statuses: [status(null, false, "OpenAI")] },
   });
   await openLearning(page);
-  await expect(page.getByText("Judge Provider")).toBeVisible();
-  await expect(page.getByText("Uses Groq")).toBeVisible();
+  await expect(page.getByText(/Uses OpenAI · gpt-oss/)).toBeVisible();
 });
 
-test("an unusable choice shows Automatic", async ({ page }) => {
+test("without a usable model the validator is inactive", async ({ page }) => {
   await mockTauri(page, {
-    settings: { learning_judge_provider_id: "openai" },
-    results: {
-      get_judge_provider: "Groq",
-      get_judge_choices: [{ id: "groq", label: "Groq" }],
-    },
+    results: { get_feature_statuses: [status("NoModel")] },
   });
   await openLearning(page);
+  await expect(page.getByText(/Inactive · no usable model/)).toBeVisible();
+});
+
+test("the validator summary links to the model picker", async ({ page }) => {
+  await mockTauri(page, { results: { get_feature_statuses: [status()] } });
+  await openLearning(page);
+  await page.getByRole("button", { name: "Change in Models" }).last().click();
   await expect(
-    page.getByRole("button", { name: "Automatic", exact: true }),
+    page.getByRole("group", { name: "Learning validator" }),
   ).toBeVisible();
 });
 
-test("the judge status is re-read after another setting is saved", async ({
+test("the validator shows why context sharing prevents it from running", async ({
+  page,
+}) => {
+  await mockTauri(page, {
+    results: { get_feature_statuses: [status("ContextOff")] },
+  });
+  await openLearning(page);
+  await expect(
+    page.getByText(/Inactive · context sharing is off/),
+  ).toBeVisible();
+});
+
+test("the automatic validator shows the effective model and reasoning level", async ({
+  page,
+}) => {
+  await mockTauri(page, {
+    results: { get_feature_statuses: [status(null, true)] },
+  });
+  await openLearning(page);
+  await expect(
+    page.getByText(/Automatic · Groq · gpt-oss · reasoning Medium/),
+  ).toBeVisible();
+});
+
+test("the validator status is re-read after a setting is saved", async ({
   page,
 }) => {
   const mock = await mockTauri(page, {
-    results: { get_judge_provider: "Groq" },
+    results: { get_feature_statuses: [status()] },
   });
   await openLearning(page);
-  await expect(page.getByText("Uses Groq")).toBeVisible();
+  await expect(page.getByText(/Uses Groq/)).toBeVisible();
   const reads = async () =>
-    (await mock.calls()).filter((c) => c.cmd === "get_judge_provider").length;
+    (await mock.calls()).filter((c) => c.cmd === "get_feature_statuses").length;
   const before = await reads();
-  // A key, model or provider change can switch the judge: any saved setting re-reads it.
   const sound = page.getByRole("checkbox", {
     name: "Sound When a Word Is Learned",
   });

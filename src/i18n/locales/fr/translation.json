@@ -326,6 +326,90 @@
     "lockedWhileTranscribing": "Vous pourrez changer de modèle une fois la transcription terminée dans l'Historique."
   },
   "settings": {
+    "providers": {
+      "title": "Fournisseurs",
+      "keyed": "Clé enregistrée",
+      "missingKey": "Clé API manquante",
+      "refused": "Clé refusée",
+      "optional": "Clé facultative",
+      "modelCount": "Modèles : {{count}}",
+      "addProvider": "Ajouter un fournisseur compatible OpenAI",
+      "name": "Nom du fournisseur",
+      "url": "URL de base",
+      "add": "Ajouter le fournisseur",
+      "key": "Clé API",
+      "replaceKey": "Saisis une nouvelle clé",
+      "enterKey": "Saisis une clé API",
+      "clearKey": "Supprimer la clé",
+      "addModel": "Rechercher ou ajouter un modèle par identifiant",
+      "useModel": "Ajouter {{model}}",
+      "speech": "Transcription",
+      "test": "Tester la connexion",
+      "testOk": "Connexion vérifiée",
+      "testError": "Échec du test de connexion",
+      "refresh": "Actualiser les modèles disponibles",
+      "available": "Modèles disponibles : {{count}}",
+      "refreshError": "Impossible de récupérer les modèles disponibles",
+      "removeProvider": "Supprimer le fournisseur",
+      "removeModel": "Supprimer",
+      "removeModelNamed": "Supprimer {{model}}",
+      "saveError": "Modification du fournisseur non enregistrée",
+      "providerInUse": "Fournisseur utilisé par {{features}}",
+      "formatInUse": "Choisis un autre fournisseur pour le validateur ou la transcription par API avant de changer le format.",
+      "modelInUse": "Change le modèle dans Utilisation par fonction avant de modifier son type.",
+      "resetFeatures": "Modèle supprimé. Choix réinitialisé pour {{features}}."
+    },
+    "features": {
+      "title": "Utilisation par fonction",
+      "name": {
+        "Rewrite": "Reformulation",
+        "RewriteFallback": "Secours de la reformulation",
+        "LearningValidator": "Validateur d’apprentissage",
+        "TranscriptionApi": "Transcription par API"
+      },
+      "empty": {
+        "Rewrite": "Configurer la reformulation",
+        "RewriteFallback": "Aucun",
+        "LearningValidator": "Automatique",
+        "TranscriptionApi": "Modèle local seulement"
+      },
+      "problem": {
+        "NotChosen": "Choisis un fournisseur",
+        "NoProvider": "Inactif · fournisseur indisponible",
+        "NoKey": "Inactif · clé API manquante",
+        "NoModel": "Inactif · aucun modèle utilisable",
+        "RewriteOff": "Inactif · reformulation désactivée",
+        "LearningOff": "Inactif · apprentissage désactivé",
+        "ValidatorOff": "Validateur désactivé",
+        "ContextOff": "Inactif · envoi du contexte désactivé",
+        "NotSpeechModel": "Inactif · choisis un modèle de transcription",
+        "NotChatModel": "Inactif · choisis un modèle de dialogue",
+        "UnsupportedProvider": "Inactif · fournisseur incompatible"
+      },
+      "level": {
+        "Off": "Désactivé",
+        "Low": "Faible",
+        "Medium": "Moyen",
+        "High": "Élevé"
+      },
+      "help": {
+        "Rewrite": "La reformulation doit être rapide. Laisse le raisonnement désactivé, sauf si la qualité compte plus que l'attente.",
+        "LearningValidator": "Le validateur décide si une correction doit être apprise. Un modèle qui raisonne se trompe moins : choisis-en un, avec un raisonnement moyen. Il tourne en arrière-plan, la lenteur ne se voit pas."
+      },
+      "provider": "Fournisseur",
+      "model": "Modèle",
+      "reasoning": "Raisonnement",
+      "reasoningStatus": "raisonnement {{level}}",
+      "reasoningModel": "{{model}} · raisonnement",
+      "recommended": "Raisonnement (recommandé)",
+      "chooseModel": "Choisis un modèle",
+      "noModels": "Ajoute un modèle dans Fournisseurs",
+      "automaticUse": "Automatique · {{provider}} · {{model}}",
+      "uses": "Utilise {{provider}} · {{model}}",
+      "changeInModels": "Modifier dans Modèles",
+      "saveError": "Choix du modèle non enregistré",
+      "speechOptions": "Options de transcription par API"
+    },
     "modelSettings": {
       "title": "Paramètres de {{model}}"
     },
@@ -859,15 +943,8 @@
           }
         },
         "judge": {
-          "label": "Juge des corrections",
-          "description": "Envoie votre correction (avant et après) à une IA pour apprendre des règles de style et des mots techniques.",
-          "status": "Utilise {{provider}}",
-          "none": "Inactif : aucune clé d'API pour Groq ni pour votre fournisseur de réécriture.",
-          "provider": {
-            "label": "Fournisseur du juge",
-            "description": "L'IA qui lit vos corrections. Automatique utilise Groq s'il a une clé, sinon votre fournisseur de réécriture.",
-            "auto": "Automatique"
-          }
+          "label": "Validateur d’apprentissage",
+          "description": "Envoie votre correction (avant et après) à une IA pour apprendre des règles de style et des mots techniques."
         }
       },
       "styles": {

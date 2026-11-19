@@ -1,78 +1,54 @@
 import assert from "node:assert/strict";
+import type { AppSettings, FeatureModel } from "@/bindings";
 import { getTranscriptionConfig } from "./transcriptionConfig";
 
-const settings = {
-  cloud_asr: {
-    provider_id: "groq",
-    models: { groq: "whisper-large-v3", custom: "local-whisper" },
-    timeout_secs: 20,
+const empty = { provider_id: "", model: "" };
+const settings: AppSettings = {
+  features: {
+    rewrite: empty,
+    rewrite_fallback: empty,
+    learning_validator: empty,
+    transcription_api: { provider_id: "groq", model: "whisper-large-v3" },
   },
-  post_process_api_keys: { groq: "test-key" },
+  provider_models: {
+    groq: [
+      { id: "whisper-large-v3", speech: true },
+      { id: "llama", speech: false },
+    ],
+    custom: [{ id: "local-whisper", speech: true }],
+  },
+  post_process_api_keys: { groq: "configured" },
   post_process_providers: [
-    { id: "groq", label: "Groq" },
-    { id: "custom", label: "Custom" },
+    { id: "groq", label: "Groq", base_url: "https://api.groq.com" },
+    { id: "custom", label: "Custom", base_url: "http://localhost" },
   ],
 };
 const models = [{ id: "local", name: "Qwen", is_downloaded: true }];
-const configured = getTranscriptionConfig(settings, models, "local");
-assert.equal(configured.issue, null);
-assert.equal(configured.localModel?.name, "Qwen");
-assert.equal(configured.api, true);
+const config = (patch: Partial<AppSettings> = {}) =>
+  getTranscriptionConfig({ ...settings, ...patch }, models, "local");
+const forChoice = (choice: FeatureModel, patch: Partial<AppSettings> = {}) =>
+  config({
+    ...patch,
+    features: { ...settings.features!, transcription_api: choice },
+  });
+
+assert.equal(config().issue, null);
+assert.equal(config().localModel?.name, "Qwen");
+assert.equal(config().api, true);
+assert.equal(forChoice(empty).api, false);
+assert.equal(config({ post_process_api_keys: {} }).issue, "missingKey");
 assert.equal(
-  getTranscriptionConfig(
-    { ...settings, cloud_asr: { ...settings.cloud_asr, provider_id: "" } },
-    models,
-    "local",
-  ).api,
-  false,
-);
-assert.equal(
-  getTranscriptionConfig(
-    { ...settings, post_process_api_keys: {} },
-    models,
-    "local",
-  ).issue,
-  "missingKey",
-);
-assert.equal(
-  getTranscriptionConfig(
-    {
-      ...settings,
-      cloud_asr: { ...settings.cloud_asr, models: { groq: "  " } },
-    },
-    models,
-    "local",
-  ).issue,
+  forChoice({ provider_id: "groq", model: "llama" }).issue,
   "missingModel",
 );
 assert.equal(
-  getTranscriptionConfig(
-    {
-      ...settings,
-      cloud_asr: { ...settings.cloud_asr, provider_id: "custom" },
-      post_process_api_keys: {},
-    },
-    models,
-    "local",
+  forChoice(
+    { provider_id: "custom", model: "local-whisper" },
+    { post_process_api_keys: {} },
   ).issue,
   null,
 );
-assert.equal(
-  getTranscriptionConfig(
-    { ...settings, post_process_providers: [] },
-    models,
-    "local",
-  ).issue,
-  "missingProvider",
-);
-assert.equal(
-  getTranscriptionConfig(
-    settings,
-    [{ ...models[0], is_downloaded: false }],
-    "local",
-  ).localModel,
-  undefined,
-);
+assert.equal(config({ post_process_providers: [] }).issue, "missingProvider");
 assert.equal(
   getTranscriptionConfig(settings, [], "local").localModel,
   undefined,
@@ -82,9 +58,3 @@ assert.equal(
   undefined,
 );
 assert.equal(getTranscriptionConfig(null, [], "").api, false);
-assert.deepEqual(settings.cloud_asr, {
-  provider_id: "groq",
-  models: { groq: "whisper-large-v3", custom: "local-whisper" },
-  timeout_secs: 20,
-});
-console.log("transcriptionConfig: all assertions passed");

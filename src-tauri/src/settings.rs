@@ -682,6 +682,12 @@ pub struct AppSettings {
     pub post_process_api_keys: SecretMap,
     #[serde(default = "default_post_process_models")]
     pub post_process_models: HashMap<String, String>,
+    #[serde(default)]
+    pub features: crate::features::FeatureModels,
+    #[serde(default)]
+    pub provider_models: HashMap<String, Vec<crate::features::ModelEntry>>,
+    #[serde(default)]
+    pub features_migrated: bool,
     #[serde(default = "default_post_process_prompts")]
     pub post_process_prompts: Vec<LLMPrompt>,
     #[serde(default)]
@@ -1195,6 +1201,12 @@ fn ensure_post_process_defaults(settings: &mut AppSettings) -> bool {
         }
     }
     for provider in default_post_process_providers() {
+        if provider.id == "custom"
+            && settings.features_migrated
+            && settings.post_process_provider("custom").is_none()
+        {
+            continue;
+        }
         // Use match to do a single lookup - either sync existing or add new
         match settings
             .post_process_providers
@@ -1230,13 +1242,6 @@ fn ensure_post_process_defaults(settings: &mut AppSettings) -> bool {
                 settings.post_process_providers.push(provider.clone());
                 changed = true;
             }
-        }
-
-        if !settings.post_process_api_keys.contains_key(&provider.id) {
-            settings
-                .post_process_api_keys
-                .insert(provider.id.clone(), String::new());
-            changed = true;
         }
 
         let default_model = default_model_for_provider(&provider.id);
@@ -1411,6 +1416,9 @@ pub fn get_default_settings() -> AppSettings {
         post_process_providers: default_post_process_providers(),
         post_process_api_keys: default_post_process_api_keys(),
         post_process_models: default_post_process_models(),
+        features: Default::default(),
+        provider_models: Default::default(),
+        features_migrated: false,
         post_process_prompts: default_post_process_prompts(),
         post_process_selected_prompt_id: Some(crate::adaptive::HOUSE_PROMPT_ID.to_string()),
         mute_while_recording: false,
@@ -1464,12 +1472,6 @@ impl AppSettings {
         self.language_detection_window_secs.clamp(min, max) as usize * 16_000
     }
 
-    pub fn active_post_process_provider(&self) -> Option<&PostProcessProvider> {
-        self.post_process_providers
-            .iter()
-            .find(|provider| provider.id == self.post_process_provider_id)
-    }
-
     pub fn post_process_provider(&self, provider_id: &str) -> Option<&PostProcessProvider> {
         self.post_process_providers
             .iter()
@@ -1495,28 +1497,158 @@ pub fn load_or_create_app_settings(app: &AppHandle) -> AppSettings {
     settings
 }
 
+fn provider_key_path(app: &AppHandle) -> Result<std::path::PathBuf, String> {
+    crate::portable::app_data_dir(app)
+        .map(|dir| dir.join("provider-keys.bin"))
+        .map_err(|error| error.to_string())
+}
+
+fn read_provider_keys(app: &AppHandle) -> Result<Option<SecretMap>, String> {
+    let bytes = match std::fs::read(provider_key_path(app)?) {
+        Ok(bytes) => bytes,
+        Err(error) if error.kind() == std::io::ErrorKind::NotFound => return Ok(None),
+        Err(error) => return Err(error.to_string()),
+    };
+    #[cfg(windows)]
+    let bytes = crate::dpapi::run(&bytes, false).ok_or("Cannot decrypt provider keys")?;
+    serde_json::from_slice(&bytes)
+        .map(Some)
+        .map_err(|_| "Cannot read provider keys".to_owned())
+}
+
+fn write_provider_keys(app: &AppHandle, keys: &SecretMap) -> Result<(), String> {
+    use std::io::Write;
+    let path = provider_key_path(app)?;
+    let directory = path.parent().ok_or("Missing provider key directory")?;
+    std::fs::create_dir_all(directory).map_err(|error| error.to_string())?;
+    let bytes = serde_json::to_vec(keys).map_err(|_| "Cannot encode provider keys")?;
+    #[cfg(windows)]
+    let bytes = crate::dpapi::run(&bytes, true).ok_or("Cannot encrypt provider keys")?;
+    // shortcut: Unix uses an owner-only file; move to a system keyring when the fork supports Unix releases.
+    let mut file = tempfile::NamedTempFile::new_in(directory).map_err(|error| error.to_string())?;
+    file.write_all(&bytes).map_err(|error| error.to_string())?;
+    file.as_file()
+        .sync_all()
+        .map_err(|error| error.to_string())?;
+    file.persist(path)
+        .map_err(|error| error.error.to_string())?;
+    Ok(())
+}
+
+static PROVIDER_KEYS_LOCK: std::sync::Mutex<()> = std::sync::Mutex::new(());
+
+pub(crate) fn update_provider_key(
+    app: &AppHandle,
+    provider_id: &str,
+    key: &str,
+) -> Result<(), String> {
+    let mut settings = get_settings(app);
+    let _lock = PROVIDER_KEYS_LOCK.lock().unwrap_or_else(|e| e.into_inner());
+    match read_provider_keys(app) {
+        Ok(Some(keys)) => settings.post_process_api_keys = keys,
+        Ok(None) => {}
+        Err(error) if !key.trim().is_empty() => {
+            let path = provider_key_path(app)?;
+            let mut backup = tempfile::Builder::new()
+                .prefix("provider-keys-backup-")
+                .tempfile_in(path.parent().ok_or("Missing provider key directory")?)
+                .map_err(|error| error.to_string())?;
+            std::io::copy(
+                &mut std::fs::File::open(&path).map_err(|_| error)?,
+                &mut backup,
+            )
+            .map_err(|error| error.to_string())?;
+            backup.keep().map_err(|error| error.error.to_string())?;
+        }
+        Err(error) => return Err(error),
+    }
+    if key.trim().is_empty() {
+        settings.post_process_api_keys.remove(provider_id);
+    } else {
+        settings
+            .post_process_api_keys
+            .insert(provider_id.to_owned(), key.trim().to_owned());
+    }
+    write_provider_keys(app, &settings.post_process_api_keys)
+}
+
+fn persisted_settings(settings: &AppSettings) -> serde_json::Value {
+    let mut value = serde_json::to_value(settings).expect("settings serialize");
+    value
+        .as_object_mut()
+        .expect("settings are an object")
+        .remove("post_process_api_keys");
+    value
+}
+
+fn merge_legacy_provider_keys(vault: &mut SecretMap, legacy: &SecretMap) -> bool {
+    let mut changed = false;
+    for (provider, key) in legacy.iter() {
+        if !key.trim().is_empty() && vault.get(provider) != Some(key) {
+            vault.insert(provider.clone(), key.clone());
+            changed = true;
+        }
+    }
+    changed
+}
+
 pub fn get_settings(app: &AppHandle) -> AppSettings {
     let store = app
         .store(crate::portable::store_path(SETTINGS_STORE_PATH))
         .expect("Failed to initialize store");
 
-    // Settings reads also persist one-time migrations. Migration helpers are
-    // idempotent, so this converges after the first read of an older store.
-    let mut settings = if let Some(settings_value) = store.get("settings") {
-        let (mut settings, mut updated) =
-            match serde_json::from_value::<AppSettings>(settings_value.clone()) {
-                Ok(settings) => (settings, false),
-                Err(e) => {
-                    warn!("Failed to parse stored settings ({e}); salvaging valid fields");
-                    (salvage_settings(&settings_value), true)
+    let _lock = PROVIDER_KEYS_LOCK.lock().unwrap_or_else(|e| e.into_inner());
+    let stored = store.get("settings");
+    let (mut settings, mut updated) = match &stored {
+        Some(value) => match serde_json::from_value::<AppSettings>(value.clone()) {
+            Ok(settings) => (settings, false),
+            Err(error) => {
+                warn!("Failed to parse stored settings ({error}); salvaging valid fields");
+                (salvage_settings(value), true)
+            }
+        },
+        None => (get_default_settings(), true),
+    };
+    let legacy_keys = stored
+        .as_ref()
+        .and_then(|value| value.get("post_process_api_keys"));
+    let keys_ready = match read_provider_keys(app) {
+        Ok(Some(mut keys)) => {
+            let changed = legacy_keys.is_some()
+                && merge_legacy_provider_keys(&mut keys, &settings.post_process_api_keys);
+            settings.post_process_api_keys = keys;
+            !changed
+                || match write_provider_keys(app, &settings.post_process_api_keys) {
+                    Ok(()) => true,
+                    Err(error) => {
+                        warn!("Cannot migrate provider keys: {error}");
+                        false
+                    }
                 }
-            };
-
-        if apply_settings_migrations(&mut settings, &settings_value) {
-            updated = true;
         }
+        Ok(None)
+            if settings
+                .post_process_api_keys
+                .values()
+                .any(|key| !key.trim().is_empty()) =>
+        {
+            match write_provider_keys(app, &settings.post_process_api_keys) {
+                Ok(()) => true,
+                Err(error) => {
+                    warn!("Cannot migrate provider keys: {error}");
+                    false
+                }
+            }
+        }
+        Ok(None) => true,
+        Err(error) => {
+            warn!("Cannot load provider keys: {error}");
+            false
+        }
+    };
 
-        // Merge in any bindings added since this store was written.
+    if let Some(value) = &stored {
+        updated |= apply_settings_migrations(&mut settings, value);
         for (key, value) in get_default_settings().bindings {
             if let std::collections::hash_map::Entry::Vacant(entry) = settings.bindings.entry(key) {
                 debug!("Adding missing binding: {}", entry.key());
@@ -1524,20 +1656,26 @@ pub fn get_settings(app: &AppHandle) -> AppSettings {
                 updated = true;
             }
         }
-
-        if updated {
-            store.set("settings", serde_json::to_value(&settings).unwrap());
+    }
+    updated |= ensure_post_process_defaults(&mut settings);
+    // A vault read failure must not freeze an incorrect automatic choice.
+    let migrated = crate::features::migrate(&mut settings);
+    if migrated && !keys_ready {
+        settings.features_migrated = false;
+    }
+    if updated || (keys_ready && (migrated || legacy_keys.is_some())) {
+        let mut value = persisted_settings(&settings);
+        if !keys_ready {
+            if let Some(legacy_keys) = legacy_keys {
+                value["post_process_api_keys"] = legacy_keys.clone();
+            }
         }
-
-        settings
-    } else {
-        let default_settings = get_default_settings();
-        store.set("settings", serde_json::to_value(&default_settings).unwrap());
-        default_settings
-    };
-
-    if ensure_post_process_defaults(&mut settings) {
-        store.set("settings", serde_json::to_value(&settings).unwrap());
+        store.set("settings", value);
+        if keys_ready && legacy_keys.is_some() {
+            if let Err(error) = store.save() {
+                warn!("Cannot remove migrated keys from the settings file: {error}");
+            }
+        }
     }
 
     settings
@@ -1922,7 +2060,15 @@ pub fn write_settings(app: &AppHandle, settings: AppSettings) {
         .store(crate::portable::store_path(SETTINGS_STORE_PATH))
         .expect("Failed to initialize store");
 
-    store.set("settings", serde_json::to_value(&settings).unwrap());
+    let _lock = PROVIDER_KEYS_LOCK.lock().unwrap_or_else(|e| e.into_inner());
+    let mut value = persisted_settings(&settings);
+    if let Some(old) = store.get("settings") {
+        // Preserve the legacy keys if the vault migration could not be written.
+        if let Some(legacy_keys) = old.get("post_process_api_keys") {
+            value["post_process_api_keys"] = legacy_keys.clone();
+        }
+    }
+    store.set("settings", value);
 }
 
 pub fn get_bindings(app: &AppHandle) -> HashMap<String, ShortcutBinding> {
@@ -2532,10 +2678,21 @@ mod tests {
         );
         assert_eq!(
             settings.post_process_selected_prompt_id.as_deref(),
-            Some(crate::adaptive::HOUSE_PROMPT_ID)
+            if cfg!(target_os = "windows") {
+                Some(crate::adaptive::HOUSE_PROMPT_ID)
+            } else {
+                Some("mine")
+            }
         );
         assert!(settings.post_process_prompts.iter().any(|p| p.id == "mine"));
-        assert_eq!(settings.post_process_models["groq"], "openai/gpt-oss-120b");
+        assert_eq!(
+            settings.post_process_models["groq"],
+            if cfg!(target_os = "windows") {
+                "openai/gpt-oss-120b"
+            } else {
+                "openai/gpt-oss-20b"
+            }
+        );
         assert_eq!(settings.post_process_models["openai"], "openai/gpt-oss-20b");
         assert_eq!(
             settings.post_process_prompts[0].prompt,
@@ -2757,6 +2914,35 @@ mod tests {
         assert!(!debug_output.contains("sk-proj-secret-key-12345"));
         assert!(!debug_output.contains("sk-ant-secret-key-67890"));
         assert!(debug_output.contains("[REDACTED]"));
+    }
+
+    #[test]
+    fn migrated_vault_keeps_keys_added_or_renewed_during_a_downgrade() {
+        let mut vault = SecretMap(HashMap::from([
+            ("groq".into(), "old".into()),
+            ("openai".into(), "keep".into()),
+        ]));
+        let legacy = SecretMap(HashMap::from([
+            ("groq".into(), "renewed".into()),
+            ("openai".into(), "".into()),
+            ("custom".into(), "added".into()),
+        ]));
+        assert!(merge_legacy_provider_keys(&mut vault, &legacy));
+        assert_eq!(vault["groq"], "renewed");
+        assert_eq!(vault["openai"], "keep");
+        assert_eq!(vault["custom"], "added");
+        assert!(!merge_legacy_provider_keys(&mut vault, &legacy));
+    }
+
+    #[test]
+    fn persisted_settings_do_not_contain_provider_keys() {
+        let mut settings = get_default_settings();
+        settings
+            .post_process_api_keys
+            .insert("openai".into(), "secret".into());
+        let value = persisted_settings(&settings);
+        assert!(value.get("post_process_api_keys").is_none());
+        assert!(!value.to_string().contains("secret"));
     }
 
     #[test]

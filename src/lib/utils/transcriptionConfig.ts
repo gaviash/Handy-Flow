@@ -1,29 +1,34 @@
-import type {
-  CloudAsrSettings,
-  ModelInfo,
-  PostProcessProvider,
-} from "@/bindings";
+import type { AppSettings, ModelInfo } from "@/bindings";
 
 export function getTranscriptionConfig(
-  settings: {
-    cloud_asr?: CloudAsrSettings;
-    post_process_api_keys?: Partial<Record<string, string>>;
-    post_process_providers?: Pick<PostProcessProvider, "id" | "label">[];
-  } | null,
+  settings: Pick<
+    AppSettings,
+    | "features"
+    | "provider_models"
+    | "post_process_api_keys"
+    | "post_process_providers"
+  > | null,
   models: Pick<ModelInfo, "id" | "name" | "is_downloaded">[],
   currentModel: string,
 ) {
-  const id = settings?.cloud_asr?.provider_id ?? "";
+  const choice = settings?.features?.transcription_api;
+  const id = choice?.provider_id ?? "";
+  const model = choice?.model ?? "";
   const provider = settings?.post_process_providers?.find((p) => p.id === id);
-  const model = settings?.cloud_asr?.models[id]?.trim() ?? "";
   const api = !!id;
   const issue = !api
     ? null
-    : !provider || !["groq", "openai", "custom"].includes(id)
+    : !provider ||
+        provider.api_format === "anthropic" ||
+        id === "apple_intelligence"
       ? "missingProvider"
-      : !model
+      : !settings?.provider_models?.[id]?.some(
+            (entry) => entry.id === model && entry.speech,
+          )
         ? "missingModel"
-        : id !== "custom" && !settings?.post_process_api_keys?.[id]?.trim()
+        : id !== "custom" &&
+            !id.startsWith("custom-") &&
+            !settings?.post_process_api_keys?.[id]?.trim()
           ? "missingKey"
           : null;
   return {

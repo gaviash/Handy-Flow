@@ -7,10 +7,11 @@ interface BaseUrlFieldProps {
   disabled: boolean;
   placeholder?: string;
   className?: string;
+  id?: string;
 }
 
 export const BaseUrlField: React.FC<BaseUrlFieldProps> = React.memo(
-  ({ value, onBlur, disabled, placeholder, className = "" }) => {
+  ({ value, onBlur, disabled, placeholder, className = "", id }) => {
     const [localValue, setLocalValue] = useState(value);
 
     // Sync with prop changes
@@ -18,12 +19,9 @@ export const BaseUrlField: React.FC<BaseUrlFieldProps> = React.memo(
       setLocalValue(value);
     }, [value]);
 
-    const disabledMessage = disabled
-      ? "Base URL is managed by the selected provider."
-      : undefined;
-
     return (
       <Input
+        id={id}
         type="text"
         value={localValue}
         onChange={(event) => setLocalValue(event.target.value)}
@@ -32,7 +30,6 @@ export const BaseUrlField: React.FC<BaseUrlFieldProps> = React.memo(
         variant="compact"
         disabled={disabled}
         className={`flex-1 min-w-[360px] ${className}`}
-        title={disabledMessage}
       />
     );
   },

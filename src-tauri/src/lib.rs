@@ -14,7 +14,10 @@ mod clipboard;
 mod cloud_asr;
 mod commands;
 mod context;
+#[cfg(windows)]
+mod dpapi;
 pub mod engine_supervisor;
+mod features;
 mod helpers;
 mod input;
 mod judge;
@@ -754,15 +757,19 @@ pub fn run(cli_args: CliArgs) {
             shortcut::change_learning_enabled_setting,
             shortcut::change_learned_sound_enabled_setting,
             shortcut::change_learning_judge_enabled_setting,
-            shortcut::change_learning_judge_provider_setting,
+            features::get_feature_statuses,
+            features::set_feature_model,
+            features::set_provider_models,
+            features::remove_provider_model,
+            features::upsert_provider,
+            features::remove_custom_provider,
+            features::refresh_provider_models,
+            features::test_provider,
             shortcut::change_styles_setting,
             shortcut::change_snippets_setting,
             shortcut::change_user_name_setting,
-            shortcut::change_post_process_fallback_provider_setting,
             shortcut::change_transforms_setting,
             commands::history::get_dictation_stats,
-            judge::get_judge_provider,
-            judge::get_judge_choices,
             learning::get_learned_words,
             learning::delete_learned_word,
             learning::clear_learned_words,
@@ -790,12 +797,8 @@ pub fn run(cli_args: CliArgs) {
             shortcut::change_auto_submit_key_setting,
             shortcut::change_post_process_enabled_setting,
             shortcut::change_experimental_enabled_setting,
-            shortcut::change_post_process_base_url_setting,
-            shortcut::change_post_process_api_format_setting,
-            shortcut::change_post_process_api_key_setting,
-            shortcut::change_post_process_model_setting,
-            shortcut::set_post_process_provider,
-            shortcut::fetch_post_process_models,
+            features::change_post_process_api_format_setting,
+            features::change_post_process_api_key_setting,
             shortcut::add_post_process_prompt,
             shortcut::update_post_process_prompt,
             shortcut::delete_post_process_prompt,
@@ -895,6 +898,7 @@ pub fn run(cli_args: CliArgs) {
             notices::dismiss_notice,
             notices::dismiss_overlay_notice,
         ])
+        .typ::<learning::LearnedNews>()
         .events(collect_events![
             managers::history::HistoryUpdatePayload,
             managers::transcription_jobs::TranscriptionJob,

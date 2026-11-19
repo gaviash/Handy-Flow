@@ -1,3 +1,4 @@
+use crate::features::Reasoning;
 use crate::settings::{PostProcessApiFormat, PostProcessProvider};
 use log::{debug, error, info};
 use reqwest::header::{HeaderMap, HeaderValue, AUTHORIZATION, CONTENT_TYPE, REFERER, USER_AGENT};
@@ -97,6 +98,37 @@ fn reasoning_disable_params(provider: &PostProcessProvider) -> ReasoningParams {
     }
 }
 
+fn reasoning_params(
+    provider: &PostProcessProvider,
+    level: Reasoning,
+    model_reasons: bool,
+) -> ReasoningParams {
+    let effort = match level {
+        Reasoning::Off => return reasoning_disable_params(provider),
+        Reasoning::Low => "low",
+        Reasoning::Medium => "medium",
+        Reasoning::High => "high",
+    };
+    let mut params = ReasoningParams::default();
+    if !model_reasons {
+        return params;
+    }
+    let base_url = provider.base_url.to_ascii_lowercase();
+    if base_url.contains("api.deepseek.com") {
+        params.thinking = Some(serde_json::json!({ "type": "enabled" }));
+    } else if base_url.contains("api.cloudflare.com") {
+        params.chat_template_kwargs = Some(serde_json::json!({ "enable_thinking": true }));
+    } else if provider.id == "openrouter" {
+        params.reasoning = Some(ReasoningConfig {
+            effort: Some(effort.into()),
+            exclude: Some(true),
+        });
+    } else {
+        params.reasoning_effort = Some(effort.into());
+    }
+    params
+}
+
 /// Endpoints (base_url|model) that rejected the reasoning-disable fields with a
 /// 4xx. Remembered for the lifetime of the process so every dictation after the
 /// first skips the doomed attempt and goes straight to a plain request.
@@ -158,6 +190,12 @@ struct AnthropicMessagesRequest {
     model: String,
     max_tokens: u32,
     messages: Vec<ChatMessage>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    system: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    thinking: Option<Value>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    output_config: Option<Value>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -208,6 +246,9 @@ fn build_headers(provider: &PostProcessProvider, api_key: &str) -> Result<Header
     headers.insert("X-Title", HeaderValue::from_static("Handy Flow"));
 
     // Provider-specific auth headers
+    if provider.api_format == PostProcessApiFormat::Anthropic {
+        headers.insert("anthropic-version", HeaderValue::from_static("2023-06-01"));
+    }
     if !api_key.is_empty() {
         if provider.api_format == PostProcessApiFormat::Anthropic {
             headers.insert(
@@ -215,7 +256,6 @@ fn build_headers(provider: &PostProcessProvider, api_key: &str) -> Result<Header
                 HeaderValue::from_str(api_key)
                     .map_err(|e| format!("Invalid API key header value: {}", e))?,
             );
-            headers.insert("anthropic-version", HeaderValue::from_static("2023-06-01"));
         } else {
             headers.insert(
                 AUTHORIZATION,
@@ -388,6 +428,14 @@ fn report_reqwest_error(context: &str, error: &reqwest::Error) -> String {
     details
 }
 
+fn redact_key(text: String, api_key: &str) -> String {
+    if api_key.is_empty() {
+        text
+    } else {
+        text.replace(api_key, "[REDACTED]")
+    }
+}
+
 /// Send a chat completion request to an OpenAI-compatible API
 /// Returns Ok(Some(content)) on success, Ok(None) if response has no content,
 /// or Err on actual errors (HTTP, parsing, etc.)
@@ -396,12 +444,8 @@ pub async fn send_chat_completion(
     api_key: String,
     model: &str,
     prompt: String,
-    disable_reasoning: bool,
+    reasoning_level: Option<Reasoning>,
 ) -> Result<Option<String>, String> {
-    if provider.api_format == PostProcessApiFormat::Anthropic {
-        return send_anthropic_message(provider, api_key, model, prompt).await;
-    }
-
     send_chat_completion_with_schema(
         provider,
         api_key,
@@ -409,7 +453,7 @@ pub async fn send_chat_completion(
         prompt,
         None,
         None,
-        disable_reasoning,
+        reasoning_level,
     )
     .await
 }
@@ -418,8 +462,7 @@ pub async fn send_chat_completion(
 /// When json_schema is provided, uses structured outputs mode.
 /// system_prompt is used as the system message when provided.
 ///
-/// When disable_reasoning is set, the request carries the reasoning-disable
-/// fields the endpoint is expected to understand. Not every OpenAI-compatible
+/// When a reasoning level is supplied, use the fields the endpoint is expected to understand. Not every OpenAI-compatible
 /// endpoint accepts them (DeepSeek, Gemini's compat layer, and some OpenRouter
 /// upstreams reject with 400), so a 400/422 answer to such a request triggers
 /// one retry without the fields, and the rejection is remembered per
@@ -431,8 +474,19 @@ pub async fn send_chat_completion_with_schema(
     user_content: String,
     system_prompt: Option<String>,
     json_schema: Option<Value>,
-    disable_reasoning: bool,
+    reasoning_level: Option<Reasoning>,
 ) -> Result<Option<String>, String> {
+    if provider.api_format == PostProcessApiFormat::Anthropic {
+        return send_anthropic_message(
+            provider,
+            api_key,
+            model,
+            user_content,
+            system_prompt,
+            reasoning_level,
+        )
+        .await;
+    }
     let base_url = provider.base_url.trim_end_matches('/');
     let url = format!("{}/chat/completions", base_url);
 
@@ -470,12 +524,12 @@ pub async fn send_chat_completion_with_schema(
         },
     });
 
-    let key = endpoint_key(provider, model);
-    let reasoning = if disable_reasoning && !is_known_rejected(&key) {
-        reasoning_disable_params(provider)
-    } else {
-        ReasoningParams::default()
-    };
+    // An endpoint may reject "none" and accept a positive level, or vice versa.
+    let key = format!("{}|{reasoning_level:?}", endpoint_key(provider, model));
+    let reasoning = reasoning_level
+        .filter(|_| !is_known_rejected(&key))
+        .map(|level| reasoning_params(provider, level, true))
+        .unwrap_or_default();
 
     let mut request_body = ChatCompletionRequest {
         model: model.to_string(),
@@ -499,19 +553,13 @@ pub async fn send_chat_completion_with_schema(
         sanitized_url(response.url())
     );
 
-    // A 400/422 on a request carrying reasoning-disable fields is almost always
+    // A 400/422 on a request carrying reasoning fields is usually
     // the endpoint rejecting those fields — retry once without them.
     if !status.is_success()
         && matches!(status.as_u16(), 400 | 422)
         && !request_body.reasoning.is_empty()
     {
-        let error_text = response.text().await.unwrap_or_else(|e| {
-            report_reqwest_error("Failed to read reasoning rejection response", &e)
-        });
-        info!(
-            "Endpoint rejected request with reasoning disabled (status {}): {}. Retrying without reasoning fields",
-            status, error_text
-        );
+        info!("Endpoint rejected reasoning fields (status {status}); retrying without them");
 
         request_body.reasoning = ReasoningParams::default();
         response = client
@@ -544,7 +592,8 @@ pub async fn send_chat_completion_with_schema(
             .unwrap_or_else(|e| report_reqwest_error("Failed to read API error response", &e));
         return Err(format!(
             "API request failed with status {}: {}",
-            status, error_text
+            status,
+            redact_key(error_text, &api_key)
         ));
     }
 
@@ -564,19 +613,60 @@ pub async fn send_chat_completion_with_schema(
         return Err("Response was truncated at the provider's output token limit".to_string());
     }
 
-    Ok(choice.message.content)
+    Ok(choice.message.content.and_then(|content| {
+        let visible = crate::actions::strip_think_block(&content);
+        (!visible.trim().is_empty()).then(|| visible.to_owned())
+    }))
 }
 
-/// Send a single-prompt request to an Anthropic Messages API (`/messages`).
-/// Used by every provider with the Anthropic format (the built-in Anthropic
-/// provider and a custom provider set to it). None of them use structured
-/// output, and thinking is off unless requested, so no reasoning fields are
-/// needed.
+fn anthropic_reasoning(
+    model: &str,
+    level: Option<Reasoning>,
+) -> (Option<Value>, Option<Value>, u32) {
+    let (effort, budget) = match level {
+        None | Some(Reasoning::Off) => return (None, None, ANTHROPIC_MAX_TOKENS),
+        Some(Reasoning::Low) => ("low", 1024),
+        Some(Reasoning::Medium) => ("medium", 2048),
+        Some(Reasoning::High) => ("high", 4096),
+    };
+    let version = model
+        .strip_prefix("claude-")
+        .and_then(|id| id.split_once('-'));
+    let adaptive = version
+        .and_then(|(_, version)| {
+            let mut parts = version.split('-');
+            Some((
+                parts.next()?.parse::<u32>().ok()?,
+                parts
+                    .next()
+                    .and_then(|n| n.parse::<u32>().ok())
+                    .unwrap_or(0),
+            ))
+        })
+        .is_some_and(|(major, minor)| major > 4 || (major == 4 && (6..100).contains(&minor)));
+    if adaptive {
+        (
+            Some(serde_json::json!({ "type": "adaptive" })),
+            Some(serde_json::json!({ "effort": effort })),
+            ANTHROPIC_MAX_TOKENS + budget,
+        )
+    } else {
+        (
+            Some(serde_json::json!({ "type": "enabled", "budget_tokens": budget })),
+            None,
+            ANTHROPIC_MAX_TOKENS + budget,
+        )
+    }
+}
+
+/// Use the native Messages API for Anthropic-format providers.
 async fn send_anthropic_message(
     provider: &PostProcessProvider,
     api_key: String,
     model: &str,
     prompt: String,
+    system: Option<String>,
+    reasoning_level: Option<Reasoning>,
 ) -> Result<Option<String>, String> {
     let url = format!("{}/messages", provider.base_url.trim_end_matches('/'));
 
@@ -585,21 +675,38 @@ async fn send_anthropic_message(
         sanitized_url_for_log(&url)
     );
 
-    let request_body = AnthropicMessagesRequest {
+    let cache_key = format!("{}|{reasoning_level:?}", endpoint_key(provider, model));
+    let (thinking, output_config, max_tokens) = anthropic_reasoning(
+        model,
+        reasoning_level.filter(|_| !is_known_rejected(&cache_key)),
+    );
+    let mut body = AnthropicMessagesRequest {
         model: model.to_string(),
-        max_tokens: ANTHROPIC_MAX_TOKENS,
+        max_tokens,
         messages: vec![ChatMessage {
             role: "user".to_string(),
             content: prompt,
         }],
+        system,
+        thinking,
+        output_config,
     };
-
-    let response = create_client(provider, &api_key)?
-        .post(&url)
-        .json(&request_body)
-        .send()
+    let client = create_client(provider, &api_key)?;
+    let request = |body: &AnthropicMessagesRequest| client.post(&url).json(body).send();
+    let mut response = request(&body)
         .await
         .map_err(|e| report_reqwest_error("HTTP request failed", &e))?;
+    if matches!(response.status().as_u16(), 400 | 422) && body.thinking.is_some() {
+        body.thinking = None;
+        body.output_config = None;
+        body.max_tokens = ANTHROPIC_MAX_TOKENS;
+        response = request(&body)
+            .await
+            .map_err(|e| report_reqwest_error("HTTP retry failed", &e))?;
+        if response.status().is_success() {
+            remember_rejection(cache_key);
+        }
+    }
     let status = response.status();
     debug!(
         "Anthropic Messages response received with status {} over {:?} from {}",
@@ -615,7 +722,8 @@ async fn send_anthropic_message(
             .unwrap_or_else(|e| report_reqwest_error("Failed to read API error response", &e));
         return Err(format!(
             "API request failed with status {}: {}",
-            status, error_text
+            status,
+            redact_key(error_text, &api_key)
         ));
     }
 
@@ -643,7 +751,11 @@ pub async fn fetch_models(
     api_key: String,
 ) -> Result<Vec<String>, String> {
     let base_url = provider.base_url.trim_end_matches('/');
-    let url = format!("{}/models", base_url);
+    let endpoint = provider.models_endpoint.as_deref().unwrap_or("/models");
+    let url = format!(
+        "{base_url}/{endpoint}",
+        endpoint = endpoint.trim_start_matches('/')
+    );
 
     debug!("Fetching models from: {}", sanitized_url_for_log(&url));
 
@@ -664,14 +776,7 @@ pub async fn fetch_models(
         sanitized_url(response.url())
     );
     if !status.is_success() {
-        let error_text = response
-            .text()
-            .await
-            .unwrap_or_else(|e| report_reqwest_error("Failed to read model list error", &e));
-        return Err(format!(
-            "Model list request failed ({}): {}",
-            status, error_text
-        ));
+        return Err(format!("HTTP {}", status.as_u16()));
     }
 
     let parsed: serde_json::Value = response
@@ -947,6 +1052,9 @@ mod tests {
     #[test]
     fn anthropic_request_carries_required_max_tokens() {
         let request = AnthropicMessagesRequest {
+            system: None,
+            thinking: None,
+            output_config: None,
             model: "claude-haiku".to_string(),
             max_tokens: ANTHROPIC_MAX_TOKENS,
             messages: vec![ChatMessage {
@@ -973,6 +1081,29 @@ mod tests {
         assert_eq!(empty.into_text(), None);
     }
 
+    #[test]
+    fn reasoning_effort_matches_the_provider_and_off_keeps_the_old_fields() {
+        let groq = provider("groq", "https://api.groq.com/openai/v1");
+        let openrouter = provider("openrouter", "https://openrouter.ai/api/v1");
+        let deepseek = provider("custom", "https://api.deepseek.com/v1");
+        let cloudflare = provider("cloudflare", "https://api.cloudflare.com/client/v4");
+        assert_eq!(
+            serde_json::to_value(reasoning_params(&groq, Reasoning::Medium, true)).unwrap(),
+            serde_json::json!({"reasoning_effort":"medium"})
+        );
+        assert!(reasoning_params(&groq, Reasoning::Medium, false).is_empty());
+        assert_eq!(
+            serde_json::to_value(reasoning_params(&openrouter, Reasoning::High, true)).unwrap(),
+            serde_json::json!({"reasoning":{"effort":"high","exclude":true}})
+        );
+        for endpoint in [groq, openrouter, deepseek, cloudflare] {
+            assert_eq!(
+                reasoning_params(&endpoint, Reasoning::Off, true),
+                reasoning_disable_params(&endpoint)
+            );
+        }
+    }
+
     #[tokio::test]
     async fn anthropic_format_parses_messages_response() {
         let base_url = serve_one_response(
@@ -985,10 +1116,27 @@ mod tests {
             "key".to_string(),
             "claude-haiku",
             "raw text".to_string(),
-            true,
+            Some(Reasoning::Off),
         )
         .await;
         assert_eq!(result, Ok(Some("Cleaned text".to_string())));
+    }
+
+    #[tokio::test]
+    async fn chat_completion_treats_thought_without_visible_text_as_empty() {
+        let base_url = serve_one_response(
+            "200 OK",
+            r#"{"choices":[{"message":{"content":"<think>thinking only</think>"},"finish_reason":"stop"}]}"#,
+        ).await;
+        let result = send_chat_completion(
+            &provider("custom", &base_url),
+            "".into(),
+            "test-model",
+            "raw text".into(),
+            None,
+        )
+        .await;
+        assert_eq!(result, Ok(None));
     }
 
     #[tokio::test]
@@ -1003,7 +1151,7 @@ mod tests {
             "key".to_string(),
             "test-model",
             "raw text".to_string(),
-            false,
+            None,
         )
         .await;
         assert!(result.unwrap_err().contains("truncated"));
@@ -1021,7 +1169,7 @@ mod tests {
             "key".to_string(),
             "claude-haiku",
             "raw text".to_string(),
-            true,
+            Some(Reasoning::Off),
         )
         .await;
         assert!(result.unwrap_err().contains("truncated"));

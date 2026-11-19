@@ -2,6 +2,7 @@
 use crate::apple_intelligence;
 use crate::audio_feedback::{play_feedback_sound, play_feedback_sound_blocking, SoundType};
 use crate::audio_toolkit::VadPolicy;
+use crate::features::{feature_target, Feature, Reasoning};
 use crate::managers::audio::{recording_notice_code, AudioRecordingManager};
 use crate::managers::history::HistoryManager;
 use crate::managers::model::ModelManager;
@@ -154,17 +155,7 @@ async fn transform_text(
     context: Option<&crate::context::LlmContext>,
     report: Option<u64>,
 ) -> Option<String> {
-    let provider = settings.active_post_process_provider().cloned()?;
-    let model = settings
-        .post_process_models
-        .get(&provider.id)
-        .cloned()
-        .unwrap_or_default();
-    let key = settings
-        .post_process_api_keys
-        .get(&provider.id)
-        .cloned()
-        .unwrap_or_default();
+    let (provider, key, model, reasoning) = rewrite_target(settings)?;
     let message = crate::adaptive::transform_user_message(instruction, text, context);
     crate::context::record_sent(report, &message);
     let call = crate::llm_client::send_chat_completion_with_schema(
@@ -174,7 +165,7 @@ async fn transform_text(
         message.clone(),
         Some(crate::adaptive::TRANSFORM_PROMPT.to_string()),
         None,
-        skips_reasoning(&provider.id),
+        rewrite_reasoning(&provider.id, reasoning),
     );
     let mut reply = tokio::time::timeout(Duration::from_secs(12), call)
         .await
@@ -188,6 +179,7 @@ async fn transform_text(
         let spare = ask_fallback(
             settings,
             &provider.id,
+            &model,
             message,
             crate::adaptive::TRANSFORM_PROMPT,
         );
@@ -216,9 +208,20 @@ fn house_framing(prompt_id: &str, prompt: &str) -> Option<String> {
     }
 }
 
-/// Providers asked to skip reasoning: it adds seconds and rarely helps a rewrite.
-fn skips_reasoning(provider_id: &str) -> bool {
-    matches!(provider_id, "custom" | "openrouter" | "cloudflare")
+fn rewrite_target(settings: &AppSettings) -> Option<crate::features::Target> {
+    if settings.features.rewrite.provider_id.is_empty() {
+        return None;
+    }
+    feature_target(settings, Feature::Rewrite)
+        .or_else(|| feature_target(settings, Feature::RewriteFallback))
+}
+
+// Preserve the default request shape for rewrite providers that never got an Off field.
+fn rewrite_reasoning(provider_id: &str, reasoning: Reasoning) -> Option<Reasoning> {
+    (reasoning != Reasoning::Off
+        || matches!(provider_id, "custom" | "openrouter" | "cloudflare")
+        || provider_id.starts_with("custom-"))
+    .then_some(reasoning)
 }
 
 /// Groq ↔ Cloudflare: when the main provider fails, the fallback provider set
@@ -226,37 +229,27 @@ fn skips_reasoning(provider_id: &str) -> bool {
 async fn ask_fallback(
     settings: &AppSettings,
     failed_id: &str,
+    failed_model: &str,
     user: String,
     system: &str,
 ) -> Option<Result<Option<String>, String>> {
-    let id = settings.post_process_fallback_provider_id.as_str();
-    if id.is_empty() || id == failed_id {
+    let (provider, key, model, reasoning) = feature_target(settings, Feature::RewriteFallback)?;
+    if provider.id == failed_id && model == failed_model {
         return None;
     }
-    let provider = settings.post_process_provider(id)?.clone();
-    let model = settings
-        .post_process_models
-        .get(id)
-        .filter(|m| !m.trim().is_empty())?;
-    let key = settings
-        .post_process_api_keys
-        .get(id)
-        .cloned()
-        .unwrap_or_default();
-    // A local custom server (Ollama) needs no key; a cloud provider does.
-    if key.is_empty() && id != "custom" {
-        return None;
-    }
-    warn!("Main provider '{failed_id}' failed; asking fallback '{id}'");
+    warn!(
+        "Main provider '{failed_id}' failed; asking fallback '{}'",
+        provider.id
+    );
     Some(
         crate::llm_client::send_chat_completion_with_schema(
             &provider,
             key,
-            model,
+            &model,
             user,
             Some(system.to_string()),
             None,
-            skips_reasoning(id),
+            rewrite_reasoning(&provider.id, reasoning),
         )
         .await,
     )
@@ -367,13 +360,14 @@ fn strip_invisible_chars(s: &str) -> String {
 /// reasoning, and some local servers put the reasoning text into `content`
 /// instead of a separate field — without this the user would get the model's
 /// chain of thought pasted along with the cleaned transcription.
-fn strip_think_block(s: &str) -> &str {
-    if let Some(rest) = s.trim_start().strip_prefix("<think>") {
-        if let Some(end) = rest.find("</think>") {
-            return rest[end + "</think>".len()..].trim_start();
-        }
+pub(crate) fn strip_think_block(mut content: &str) -> &str {
+    while let Some(thought) = content.trim_start().strip_prefix("<think>") {
+        let Some((_, visible)) = thought.split_once("</think>") else {
+            return "";
+        };
+        content = visible.trim_start();
     }
-    s
+    content
 }
 
 /// Build a system prompt from the user's prompt template.
@@ -451,27 +445,10 @@ async fn post_process_transcription(
         return PostProcessOutcome::Skipped;
     }
 
-    let provider = match settings.active_post_process_provider().cloned() {
-        Some(provider) => provider,
-        None => {
-            debug!("Post-processing enabled but no provider is selected");
-            return PostProcessOutcome::Failed;
-        }
-    };
-
-    let model = settings
-        .post_process_models
-        .get(&provider.id)
-        .cloned()
-        .unwrap_or_default();
-
-    if model.trim().is_empty() {
-        debug!(
-            "Post-processing skipped because provider '{}' has no model configured",
-            provider.id
-        );
+    let Some((provider, api_key, model, reasoning)) = rewrite_target(settings) else {
+        debug!("Post-processing enabled but no usable model is selected");
         return PostProcessOutcome::Failed;
-    }
+    };
 
     let selected_prompt_id = match &settings.post_process_selected_prompt_id {
         Some(id) => id.clone(),
@@ -506,16 +483,7 @@ async fn post_process_transcription(
         provider.id, model
     );
 
-    let api_key = settings
-        .post_process_api_keys
-        .get(&provider.id)
-        .cloned()
-        .unwrap_or_default();
-
-    // Ask these providers to skip reasoning/thinking — post-processing rarely
-    // benefits from it and it adds seconds of latency. llm_client picks the
-    // field the endpoint understands and retries without it if rejected.
-    let disable_reasoning = skips_reasoning(&provider.id);
+    let reasoning = rewrite_reasoning(&provider.id, reasoning);
 
     // Handy Adaptive framing: instructions in the system message, the
     // dictation (and context) framed as data in the user message, plain-text reply.
@@ -532,7 +500,7 @@ async fn post_process_transcription(
                 message.clone(),
                 Some(system_prompt.clone()),
                 None,
-                disable_reasoning,
+                reasoning,
             )
             .await;
             // Groq's free tier caps each model's tokens per day: once 120b is out
@@ -551,7 +519,7 @@ async fn post_process_transcription(
                     message.clone(),
                     Some(system_prompt.clone()),
                     None,
-                    disable_reasoning,
+                    reasoning,
                 )
                 .await;
             }
@@ -569,7 +537,8 @@ async fn post_process_transcription(
                 provider.id,
                 reply.as_ref().err()
             );
-            if let Some(spare) = ask_fallback(settings, &provider.id, message, &system_prompt).await
+            if let Some(spare) =
+                ask_fallback(settings, &provider.id, &model, message, &system_prompt).await
             {
                 reply = spare;
             }
@@ -667,7 +636,7 @@ async fn post_process_transcription(
             user_content,
             Some(system_prompt),
             Some(json_schema),
-            disable_reasoning,
+            reasoning,
         )
         .await
         {
@@ -723,7 +692,7 @@ async fn post_process_transcription(
         api_key,
         &model,
         processed_prompt,
-        disable_reasoning,
+        reasoning,
     )
     .await
     {
@@ -1907,7 +1876,11 @@ mod tests {
         let provider_id = provider.id.clone();
         settings
             .post_process_models
-            .insert(provider_id, "model".to_string());
+            .insert(provider_id.clone(), "model".to_string());
+        settings
+            .post_process_api_keys
+            .insert(provider_id, "key".into());
+        crate::features::migrate(&mut settings);
         settings.post_process_selected_prompt_id =
             settings.post_process_prompts.first().map(|p| p.id.clone());
         settings
@@ -1953,7 +1926,8 @@ mod tests {
         );
 
         let mut settings = post_process_settings("http://127.0.0.1:1");
-        settings.post_process_models.clear();
+        settings.features.rewrite.model.clear();
+        settings.features.rewrite_fallback = Default::default();
         assert_eq!(
             run_post_process(&settings, "hello"),
             PostProcessOutcome::Failed
@@ -1980,6 +1954,18 @@ mod tests {
     #[test]
     fn the_fallback_provider_answers_when_the_main_one_fails() {
         let settings = with_fallback(r#"{"choices":[{"message":{"content":"Relais OK."}}]}"#);
+        assert_eq!(
+            run_post_process(&settings, "relais ok"),
+            PostProcessOutcome::Done("Relais OK.".to_string())
+        );
+    }
+
+    #[test]
+    fn fallback_answers_when_the_rewrite_key_is_missing() {
+        let mut settings = with_fallback(r#"{"choices":[{"message":{"content":"Relais OK."}}]}"#);
+        settings
+            .post_process_api_keys
+            .remove(&settings.features.rewrite.provider_id);
         assert_eq!(
             run_post_process(&settings, "relais ok"),
             PostProcessOutcome::Done("Relais OK.".to_string())
@@ -2014,7 +2000,7 @@ mod tests {
         let refusal =
             r#"{"choices":[{"message":{"content":"I'm sorry, but I can't help with that."}}]}"#;
         let mut settings = post_process_settings(&serve_once(refusal));
-        settings.post_process_fallback_provider_id.clear();
+        settings.features.rewrite_fallback = Default::default();
         assert_eq!(
             tauri::async_runtime::block_on(transform_text(
                 &settings,
@@ -2135,10 +2121,7 @@ mod tests {
             "Mentions <think> mid-sentence."
         );
         // Unclosed block: leave untouched rather than guess
-        assert_eq!(
-            strip_think_block("<think>never closed"),
-            "<think>never closed"
-        );
+        assert_eq!(strip_think_block("<think>never closed"), "");
     }
 
     #[test]
