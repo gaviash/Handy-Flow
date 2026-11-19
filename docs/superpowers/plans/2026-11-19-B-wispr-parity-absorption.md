@@ -77,7 +77,7 @@ Rules in order (spec §5, copy the exact conditions): 0 guard (`field` None or `
 **Files:** Create `src-tauri/src/validator.rs`; modify `learning.rs` (`candidates` no longer rejects on distance; `observe` calls the validator instead of `learn` + the misheard part of the judge), `judge.rs` (`JUDGE_PROMPT` keeps only `style_rule`, `filler`, `content_change`, `unclear`; drop `misheard`/`technical` handling in `apply_verdicts`).
 
 **Interfaces:**
-- Consumes: `features::feature_target(s, Feature::LearningValidator)` (Plan A), `lexicon::is_common` (Task 2), `learning::{candidates, record_word, Memory}`.
+- Consumes: `features::feature_target(s, Feature::LearningValidator)` (Plan A, returns the reasoning level too), `llm_client::send_chat_completion_with_schema(..., reasoning)` (Plan A Task 2b — pass the validator's level, never a hard-coded `Off`; timeout 15 s when `Off`, 45 s otherwise), `lexicon::is_common` (Task 2), `learning::{candidates, record_word, Memory}`.
 - Produces:
 ```rust
 pub enum Local { Candidate(Candidate), Guarded(&'static str) }      // in learning.rs

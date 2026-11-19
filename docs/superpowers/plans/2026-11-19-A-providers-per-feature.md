@@ -42,6 +42,7 @@
 3. A speech-API choice whose model disappears falls back to "local model only" and warns, never sends audio to a chat model (Task 2 test `speech_feature_only_accepts_speech_models`).
 4. "Automatic" for the validator follows the rewrite **live**: changing the rewrite model changes the validator without a second save (Task 2 test).
 5. Rewrite turned off (`post_process_enabled = false`) disables the Automatic validator but not an explicitly chosen one (today's rule in `judge_target`, kept).
+6. A provider that rejects the reasoning field (4xx) must not break the feature: today's `reasoning_rejections` retry without the field also covers the new enable path (Task 2b test).
 
 ---
 
@@ -54,13 +55,17 @@
 
 **Interfaces — Produces:**
 ```rust
+#[derive(Serialize, Deserialize, Clone, Copy, Debug, Default, PartialEq, Eq, Type)]
+pub enum Reasoning { #[default] Off, Low, Medium, High }
 #[derive(Serialize, Deserialize, Clone, Debug, Default, PartialEq, Eq, Type)]
-pub struct FeatureModel { pub provider_id: String, pub model: String }   // empty provider_id = off / Automatic
+pub struct FeatureModel { pub provider_id: String, pub model: String,
+                          #[serde(default)] pub reasoning: Reasoning }   // empty provider_id = off / Automatic
 #[derive(Serialize, Deserialize, Clone, Debug, Default, PartialEq, Eq, Type)]
 pub struct FeatureModels { pub rewrite: FeatureModel, pub rewrite_fallback: FeatureModel,
                            pub learning_validator: FeatureModel, pub transcription_api: FeatureModel }
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, Type)]
-pub struct ModelEntry { pub id: String, pub speech: bool }
+pub struct ModelEntry { pub id: String, pub speech: bool, #[serde(default)] pub reasoning: bool }
+pub fn guess_reasoning(model_id: &str) -> bool   // spec §1.4 name list: gpt-oss, o1/o3/o4, gpt-5, *-r1*, qwq, qwen3, deepseek-reasoner, magistral, gemini-2.5, recent claude
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize, Type)]
 pub enum Feature { Rewrite, RewriteFallback, LearningValidator, TranscriptionApi }
 pub fn migrate(s: &mut AppSettings)   // no-op when s.features_migrated
@@ -72,6 +77,8 @@ pub fn migrate(s: &mut AppSettings)   // no-op when s.features_migrated
   - `migration_without_a_usable_judge_is_automatic`: no Groq key, rewrite off → `learning_validator == FeatureModel::default()`.
   - `migration_keeps_the_speech_api`: `cloud_asr.provider_id="groq"`, `cloud_asr.models{"groq":"whisper-large-v3"}` → `transcription_api == ("groq","whisper-large-v3")`, and `provider_models["groq"]` has that id with `speech:true`.
   - `migration_runs_once`: second call after the user changed `features` changes nothing.
+  - `migration_sets_reasoning_defaults`: rewrite/fallback/speech → `Reasoning::Off`; validator → `Medium` when its model `guess_reasoning` is true (Groq spare model `openai/gpt-oss-*` → `Medium`), else `Off`; every migrated `ModelEntry` gets `reasoning = guess_reasoning(id)`.
+  - `guess_reasoning_knows_the_families`: true for `openai/gpt-oss-120b`, `o4-mini`, `gpt-5-mini`, `deepseek-r1-distill-llama-70b`, `qwen3-32b`; false for `llama-3.3-70b-versatile`, `gpt-4o-mini`, `whisper-large-v3`.
 - [ ] **Step 2: Run** the Rust test command filtered on `features::` → FAIL (module missing).
 - [ ] **Step 3: Implement** the types and `migrate` (compute the judge pair by calling `judge::judge_target(&before)` on a clone before touching anything; speech flag from `cloud_asr::PROVIDERS`). Set `features_migrated = true`.
 - [ ] **Step 4: Run** → PASS; refresh the settings fixture (`UPDATE_FIXTURES=1`), run the whole suite → PASS.
@@ -97,12 +104,28 @@ Rules: a key is required except for `custom`; `LearningValidator` with an empty 
 - [ ] **Step 2: Run** → FAIL. **Step 3: Implement** and switch the four call sites. **Step 4: Run** the whole suite → PASS.
 - [ ] **Step 5: Commit** `refactor(settings): every AI feature resolves its provider and model in one place`
 
+### Task 2b: Reasoning level sent per feature (spec §1.4)
+
+**Files:** `src-tauri/src/llm_client.rs` (`reasoning_disable_params` at `:66`, the `disable_reasoning: bool` parameter of `send_chat_completion_with_schema` at `:427` and of its callers), `features.rs` (`Target` gains the level), `judge.rs` (today passes `true`: it must pass the validator's level), `actions.rs` (rewrite passes `features.rewrite.reasoning`), `validator.rs` later in Plan B uses the same API.
+
+**Interfaces — Produces:**
+```rust
+pub type Target = (PostProcessProvider, String, String, Reasoning);   // replaces Task 2's tuple
+fn reasoning_params(provider: &PostProcessProvider, level: Reasoning, model_reasons: bool) -> ReasoningParams
+// send_chat_completion_with_schema(..., reasoning: Reasoning) replaces `disable_reasoning: bool`
+```
+Rules: `Off` → exactly today's `reasoning_disable_params(provider)` (keep its per-provider branches and the 4xx-rejection memory `reasoning_rejections`); a level on a model with `reasoning: false` → no reasoning field at all; a level on a reasoning model → OpenAI-style `reasoning_effort` (`"low"|"medium"|"high"`), OpenRouter `reasoning {effort, exclude: true}`, DeepSeek `thinking {type: "enabled"}`, Cloudflare `chat_template_kwargs {enable_thinking: true}`. The reply always goes through the existing think-block stripping. Validator timeout: 15 s when `Off`, 45 s otherwise (`judge.rs:11` `TIMEOUT` becomes a function of the level).
+
+- [ ] **Step 1: Failing tests** next to the existing request-body tests in `llm_client.rs` (`~:858-961`): `medium_on_groq_gpt_oss_sends_reasoning_effort_medium`, `off_keeps_todays_disable_fields` (same JSON as today for openrouter, deepseek, cloudflare, custom), `a_level_on_a_non_reasoning_model_sends_nothing`, `openrouter_high_sends_effort_and_exclude`; in `judge.rs`: `validator_timeout_grows_with_reasoning`.
+- [ ] **Step 2–4:** RED, implement, GREEN (whole suite: every caller of `send_chat_completion_with_schema` updated).
+- [ ] **Step 5: Commit** `feat(llm): choose the reasoning level of each AI feature`
+
 ### Task 3: Commands for the Settings page
 
 **Files:** `features.rs` (commands), `lib.rs` (register; remove `get_judge_choices` / `get_judge_provider` once Task 4 no longer uses them — same commit as Task 4), `shortcut/mod.rs` (setters live next to the other settings setters, same pattern as `change_learning_judge_provider_setting` at `:1082`).
 
 **Interfaces — Produces (all `#[tauri::command] #[specta::specta]`):**
-`get_feature_statuses() -> Vec<FeatureStatus>`; `set_feature_model(feature: Feature, choice: FeatureModel) -> Result<(), String>` (validates provider exists and model is in `provider_models` with the right `speech` flag); `set_provider_models(provider_id: String, models: Vec<ModelEntry>) -> Result<(), String>`; `remove_provider_model(provider_id, model_id) -> Result<(), String>` (a feature using it → that feature falls back: rewrite/validator → empty, speech → empty = local only); `remove_custom_provider(provider_id) -> Result<(), Vec<Feature>>` (Err with the features using it); `test_provider(provider_id: String) -> Result<String, String>` (one tiny chat completion, or `GET models_endpoint`; returns a short status, never the key). Refresh from the provider reuses the existing model-list fetch used by `ModelSelect.tsx` (find it with `grep -rn "models_endpoint" src-tauri/src`).
+`get_feature_statuses() -> Vec<FeatureStatus>` (`FeatureStatus` gains `reasoning: Reasoning` and `model_reasons: bool`); `set_feature_model(feature: Feature, choice: FeatureModel) -> Result<(), String>` (validates provider exists and model is in `provider_models` with the right `speech` flag; forces `reasoning = Off` when the model can't reason); `set_provider_models(provider_id: String, models: Vec<ModelEntry>) -> Result<(), String>`; `remove_provider_model(provider_id, model_id) -> Result<(), String>` (a feature using it → that feature falls back: rewrite/validator → empty, speech → empty = local only); `remove_custom_provider(provider_id) -> Result<(), Vec<Feature>>` (Err with the features using it); `test_provider(provider_id: String) -> Result<String, String>` (one tiny chat completion, or `GET models_endpoint`; returns a short status, never the key). Refresh from the provider reuses the existing model-list fetch used by `ModelSelect.tsx` (find it with `grep -rn "models_endpoint" src-tauri/src`).
 
 - [ ] **Step 1: Failing tests** on the pure parts (move logic into `fn set_feature_model_in(s: &mut AppSettings, …)` etc. so they test without an `AppHandle`): wrong speech flag refused; removing a used model clears the feature; removing a used custom provider returns its features.
 - [ ] **Step 2–4:** RED, implement, GREEN (whole suite). Regenerate `bindings.ts` (`bun run tauri dev`, close once it has started).
@@ -115,9 +138,9 @@ Rules: a key is required except for `custom`; `LearningValidator` with an empty 
 - Modify: the Models page component (find it: `grep -rn "CloudAsrSettings" src/components/settings/models`) to show both cards above the local models; `CloudAsrSettings.tsx` keeps only the speech options not covered here (timeout) and a summary line; `PostProcessingSettingsApi/index.tsx` keeps prompts/timeout and replaces provider+key+model by a summary « {fournisseur} · {modèle} — Modifier » linking to the Models page; `post-processing/LearningSettings.tsx` replaces the judge provider menu by the validator status line from `get_feature_statuses` + the same link. Keep the judge on/off toggle.
 - i18n: new keys under `settings.providers.*` and `settings.features.*` in `src/i18n/locales/en/translation.json` and `fr`, English value copied to the other locales.
 
-Behaviour (spec §2): provider list with key state; provider sheet with key (masked), URL when editable, models (refresh, add by hand, delete, "transcription" checkbox), **Test** button; one row per feature with provider menu → model menu (filtered by speech flag) → status line (`FeatureStatus`); "Automatique" option only on the validator row, showing « Automatique : {fournisseur} · {modèle} ».
+Behaviour (spec §2): provider list with key state; provider sheet with key (masked), URL when editable, models (refresh, add by hand, delete, "transcription" and "raisonnement" checkboxes — the latter pre-filled by `guess_reasoning`), **Test** button; one row per feature with provider menu → model menu (filtered by speech flag) → **Raisonnement** menu (Désactivé / Faible / Moyen / Élevé, shown only when the model reasons) → status line (`FeatureStatus`); "Automatique" option only on the validator row, showing « Automatique : {fournisseur} · {modèle} · raisonnement {niveau} ». In the **validator** model menu, reasoning models come first under « Raisonnement (recommandé) » with a badge; the rewrite menu keeps alphabetical order with the same badge. Visible help sentences under the validator and rewrite rows: copy them verbatim from spec §2.2.
 
-- [ ] **Step 1: Failing Playwright test** `tests/providers.spec.ts`: configure two providers in the mocked settings, give the validator a provider different from the rewrite, reload → both choices shown; the speech row lists only speech models; deleting a used custom provider shows the refusal with the feature names. Adapt the 6 judge tests in `tests/learning.spec.ts` to the new validator line (same expectations about « Utilise {fournisseur} » / « Inactif : … »).
+- [ ] **Step 1: Failing Playwright test** `tests/providers.spec.ts`: configure two providers in the mocked settings, give the validator a provider different from the rewrite, reload → both choices shown; the speech row lists only speech models; deleting a used custom provider shows the refusal with the feature names; the validator model menu lists `openai/gpt-oss-120b` before `llama-3.3-70b-versatile`; choosing a non-reasoning model hides the Raisonnement menu; setting the validator to « Élevé » calls `set_feature_model` with `reasoning: "High"`. Adapt the 6 judge tests in `tests/learning.spec.ts` to the new validator line (same expectations about « Utilise {fournisseur} » / « Inactif : … »).
 - [ ] **Step 2: Run** `bun run test:playwright tests/providers.spec.ts` → FAIL.
 - [ ] **Step 3: Implement** the cards (reuse `ApiKeyField`, `BaseUrlField`, `ModelSelect` from `PostProcessingSettingsApi`), then remove `get_judge_choices`/`get_judge_provider` from Rust and `bindings.ts`.
 - [ ] **Step 4: Run** `bun run lint && bun run build && bun run check:translations && bun run test:playwright` → all green; Rust suite green.
