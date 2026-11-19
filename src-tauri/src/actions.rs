@@ -1515,7 +1515,7 @@ impl ShortcutAction for TranscribeAction {
                                 // F80: the pasted text is watched for the user's corrections.
                                 let observed = field
                                     .clone()
-                                    .filter(|_| !sensitive && !excluded && !terminal)
+                                    .filter(|_| !sensitive && !excluded)
                                     .map(|f| (f, final_text.clone(), history_id, observed_app));
                                 // What was pasted counts the learned words it holds.
                                 let kept = final_text.clone();
@@ -1575,6 +1575,7 @@ impl ShortcutAction for TranscribeAction {
                                                         text,
                                                         *id,
                                                         app.clone(),
+                                                        terminal,
                                                     );
                                                 }
                                                 // Leave a newer session's notice alone.

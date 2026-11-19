@@ -924,10 +924,11 @@ pub fn watch_focused() -> bool {
     windows::watch_focused()
 }
 
-/// The watched field's whole text, or `None` once it can't be read.
+/// The watched field's text (its last part when `tail`), or `None` once it
+/// can't be read.
 #[cfg(windows)]
-pub fn read_watched() -> Option<String> {
-    windows::read_watched()
+pub fn read_watched(tail: bool) -> Option<String> {
+    windows::read_watched(tail)
 }
 
 #[cfg(not(windows))]
@@ -936,7 +937,7 @@ pub fn watch_focused() -> bool {
 }
 
 #[cfg(not(windows))]
-pub fn read_watched() -> Option<String> {
+pub fn read_watched(_tail: bool) -> Option<String> {
     None
 }
 
