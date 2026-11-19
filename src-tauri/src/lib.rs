@@ -474,6 +474,9 @@ where
 }
 
 #[cfg(test)]
+mod learning_e2e_tests;
+
+#[cfg(test)]
 mod headless_guard_tests {
     use super::run_headless_guarded;
 
