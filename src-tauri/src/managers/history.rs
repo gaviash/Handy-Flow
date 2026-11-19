@@ -43,6 +43,7 @@ const ADDED_COLUMNS: &[&str] = &[
     "language_source",
     "app",
     "kept_text",
+    "context_terms",
 ];
 
 /// Every column a [`HistoryEntry`] is read from.
@@ -461,6 +462,10 @@ impl HistoryManager {
     }
 
     /// Handy Adaptive: the text the user kept after editing a dictation.
+    pub fn set_context_terms(&self, id: i64, terms: &[String]) -> Result<()> {
+        set_context_terms_on(&self.get_connection()?, id, terms)
+    }
+
     pub fn set_kept_text(&self, id: i64, text: &str) -> Result<()> {
         set_kept_text_on(&self.get_connection()?, id, text)
     }
@@ -503,6 +508,16 @@ fn stats_on(conn: &Connection) -> Result<(u32, u32, Vec<(String, u32)>, u32)> {
     apps.sort_by(|a, b| b.1.cmp(&a.1));
     apps.truncate(5);
     Ok((rows.len() as u32, words, apps, words_today))
+}
+
+/// The terms the rewrite was given (Wispr keeps its `additionalContext`), as
+/// a JSON array: the screen's text itself is never stored.
+fn set_context_terms_on(conn: &Connection, id: i64, terms: &[String]) -> Result<()> {
+    conn.execute(
+        "UPDATE transcription_history SET context_terms = ?1 WHERE id = ?2",
+        params![serde_json::to_string(terms)?, id],
+    )?;
+    Ok(())
 }
 
 fn set_kept_text_on(conn: &Connection, id: i64, text: &str) -> Result<()> {
@@ -946,6 +961,26 @@ mod tests {
         // Most recent first; kept text, else the rewrite; never a raw transcript.
         assert_eq!(texts, vec!["rewritten c", "kept a"]);
         assert_eq!(past[1].timestamp, 100);
+    }
+
+    #[test]
+    fn the_terms_a_rewrite_was_given_are_kept() {
+        let mut conn = Connection::open_in_memory().expect("open in-memory db");
+        HistoryManager::apply_migrations(&mut conn).expect("migrate");
+        insert_entry(&conn, 10, "merci jeff", Some("Merci Jev."));
+        let id: i64 = conn
+            .query_row("SELECT id FROM transcription_history", [], |r| r.get(0))
+            .unwrap();
+        let terms = vec![r#"Jev (heard as "Jeff")"#.to_string(), "Claude".to_string()];
+        set_context_terms_on(&conn, id, &terms).unwrap();
+        let stored: String = conn
+            .query_row(
+                "SELECT context_terms FROM transcription_history WHERE id = ?1",
+                [id],
+                |r| r.get(0),
+            )
+            .unwrap();
+        assert_eq!(serde_json::from_str::<Vec<String>>(&stored).unwrap(), terms);
     }
 
     #[test]

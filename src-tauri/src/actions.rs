@@ -1491,6 +1491,16 @@ impl ShortcutAction for TranscribeAction {
                                     Ok(entry) => history_id = Some(entry.id),
                                     Err(err) => error!("Failed to save history entry: {}", err),
                                 }
+                                // The spellings the rewrite was given, to check later.
+                                if let (Some(id), Some(c), true) =
+                                    (history_id, llm_context.as_ref(), post_process)
+                                {
+                                    let terms: Vec<String> =
+                                        c.terms.iter().chain(&c.names).cloned().collect();
+                                    if let Err(err) = hm.set_context_terms(id, &terms) {
+                                        error!("Failed to record the rewrite's terms: {}", err);
+                                    }
+                                }
                             }
 
                             // The user's hook only changes what gets pasted;
