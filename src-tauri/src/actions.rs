@@ -1517,6 +1517,8 @@ impl ShortcutAction for TranscribeAction {
                                     .clone()
                                     .filter(|_| !sensitive && !excluded && !terminal)
                                     .map(|f| (f, final_text.clone(), history_id, observed_app));
+                                // What was pasted counts the learned words it holds.
+                                let kept = final_text.clone();
                                 // Taken before the paste thread exists, and so
                                 // before the next session can start.
                                 let session = RECORDING_SESSION.load(Ordering::SeqCst);
@@ -1563,7 +1565,9 @@ impl ShortcutAction for TranscribeAction {
                                                     "Text pasted successfully in {:?}",
                                                     paste_time.elapsed()
                                                 );
-                                                crate::learning::touch_used(&ah_clone, &spoken);
+                                                crate::learning::touch_used(
+                                                    &ah_clone, &spoken, &kept,
+                                                );
                                                 if let Some((f, text, id, app)) = &observed {
                                                     crate::learning::observe(
                                                         &ah_clone,

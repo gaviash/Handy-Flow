@@ -132,6 +132,9 @@ pub struct Learned {
     /// A pending word (seen once, needs a second sighting) is not used yet.
     #[serde(default = "yes")]
     pub active: bool,
+    /// Pasted texts that held the term (Wispr `frequencyUsed`, E78).
+    #[serde(default)]
+    pub used: u32,
 }
 
 fn yes() -> bool {
@@ -193,12 +196,17 @@ pub(crate) fn prune(m: &mut Memory, now: i64) {
         let term = w.term.clone();
         w.heard.retain(|h| !is_grammar_change(h, &term));
     }
+    // Wispr never expires its dictionary: only pending words leave.
     m.words
-        .retain(|w| w.last_seen >= expired && !w.heard.is_empty());
+        .retain(|w| (w.active || w.last_seen >= expired) && !w.heard.is_empty());
     m.rules.retain(|r| r.active || r.last_seen >= expired);
     if m.words.len() > WORDS_MAX {
-        m.words
-            .sort_by(|a, b| b.count.cmp(&a.count).then(b.last_seen.cmp(&a.last_seen)));
+        m.words.sort_by(|a, b| {
+            b.used
+                .cmp(&a.used)
+                .then(b.count.cmp(&a.count))
+                .then(b.last_seen.cmp(&a.last_seen))
+        });
         m.words.truncate(WORDS_MAX);
     }
     if m.rules.len() > RULES_MAX {
@@ -584,28 +592,36 @@ pub(crate) fn contains_word(text: &str, word: &str) -> bool {
 
 /// Restarts the 30 days of every active word the user said: its term or one
 /// of its heard forms, as a whole word in `spoken` (the raw transcription).
-/// Pending words still need a second correction. `true` when one was found.
-pub(crate) fn mark_used(m: &mut Memory, spoken: &str, now: i64) -> bool {
+/// Counts one use of each term written in `kept`, the pasted text (Wispr
+/// `frequencyUsed`, E78). Pending words still need a second correction.
+/// `true` when a word changed.
+pub(crate) fn mark_used(m: &mut Memory, spoken: &str, kept: &str, now: i64) -> bool {
     let text = unify(spoken).to_lowercase();
-    let mut found = false;
+    let kept = unify(kept).to_lowercase();
+    let mut changed = false;
     for w in m.words.iter_mut().filter(|w| w.active) {
         let said = std::iter::once(&w.term)
             .chain(&w.heard)
             .any(|f| contains_word(&text, &unify(f).to_lowercase()));
         if said {
             w.last_seen = now;
-            found = true;
+            changed = true;
+        }
+        if contains_word(&kept, &unify(&w.term).to_lowercase()) {
+            w.used += 1;
+            changed = true;
         }
     }
-    found
+    changed
 }
 
 /// After a dictation: keeps the learned words the user said for 30 more
-/// days. `spoken` is the raw transcription, never the rewrite: a word the
-/// rewrite writes on its own must not keep itself alive.
-pub fn touch_used(app: &AppHandle, spoken: &str) {
+/// days and counts the ones the pasted text holds. `spoken` is the raw
+/// transcription: a word the rewrite writes on its own must not keep itself
+/// alive.
+pub fn touch_used(app: &AppHandle, spoken: &str, kept: &str) {
     with_memory(app, |m| {
-        if mark_used(m, spoken, chrono::Utc::now().timestamp()) {
+        if mark_used(m, spoken, kept, chrono::Utc::now().timestamp()) {
             save(app, m);
         }
     });
@@ -666,6 +682,7 @@ pub(crate) fn record_word(m: &mut Memory, c: &Candidate, now: i64) -> Option<Lea
                 last_seen: now,
                 kind: c.kind,
                 active,
+                used: 0,
             });
             active.then(|| LearnedNews::Word {
                 term: c.term.clone(),
@@ -1548,6 +1565,7 @@ mod tests {
             last_seen: now,
             kind,
             active: true,
+            used: 0,
         };
         let mut m = Memory::default();
         m.words.push(word("est", "et", WordKind::Misheard));
@@ -1567,10 +1585,11 @@ mod tests {
             last_seen: 0,
             kind: WordKind::Term,
             active: true,
+            used: 0,
         });
-        assert!(mark_used(&mut m, "on compare quen et gemma", 500));
+        assert!(mark_used(&mut m, "on compare quen et gemma", "", 500));
         assert_eq!(m.words[0].last_seen, 500);
-        assert!(!mark_used(&mut m, "on compare queneau", 900)); // not a whole word
+        assert!(!mark_used(&mut m, "on compare queneau", "", 900)); // not a whole word
         assert_eq!(m.words[0].last_seen, 500);
     }
 
@@ -1905,6 +1924,7 @@ mod tests {
             last_seen,
             kind,
             active,
+            used: 0,
         }
     }
 
@@ -2009,10 +2029,10 @@ mod tests {
             true,
         ));
         prune(&mut m, 31 * day);
-        // Active or pending, a word unused for 30 days goes.
+        // A pending word unused for 30 days goes; an active one stays (Wispr).
         assert_eq!(
             m.words.iter().map(|w| w.term.as_str()).collect::<Vec<_>>(),
-            vec!["Kubernetes"]
+            vec!["Qwen", "Kubernetes"]
         );
         m.words = (0..WORDS_MAX + 5)
             .map(|i| word(&format!("w{i}"), "", 1, i as i64, WordKind::Term, true))
@@ -2038,6 +2058,7 @@ mod tests {
         assert!(mark_used(
             &mut m,
             "J'utilise qwen et Node.js, le config dit partir.",
+            "",
             9
         ));
         let seen = |t: &str| m.words.iter().find(|w| w.term == t).unwrap().last_seen;
@@ -2046,6 +2067,42 @@ mod tests {
         // Pending: dictating it proves nothing. Inside "partir": not the word.
         assert_eq!(seen("config"), 0);
         assert_eq!(seen("art"), 0);
-        assert!(!mark_used(&mut m, "rien ici", 10));
+        assert!(!mark_used(&mut m, "rien ici", "", 10));
+    }
+
+    #[test]
+    fn an_active_word_survives_a_year_without_use() {
+        let mut m = Memory::default();
+        m.words
+            .push(word("Jev", "Jeff", 5, 0, WordKind::Term, true));
+        prune(&mut m, 365 * 86_400);
+        assert!(m.words.iter().any(|w| w.term == "Jev"));
+    }
+
+    #[test]
+    fn a_pending_word_still_expires_after_30_days() {
+        let mut m = Memory::default();
+        m.words
+            .push(word("slop", "slope", 1, 0, WordKind::Misheard, false));
+        prune(&mut m, 31 * 86_400);
+        assert!(m.words.is_empty());
+    }
+
+    #[test]
+    fn the_term_in_the_pasted_text_counts_one_use() {
+        let mut m = Memory::default();
+        m.words
+            .push(word("Jev", "Jeff", 5, 0, WordKind::Term, true));
+        assert!(mark_used(&mut m, "merci jeff", "Merci Jev.", 7));
+        assert_eq!(m.words[0].used, 1);
+    }
+
+    #[test]
+    fn a_heard_form_alone_refreshes_but_does_not_count() {
+        let mut m = Memory::default();
+        m.words
+            .push(word("Jev", "Jeff", 5, 0, WordKind::Term, true));
+        assert!(mark_used(&mut m, "merci jeff", "Merci Jeff.", 7));
+        assert_eq!((m.words[0].last_seen, m.words[0].used), (7, 0));
     }
 }
