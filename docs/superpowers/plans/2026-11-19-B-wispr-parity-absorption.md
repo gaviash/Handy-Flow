@@ -31,7 +31,7 @@
 - Junction applies to **every** target, terminal included (spec §6 Q3), and does nothing when `caret_known` is false.
 - A validated candidate is active at its **first** correction (spec §6 Q2, Wispr E146); "pending until seen twice" survives only when no validator is reachable.
 - Logs never contain dictated text: lengths, reasons and verdict kinds only.
-- Lexicon licence: use `hermitdave/FrequencyWords` 2018 `fr_50k.txt` / `en_50k.txt` (data CC BY-SA 4.0); add the attribution to `LICENSE`-adjacent third-party notices (`THIRD_PARTY_NOTICES.md`, create if missing). If a reviewer or the user rejects CC BY-SA, fall back to the R11 rule (rare = capital not at start, digit, or non-ASCII) — `lexicon::is_common` then always returns false.
+- Lexicon licence — **accepted by the user on 2026-11-19**: use `hermitdave/FrequencyWords` 2018 `fr_50k.txt` / `en_50k.txt` (data CC BY-SA 4.0); add the attribution (source, author, licence, link) to `THIRD_PARTY_NOTICES.md` (create if missing) and state in its header that the two lexicon files stay under CC BY-SA 4.0.
 
 ## Review Focus
 
