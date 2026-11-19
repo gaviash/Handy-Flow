@@ -10,7 +10,7 @@
     "expressions": true,
     "learned_words": true,
     "max_terms": 50,
-    "screen": false
+    "screen": true
   },
   "audio_feedback": false,
   "audio_feedback_volume": 1.0,
