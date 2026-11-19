@@ -22,20 +22,32 @@ L'audit date d'avant le juge des corrections (0.2.6) et d'avant le plan B. Ce qu
 - Tests existants à suivre : `tests/learning.spec.ts` (6 tests juge) ouvre la page par le bouton « Post Process ». Ils doivent ouvrir Vocabulaire puis la carte Juge (Task 8).
 - Les clés `settings.postProcessing.learning.judge.provider.*` n'existent qu'en `en` et `fr` : les ajouter aux 24 autres locales en Task 15. `bun run check:translations` échoue déjà à la base (1/25 langues), à noter en Task 0.
 
+## Révision du 2026-11-19 (fournisseurs par fonction, validateur d'apprentissage)
+
+Deux plans changent les Réglages et passent **avant** celui-ci :
+- **Plan A** `docs/superpowers/plans/2026-11-19-A-providers-per-feature.md` (spec `specs/2026-11-19-providers-per-feature.md`) : les fournisseurs et leurs modèles se configurent **une seule fois**, dans l'onglet Modèles. Chaque fonction IA choisit ensuite son fournisseur et son modèle : Reformulation, Secours, Validateur d'apprentissage, Transcription par API. Il livre les composants `S/models/ProvidersCard.tsx` et `S/models/FeatureModelsCard.tsx`, les commandes `get_feature_statuses`, `set_feature_model`, `set_provider_models`, `remove_provider_model`, `remove_custom_provider`, `test_provider`, et **supprime** `get_judge_choices`, `get_judge_provider` et le menu « Fournisseur du juge ».
+- **Plan B** `docs/superpowers/plans/2026-11-19-B-wispr-parity-absorption.md` : le juge des mots devient le **validateur d'apprentissage** (le juge ne garde que les règles de style). Il ajoute la commande `get_learning_stats` et une ligne de compteurs sur 30 jours.
+
+**Ordre d'exécution : Plan A → Plan B → ce plan.** Ce plan ne recrée rien de ce que A et B livrent : il **range** leurs composants dans les cartes et sous-pages. Conséquences, appliquées dans les tâches ci-dessous :
+1. **Modèles** (Task 11) devient l'unique endroit des fournisseurs : en-tête d'état, cartes **Fournisseurs** et **Utilisation par fonction** (sous-pages = composants du plan A), puis la transcription locale et l'Expert moteur.
+2. **Amélioration** (Task 7) : la carte Fournisseur n'a **plus de formulaire**. Sa sous-page montre la reformulation et son secours en lecture (« {fournisseur} · {modèle} ») avec un bouton « Modifier dans Modèles ».
+3. **Vocabulaire** (Task 8) : la carte « Juge des corrections » devient **« Validateur d'apprentissage »**. On garde l'interrupteur (`learning_judge_enabled`) et la ligne d'état lue dans `get_feature_statuses` (`LearningValidator`), avec un lien « Choisir le modèle → Modèles », sans menu de fournisseur. On ajoute la ligne de compteurs du plan B.
+4. La section « Révision du 2026-11-18 » ci-dessus est **remplacée** pour tout ce qui touche au menu du fournisseur du juge. La relecture de l'état après chaque écriture (garde `saving`) reste due, désormais sur `get_feature_statuses`.
+
 ## Global Constraints
 
-- **Branche :** créer `feat/ui-refonte` depuis `feat/handy-flow-brand` (poussée sur `origin` le 2026-11-18, plan B compris). Ne jamais pousser vers `upstream`.
+- **Branche :** créer `feat/ui-refonte` depuis `feat/handy-flow-brand`, **une fois les plans A et B fusionnés sur cette branche** (vérifier avec `git log --oneline | grep -i "per feature\|validator"`). Ne jamais pousser vers `upstream`.
 - **Machine :** sur ce PC, `bunx` n'existe pas et Playwright le lance (`playwright.config.ts`). Mettre sur le `PATH` un `bunx.cmd` contenant `@bun x %*` (dans le scratchpad, sans toucher au repo). Il n'y a pas non plus de `Desktop\Handy Flow` installé : avant chaque étape « remplacer Handy Flow », demander à l'utilisateur le dossier cible. Pousser vers `origin` seulement si l'utilisateur le demande.
 - **Tests :** logique Rust pure avec `cargo test --release --lib` (dans `src-tauri`). Logique TS avec un petit script `bun` à asserts, comme `src/lib/utils/appearance.test.ts`. UI avec Playwright headless (`bun run test:playwright`).
 - **Builds :** `bun run tauri build --no-bundle -- --profile fast` → `src-tauri/target/fast/handy.exe`. **Deux builds au total**, un par incrément (voir plus bas). Ne jamais modifier les sources pendant un build.
 - **Après chaque build :** remplacer `C:\Users\gavri\Desktop\Handy Flow\Handy Flow.exe`, les DLL de `src-tauri/transcribe-libs` et `resources\`. Sauvegarder d'abord `Data\` et l'ancien exe, fermer `Handy Flow.exe`, puis relancer. **Ne jamais toucher `Data\`** ni `Desktop\Handy`.
 - **Aucun test qui prend le clavier, le focus, la souris ou l'audio du PC.** Pas de dictée simulée. Les essais réels sont faits par l'utilisateur.
 - **i18n :** tout texte visible passe par i18next (ESLint l'impose). Les nouvelles clés vont dans `en` et `fr`, avec la valeur anglaise dans les 24 autres locales, pour que `bun run check:translations` passe. **Ne pas supprimer** une clé tant qu'une locale ou un composant l'utilise encore.
-- **`bindings.ts`** se régénère en lançant `bun run tauri dev` après tout changement de commande ou de type Rust. Ce plan ne change aucune signature de commande.
+- **`bindings.ts`** se régénère en lançant `bun run tauri dev` après tout changement de commande ou de type Rust. Ce plan ne change aucune signature de commande : il utilise celles des plans A et B telles qu'elles sont livrées.
 - **Mouvement :** `cubic-bezier(.22,1,.36,1)`, 150 à 450 ms, rien sous `prefers-reduced-motion: reduce`.
 - **Avant chaque commit :** `bun run lint`, `bun run format:check`, `bun run build` (tsc), et `cargo clippy` si du Rust a bougé.
 - **Accessibilité :** une carte est un `<button>` (jamais un `div onClick`). Le retour de sous-page est un `<button>` qui rend le focus à la carte d'origine. Une description qui conditionne un choix de confidentialité est **visible**, pas en tooltip.
-- **Portée 99 % :** pas de nouvelle fonctionnalité au-delà de ce plan. Ne pas ajouter de bouton « Tester », d'aperçu de ton ou de statistiques.
+- **Portée 99 % :** pas de nouvelle fonctionnalité au-delà de ce plan et des plans A et B. Le bouton « Tester » d'un fournisseur (plan A) et la ligne de compteurs d'apprentissage (plan B) existent déjà : on les range, on n'en ajoute pas d'autres (pas d'aperçu de ton).
 
 ## Décisions déjà prises (avec l'utilisateur, ne pas rediscuter)
 
@@ -47,15 +59,16 @@ L'audit date d'avant le juge des corrections (0.2.6) et d'avant le plan B. Ce qu
 - **Apparence reste un onglet.** Elle vient d'être livrée par la branche brand. L'audit proposait de la ranger dans Général, on ne le fait pas.
 - **Snippets → onglet Vocabulaire** (comme dans l'audit), alors que la maquette les montrait dans Amélioration.
 - Libellé FR de l'onglet `postprocessing` : **« Amélioration »**, qui remplace « Post-traitement ».
-- **Juge des corrections → Vocabulaire, en carte** (pas en Expert). Il envoie les corrections à une IA : c'est un choix de confidentialité, donc visible, avec sa description affichée.
+- **Validateur d'apprentissage (ex-juge des corrections) → Vocabulaire, en carte** (pas en Expert). Il envoie les corrections à une IA : c'est un choix de confidentialité, donc visible, avec sa description affichée. Son modèle se choisit dans Modèles (plan A), pas dans la carte.
+- **Fournisseurs et modèles → onglet Modèles uniquement** (décision utilisateur du 2026-11-19). Aucune autre page n'a de formulaire de clé, d'URL ou de modèle : seulement un résumé et un lien.
 
 ## Navigation cible
 
 ```
 Général       raccourcis · langues · micro · audio · démarrage
-Modèles       transcription locale / API (structure actuelle conservée) + Expert moteur
-Amélioration  état · Fournisseur · Ton · Transformations · Nettoyage · Expert (prompt, délai, secours, format/URL)
-Vocabulaire   NOUVEAU — mots perso · mots appris · règles de style · juge des corrections · snippets · aide à la reconnaissance
+Modèles       état · Fournisseurs · Utilisation par fonction · transcription locale · Expert moteur
+Amélioration  état · Fournisseur (résumé → Modèles) · Ton · Transformations · Nettoyage · Expert (prompt, délai)
+Vocabulaire   NOUVEAU — mots perso · mots appris (+ compteurs) · règles de style · validateur d'apprentissage · snippets · aide à la reconnaissance
 Contexte      NOUVEAU — lecture / envoi · exclusions · ce qui a été envoyé · Expert (sources, budget, VS Code)
 Historique    (inchangé) + carte Conservation
 Apparence     (inchangé)
@@ -71,7 +84,8 @@ Débogage      (si debug_mode) + backend clavier, Expérimental, logs
 3. **Échec d'une sauvegarde** : la valeur revient à l'ancienne et une notice d'erreur s'affiche. Testé en Task 2.
 4. **Suppression d'historique puis « Annuler »** : l'entrée et son WAV sont intacts. Testé en Task 4.
 5. **Réglages conditionnels** (Linux, macOS, multicanal, chinois, Apple Intelligence) : leurs gardes sont conservées après déplacement. Vérifié en Task 16 (grep des gardes avant/après).
-6. **Juge des corrections déplacé** : choisir OpenAI appelle `change_learning_judge_provider_setting`, la ligne d'état suit ce que le juge utilise vraiment (après une clé supprimée, après un choix devenu inutilisable). Testé en Task 8.
+6. **Validateur déplacé** : la ligne d'état de la carte Vocabulaire suit ce que le validateur utilise vraiment (`get_feature_statuses`), y compris « Automatique : {fournisseur} · {modèle} », après une clé supprimée et après un modèle retiré dans Modèles. Testé en Task 8.
+7. **Fournisseurs à un seul endroit** : changer le modèle de la reformulation dans Modèles se voit dans le résumé d'Amélioration et, en Automatique, dans la carte Validateur, sans recharger. Aucune page hors Modèles ne contient de champ de clé (grep en Task 16). Testé en Task 11.
 
 ---
 
@@ -143,24 +157,24 @@ S'appuyer sur ce qui existe : le bloc d'état de `S/models/ModelsSettings.tsx:~1
 
 ### Task 7 : Page Amélioration
 
-**Files :** réécrire `S/post-processing/PostProcessingSettings.tsx`. Extraire `PromptEditor` dans `S/post-processing/PromptEditor.tsx`, avec **un seul** formulaire pour créer et éditer (supprimer le JSX dupliqué `:367` / `:438`). Garder `ProviderSettings` (le contenu actuel de `PostProcessingSettingsApiComponent`) dans son propre fichier.
+**Files :** réécrire `S/post-processing/PostProcessingSettings.tsx`. Extraire `PromptEditor` dans `S/post-processing/PromptEditor.tsx`, avec **un seul** formulaire pour créer et éditer (supprimer le JSX dupliqué `:367` / `:438`). Le formulaire fournisseur (`PostProcessingSettingsApi/*`) n'est **plus rendu ici** : après le plan A, il ne vit que dans Modèles (`ProvidersCard`).
 
 Écran principal :
 - [ ] En-tête : titre « Amélioration », sous-titre « Un modèle de langage réécrit ta dictée avant de la coller. », et à droite le `ToggleSwitch` de `post_process_enabled`, déplacé depuis Avancé > Expérimental (supprimer `<PostProcessingToggle>` d'`AdvancedSettings.tsx:~80`).
 - [ ] `StatusHeader` :
   - désactivé → tone `off` : « Désactivé — la dictée est collée telle quelle. »
-  - pas de clé ou de modèle (hors Apple) → `warn` : « À configurer — choisis un fournisseur et une clé. »
-  - sinon `ok` : « Prêt — {raccourci amélioré} réécrit avec {fournisseur} ». Détail : « Modèle {modèle} · secours : {secours ou « aucun »} · ton adapté à l'app ». Le raccourci se lit dans `bindings.transcribe_with_post_process.current_binding`.
+  - statut `Rewrite` de `get_feature_statuses` en problème (`NotChosen`, `NoKey`, `NoModel`), hors Apple → `warn` : « À configurer — choisis un fournisseur et un modèle dans Modèles. », avec le bouton « Ouvrir Modèles ».
+  - sinon `ok` : « Prêt — {raccourci amélioré} réécrit avec {fournisseur} ». Détail : « Modèle {modèle} · secours : {secours ou « aucun »} · ton adapté à l'app ». Le fournisseur, le modèle et le secours se lisent dans `get_feature_statuses` (`Rewrite`, `RewriteFallback`). Le raccourci se lit dans `bindings.transcribe_with_post_process.current_binding`.
 - [ ] `CardGrid` de cartes (icône lucide → résumé) :
   - **Fournisseur** (`Server`) → « {fournisseur} · {modèle} » (+ « · secours {x} » si défini)
   - **Ton** (`MessageCircle`) → « E-mail {ton} · travail {ton} · … » (valeurs de `styles`)
   - **Transformations** (`Wand2`) → « Polish · Instruction vocale · {n} transformations »
   - **Nettoyage** (`Eraser`) → « Hésitations retirées » ou « conservées » (`filler_word_removal_enabled`, déplacé depuis Avancé)
   - **Raccourci** (`Keyboard`) → la combinaison actuelle. La sous-page contient le seul `ShortcutInput` `transcribe_with_post_process`, plus un lien « Tous les raccourcis → Général ».
-- [ ] `ExpertSection` « prompt, délai, secours, format » : `PostProcessTimeout`, carte **Prompt** (sous-page `PromptEditor`). Le prompt maison reste en lecture seule et le dernier prompt reste non supprimable.
+- [ ] `ExpertSection` « prompt, délai » : `PostProcessTimeout`, carte **Prompt** (sous-page `PromptEditor`). Le prompt maison reste en lecture seule et le dernier prompt reste non supprimable. (Le secours, le format API et l'URL sont désormais dans Modèles.)
 
 Sous-pages :
-- [ ] **Fournisseur** : fournisseur, clé, modèle avec rafraîchissement. Dans une `ExpertSection` : format API (custom), URL (si `allow_base_url_edit`), fournisseur de secours. Sous la clé, ajouter un texte visible : « Cette clé sert aussi à la transcription par API (onglet Modèles). » quand le fournisseur est `groq`, `openai` ou `custom`. Doublon voulu, désormais annoncé. Pour `groq`, ajouter : « En Automatique, le juge des corrections l'utilise aussi. » Changer une clé ou un modèle ici peut changer le juge : la carte Juge (Task 8) relit son état, rien à câbler de plus.
+- [ ] **Fournisseur** (lecture seule) : deux lignes « Reformulation : {fournisseur} · {modèle} » et « Secours : {fournisseur} · {modèle} | aucun », puis le bouton « Modifier dans Modèles » qui ouvre l'onglet Modèles sur la carte Utilisation par fonction. Texte visible : « Le même fournisseur peut servir à d'autres fonctions (transcription, validateur) : tout se règle dans Modèles. »
 - [ ] **Ton** : une ligne par catégorie (`email`, `work`, `personal`, `other`) avec icône, libellé et `Segmented` à 5 tons. Le composant existe et gère déjà les flèches, Home et End (`U/Segmented.tsx`). On remplace les 4 `Dropdown`. Si 5 options débordent à la largeur minimale de la fenêtre, laisser le `Segmented` passer à la ligne (`flex-wrap`) plutôt que revenir au menu déroulant.
 - [ ] **Transformations** : `TransformSettings` tel quel.
 - [ ] Supprimer de cette page ce qui part ailleurs : `StyleSettings` hors sous-page Ton, `SnippetSettings`, `ContextSettings` et `LearningSettings` (→ Tasks 8 et 9).
@@ -168,7 +182,8 @@ Sous-pages :
   - l'onglet est visible avec `post_process_enabled=false`, et l'état « Désactivé » s'affiche ;
   - ouvrir Ton, choisir « Formel » pour Travail : l'IPC reçoit l'update de `styles` ;
   - « ‹ Amélioration » ramène le focus sur la carte Ton ;
-  - clé vide → état « À configurer ».
+  - clé vide → état « À configurer » ;
+  - la sous-page Fournisseur ne contient aucun champ de saisie, et « Modifier dans Modèles » ouvre l'onglet Modèles.
 - [ ] Commit.
 
 ### Task 8 : Page Vocabulaire (nouvelle)
@@ -179,15 +194,15 @@ Sous-pages :
 - [ ] Visible : `ToggleSwitch` apprentissage (`learning_enabled`), champ nom (`user_name`).
 - [ ] Cartes :
   - **Mots personnels** (`BookA`) → « {n} mots » → `CustomWords`, retiré d'Avancé
-  - **Mots appris** (`Sparkles`) → « {m} mots, dont {k} en attente » → liste avec supprimer, actualiser, exporter, effacer (confirmation conservée)
+  - **Mots appris** (`Sparkles`) → « {m} mots, dont {k} en attente » → ligne de compteurs du plan B (« 30 derniers jours : … », `get_learning_stats`) puis liste avec supprimer, actualiser, exporter, effacer (confirmation conservée)
   - **Règles de style** (`PenLine`) → « {r} règles apprises » → liste avec suppression
-  - **Juge des corrections** (`Gavel`) → résumé selon le cas, dans cet ordre : « Désactivé » (`learning_judge_enabled` faux) ; « Inactif : apprentissage coupé » (`learning_enabled` faux) ; « Inactif : envoi du contexte coupé (onglet Contexte) » (`context_send_enabled` faux) ; « Utilise {fournisseur} » (`get_judge_provider`) ; sinon « Inactif : aucune clé utilisable ». Aujourd'hui, les deux cas « coupé » affichent à tort « aucune clé » : ce test sur des réglages déjà lus côté front corrige ce défaut sans toucher au Rust. Sous-page : `ToggleSwitch` `learning_judge_enabled` (description **visible**), menu « Fournisseur du juge », ligne d'état. Le bloc vient de `LearningSettings.tsx` avec sa logique (voir « Révision du 2026-11-18 »).
+  - **Validateur d'apprentissage** (`Gavel`) → résumé selon le cas, dans cet ordre : « Désactivé » (`learning_judge_enabled` faux) ; « Inactif : apprentissage coupé » (`learning_enabled` faux) ; « Inactif : envoi du contexte coupé (onglet Contexte) » (`context_send_enabled` faux) ; « Utilise {fournisseur} · {modèle} » ou « Automatique : {fournisseur} · {modèle} » (statut `LearningValidator` de `get_feature_statuses`) ; sinon « Inactif : aucun modèle utilisable ». Sous-page : `ToggleSwitch` `learning_judge_enabled` (description **visible** : « Les mots que tu corriges sont envoyés à ce modèle pour décider s'ils sont appris. »), ligne d'état, bouton « Choisir le modèle → Modèles ». **Pas de menu de fournisseur.** Le bloc vient de `LearningSettings.tsx` tel que le plan A l'a laissé.
   - **Snippets** (`TextQuote`) → « {s} snippets » → `SnippetSettings`
   - **Aide à la reconnaissance** (`AudioLines`) → « Activée · mots appris + expressions » → toggles ASR `enabled`, `learned_words`, `expressions`, liste repliable d'expressions et ligne de compatibilité du modèle (`support`)
 - [ ] `ExpertSection` : son du mot appris (`learned_sound_enabled`) et seuil de correction (`WordCorrectionThreshold`, retiré de Debug).
 - [ ] Les composants déplacés gardent leurs clés i18n actuelles (`settings.postProcessing.learning.*`…). On ne renomme pas les clés dans ce plan, seulement les valeurs FR si le texte change.
 - [ ] Test Playwright : la page s'affiche, la carte Mots personnels ouvre la sous-page et un ajout appelle l'update `custom_words`.
-- [ ] `tests/learning.spec.ts` : `openLearning` ouvre l'onglet Vocabulaire, et les tests du juge ouvrent la carte Juge. Les 6 tests juge restent verts sans changer leurs attentes. Ajouter un test : avec `context_send_enabled: false`, la carte dit « envoi du contexte coupé ».
+- [ ] `tests/learning.spec.ts` (déjà adapté par le plan A à la ligne Validateur) : `openLearning` ouvre l'onglet Vocabulaire, et ces tests ouvrent la carte Validateur. Ils restent verts sans changer leurs attentes. Ajouter deux tests : avec `context_send_enabled: false`, la carte dit « envoi du contexte coupé » ; « Choisir le modèle » ouvre l'onglet Modèles.
 - [ ] Commit.
 
 ### Task 9 : Page Contexte (nouvelle)
@@ -234,11 +249,18 @@ Sous-pages :
 
 ### Task 11 : Modèles
 
-**Files :** `S/models/ModelsSettings.tsx`
+**Files :** `S/models/ModelsSettings.tsx` ; réutiliser `S/models/ProvidersCard.tsx` et `S/models/FeatureModelsCard.tsx` (plan A) comme contenus de sous-pages ; `S/models/CloudAsrSettings.tsx` (ce qu'il en reste après le plan A).
 
-- [ ] La structure actuelle est conservée : elle a déjà un résumé d'état, et l'audit dit de ne pas la reconstruire. Seul le bloc d'état passe sur `StatusHeader`, pour la cohérence visuelle.
-- [ ] Ajouter en bas une `ExpertSection` « moteur » : `ModelUnloadTimeout`, `LongFormChunking` (retirés d'Avancé), `AccelerationSelector` (retiré d'Expérimental), `LanguageDetection` et `LanguageDetectionWindow` (retiré de Debug).
+Écran principal, de haut en bas :
+- [ ] `StatusHeader` : une phrase sur la transcription (« Transcription locale avec {modèle} » ou « Transcription par {fournisseur} · {modèle}, repli local »), et en détail le nombre de fonctions IA prêtes (« Reformulation, validateur et transcription prêts » ou la première fonction en problème, d'après `get_feature_statuses`). Tone `warn` si une fonction **activée** a un problème.
+- [ ] `CardGrid` :
+  - **Fournisseurs** (`Server`) → « {n} fournisseurs · {k} clés OK » (une clé refusée → résumé en `warn`) → sous-page `ProvidersCard` : liste, fiche fournisseur (clé, URL, modèles, case « transcription », bouton Tester), ajout d'un fournisseur compatible OpenAI ;
+  - **Utilisation par fonction** (`Workflow`) → « Reformulation {fournisseur} · Validateur {Automatique|fournisseur} · Transcription {API|locale} » → sous-page `FeatureModelsCard` : une ligne par fonction (fournisseur → modèle → état) ;
+  - **Transcription locale** (`Cpu`) → le modèle local actif → la liste et le téléchargement des modèles locaux (structure actuelle conservée, l'audit dit de ne pas la reconstruire).
+- [ ] `ExpertSection` « moteur » en bas : `ModelUnloadTimeout`, `LongFormChunking` (retirés d'Avancé), `AccelerationSelector` (retiré d'Expérimental), `LanguageDetection` et `LanguageDetectionWindow` (retiré de Debug), délai de la transcription par API (`cloud_asr.timeout_secs`).
+- [ ] Les liens entrants (Amélioration « Modifier dans Modèles », Vocabulaire « Choisir le modèle ») ouvrent directement la sous-page **Utilisation par fonction**. Ajouter un paramètre d'ouverture à la section `models` (état local initial passé par la navigation, comme les autres retours de sous-page).
 - [ ] Le lien « reformulation » s'appelle désormais « Amélioration ».
+- [ ] Tests Playwright : la carte Fournisseurs ouvre la liste ; changer le modèle de la reformulation dans Utilisation par fonction se voit dans le résumé d'Amélioration et, en Automatique, dans la carte Validateur (Review Focus 7) ; « Modifier dans Modèles » depuis Amélioration arrive sur Utilisation par fonction.
 - [ ] Commit.
 
 ### Task 12 : Avancé
@@ -275,7 +297,7 @@ Sous-pages :
 - [ ] Relier les labels aux champs (`htmlFor`/`id`, ou `aria-label`) : `SettingContainer.tsx:87`, `HistoryLimit.tsx:37`, champ nom, `PromptEditor`.
 - [ ] Overlay : remplacer les `div onClick` de fermeture des notices par des `<button aria-label>` (`RecordingOverlay.tsx:432,501`).
 - [ ] `SettingContainer` : passer `descriptionMode` à `"inline"` par défaut **uniquement** dans les nouvelles pages (prop explicite). Ne pas changer le défaut global.
-- [ ] Ajouter `settings.postProcessing.learning.judge.provider.{label,description,auto}` et les nouveaux résumés de la carte Juge, avec la valeur anglaise, aux 24 locales sans traduction.
+- [ ] Les clés `settings.postProcessing.learning.judge.provider.*` ont été retirées par le plan A (plus de menu) : vérifier qu'aucun composant ne les utilise encore, puis les supprimer de toutes les locales. Ajouter les nouveaux résumés des cartes Validateur, Fournisseurs et Utilisation par fonction, avec la valeur anglaise, aux 24 locales sans traduction. FR : « Validateur d'apprentissage » remplace « Juge des corrections » partout.
 - [ ] `bun run check:translations` passe.
 - [ ] Commit.
 
@@ -284,6 +306,7 @@ Sous-pages :
 - [ ] Script `bun scripts/check-settings-coverage.ts` (court, avec asserts) : pour chaque champ de `Settings` dans `bindings.ts`, vérifier qu'il est rendu au moins une fois sous `src/components/settings/**` ou figure dans une liste blanche commentée (champs internes). Il échoue si un réglage n'a plus d'UI après les déplacements.
 - [ ] Grep avant/après des gardes plateforme : `AirPodsMode`, `TypingTool`, `ClamshellMicrophoneSelector`, `ChineseScript`, annulation Linux, Apple Intelligence, VS Code. Chaque garde existe encore.
 - [ ] Vérifier que plus aucun composant n'est rendu à deux endroits par accident : un seul `<CustomWords`, `<FillerWordRemoval`, etc. (grep `-c`).
+- [ ] Review Focus 7 : `ApiKeyField`, `BaseUrlField` et `ModelSelect` ne sont rendus que sous `S/models/` (grep sur `src/components/settings` hors `models/` → 0 résultat).
 - [ ] Commit.
 
 ### Task 17 : Vérification finale, build, handoff
