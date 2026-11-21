@@ -1336,7 +1336,7 @@ pub fn get_default_settings() -> AppSettings {
             "ctrl+alt+space",
         );
         // No key by default: a saved transformation is bound by the user.
-        for i in 1..=3 {
+        for i in 1..=crate::adaptive::MAX_TRANSFORMS {
             add(
                 &format!("transform_{i}"),
                 &format!("Transformation {i}"),
@@ -2097,6 +2097,18 @@ pub fn get_recording_retention_period(app: &AppHandle) -> RecordingRetentionPeri
 
 #[cfg(test)]
 mod tests {
+
+    #[test]
+    #[cfg(target_os = "windows")] // the fork's shortcuts are Windows-only
+    fn every_transformation_slot_has_a_binding() {
+        let bindings = get_default_settings().bindings;
+        for i in 1..=crate::adaptive::MAX_TRANSFORMS {
+            assert!(
+                bindings.contains_key(&format!("transform_{i}")),
+                "transform_{i}"
+            );
+        }
+    }
     use super::*;
 
     #[test]

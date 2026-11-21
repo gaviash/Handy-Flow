@@ -463,3 +463,30 @@ test("Enhancement names its fallback line", async ({ page }) => {
   await openEnhancement(page);
   await expect(page.getByText("Rewrite fallback: None")).toBeVisible();
 });
+
+test("'New transformation' creates a fourth one, and it can be deleted", async ({
+  page,
+}) => {
+  const mock = await mockTauri(page);
+  await page.goto("/");
+  await page
+    .getByRole("button", { name: "Transformations", exact: true })
+    .click();
+  await page.getByRole("button", { name: "New transformation" }).click();
+  await page.getByRole("textbox", { name: "Name" }).fill("Résumer");
+  await page
+    .getByRole("textbox", { name: "Instruction" })
+    .fill("Summarize it.");
+  await page.getByRole("textbox", { name: "Name" }).focus();
+  const saved = async () =>
+    (await mock.calls())
+      .filter((c) => c.cmd === "change_transforms_setting")
+      .map((c) => (c.args as { transforms: { name: string }[] }).transforms)
+      .pop();
+  await expect.poll(saved).toHaveLength(4);
+  expect((await saved())?.[3]).toMatchObject({ name: "Résumer" });
+  await page
+    .getByRole("button", { name: "Delete this transformation" })
+    .click();
+  await expect.poll(async () => (await saved())?.[3]?.name).toBe("");
+});

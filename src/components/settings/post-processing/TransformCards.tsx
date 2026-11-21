@@ -3,23 +3,24 @@ import { useTranslation } from "react-i18next";
 import { Plus } from "lucide-react";
 import { SettingContainer, SettingsGroup, Textarea } from "@/components/ui";
 import { Input } from "../../ui/Input";
+import { Button } from "../../ui/Button";
 import { ShortcutInput } from "../ShortcutInput";
 import { useSettings } from "../../../hooks/useSettings";
 import { useOsType } from "../../../hooks/useOsType";
 import { formatKeyCombination } from "../../../lib/utils/keyboard";
 
-/** Polish, the voice instruction, then the three saved transformations. */
+/** Mirrors adaptive.rs MAX_TRANSFORMS: one shortcut per saved slot. */
+const MAX_TRANSFORMS = 9;
+/** Polish, the voice instruction, then the saved transformations. */
 export const TRANSFORM_IDS = [
   "polish",
   "instruct",
-  "transform_1",
-  "transform_2",
-  "transform_3",
-] as const;
-export type TransformId = (typeof TRANSFORM_IDS)[number];
+  ...Array.from({ length: MAX_TRANSFORMS }, (_, i) => `transform_${i + 1}`),
+];
+export type TransformId = string;
 
 const slot = (id: TransformId) =>
-  id.startsWith("transform_") ? Number(id.slice(-1)) - 1 : -1;
+  id.startsWith("transform_") ? Number(id.slice("transform_".length)) - 1 : -1;
 const b = (id: string, key: string) =>
   `settings.general.shortcut.bindings.${id}.${key}`;
 
@@ -89,6 +90,15 @@ const TransformCard = React.forwardRef<
 });
 TransformCard.displayName = "TransformCard";
 
+/** The first slot with no saved transformation, or none when all are used. */
+export function useFreeSlot(): TransformId | undefined {
+  const { getSetting } = useSettings();
+  const transforms = getSetting("transforms") ?? [];
+  return TRANSFORM_IDS.find(
+    (id) => slot(id) >= 0 && !transforms[slot(id)]?.name.trim(),
+  );
+}
+
 /** One card per transformation, its shortcut on top; "+" fills an empty slot. */
 export const TransformCards: React.FC<{
   open: (id: TransformId) => void;
@@ -100,9 +110,7 @@ export const TransformCards: React.FC<{
   const shown = TRANSFORM_IDS.filter(
     (id) => slot(id) < 0 || transforms[slot(id)]?.name.trim(),
   );
-  const free = TRANSFORM_IDS.find(
-    (id) => slot(id) >= 0 && !transforms[slot(id)]?.name.trim(),
-  );
+  const free = useFreeSlot();
   return (
     <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
       {shown.map((id) => (
@@ -137,7 +145,10 @@ export const TransformCards: React.FC<{
 
 /** A transformation's sub-page: its shortcut, and for a saved one its name
  * and instruction (saved when the field is left). */
-export const TransformEditor: React.FC<{ id: TransformId }> = ({ id }) => {
+export const TransformEditor: React.FC<{
+  id: TransformId;
+  onDeleted?: () => void;
+}> = ({ id, onDeleted }) => {
   const { t } = useTranslation();
   const { getSetting, updateSetting } = useSettings();
   const transforms = getSetting("transforms") ?? [];
@@ -149,15 +160,17 @@ export const TransformEditor: React.FC<{ id: TransformId }> = ({ id }) => {
     setName(saved?.name ?? "");
     setInstruction(saved?.instruction ?? "");
   }, [saved?.name, saved?.instruction]);
-  const save = () =>
-    updateSetting(
-      "transforms",
-      transforms.map((x, i) =>
-        i === index
-          ? { name: name.trim(), instruction: instruction.trim() }
-          : x,
-      ),
+  /** Writes this slot, padding the list when the slot is past its end. */
+  const write = (value: { name: string; instruction: string }) => {
+    const next = Array.from(
+      { length: Math.max(transforms.length, index + 1) },
+      (_, i) => transforms[i] ?? { name: "", instruction: "" },
     );
+    next[index] = value;
+    return updateSetting("transforms", next);
+  };
+  const save = () =>
+    write({ name: name.trim(), instruction: instruction.trim() });
   const p = (key: string) => `settings.postProcessing.transforms.${key}`;
   return (
     <SettingsGroup>
@@ -192,6 +205,20 @@ export const TransformEditor: React.FC<{ id: TransformId }> = ({ id }) => {
               onBlur={save}
             />
           </SettingContainer>
+          {saved?.name.trim() && (
+            <div className="px-4 py-3">
+              <Button
+                variant="danger-ghost"
+                size="sm"
+                onClick={() => {
+                  write({ name: "", instruction: "" });
+                  onDeleted?.();
+                }}
+              >
+                {t("settings.transformsPage.delete")}
+              </Button>
+            </div>
+          )}
         </>
       )}
     </SettingsGroup>
