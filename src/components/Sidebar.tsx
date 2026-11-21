@@ -13,6 +13,7 @@ import {
   Eye,
   Wand2,
 } from "lucide-react";
+import { type } from "@tauri-apps/plugin-os";
 import HandyFlowWordmark from "./icons/HandyFlowWordmark";
 import { useSettings } from "../hooks/useSettings";
 import {
@@ -72,7 +73,8 @@ export const SECTIONS_CONFIG = {
     labelKey: "sidebar.transforms",
     icon: Wand2,
     component: TransformsPage,
-    enabled: () => true,
+    // Their shortcuts exist only in the Windows build (settings.rs).
+    enabled: () => type() === "windows",
   },
   vocabulary: {
     labelKey: "sidebar.vocabulary",
