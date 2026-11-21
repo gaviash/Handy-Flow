@@ -21,6 +21,7 @@ mod features;
 mod helpers;
 mod input;
 mod judge;
+mod junction;
 mod language_detection;
 mod languages;
 mod learning;

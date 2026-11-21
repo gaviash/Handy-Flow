@@ -975,6 +975,13 @@ pub fn paste(text: String, app_handle: AppHandle) -> Result<PasteOutcome, String
     paste_with(text, app_handle, settings)
 }
 
+/// The junction rules already chose the spaces: no extra trailing one.
+pub fn paste_spaced(text: String, app_handle: AppHandle) -> Result<PasteOutcome, String> {
+    let mut settings = get_settings(&app_handle);
+    settings.append_trailing_space = false;
+    paste_with(text, app_handle, settings)
+}
+
 /// Handy Adaptive (F79): a password field's text never stays in the
 /// clipboard, whatever the clipboard setting.
 pub fn paste_secret(text: String, app_handle: AppHandle) -> Result<PasteOutcome, String> {

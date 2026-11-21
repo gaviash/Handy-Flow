@@ -1299,6 +1299,7 @@ impl ShortcutAction for TranscribeAction {
                             // Windows: a password check that didn't happen counts as private.
                             let unchecked = cfg!(windows) && !capture.password_checked;
                             let (field, terminal) = (capture.field.clone(), capture.terminal);
+                            let (screen_names, content) = (capture.names.clone(), capture.content);
                             let ctx_settings = get_settings(&ah);
                             // F120: a trigger said on its own inserts its snippet as is.
                             let snippet = (!sensitive)
@@ -1503,19 +1504,8 @@ impl ShortcutAction for TranscribeAction {
 
                             // The user's hook only changes what gets pasted;
                             // history above keeps the text as produced.
-                            let Some(final_text) = complete_unless_cancelled(
-                                crate::transcription_hook::apply(
-                                    &ah,
-                                    // F70: fit the text to the cursor it goes to.
-                                    match &field {
-                                        Some(f) => crate::adaptive::join_at_cursor(
-                                            f,
-                                            &processed.final_text,
-                                            terminal,
-                                        ),
-                                        None => processed.final_text,
-                                    },
-                                ),
+                            let Some(hooked) = complete_unless_cancelled(
+                                crate::transcription_hook::apply(&ah, processed.final_text),
                                 || rm.was_cancelled_since(cancel_generation),
                             )
                             .await
@@ -1525,6 +1515,30 @@ impl ShortcutAction for TranscribeAction {
                                 set_tray_state(&ah, TrayIconState::Idle);
                                 return;
                             };
+                            // EX-1: fit the text to the cursor it goes to; a private
+                            // field gets it as produced.
+                            let known_names: Vec<String> = screen_names
+                                .into_iter()
+                                .chain(crate::learning::plain_terms(&ah))
+                                .chain(ctx_settings.custom_words.iter().cloned())
+                                .chain(Some(ctx_settings.user_name.trim().to_string()))
+                                .filter(|n| !n.is_empty())
+                                .collect();
+                            let joined = crate::junction::join(
+                                &hooked,
+                                &crate::junction::JoinContext {
+                                    field: field
+                                        .as_ref()
+                                        .filter(|_| !(sensitive || excluded || unchecked)),
+                                    style: content
+                                        .map(|c| ctx_settings.styles.tone(c.style()))
+                                        .unwrap_or_default(),
+                                    content,
+                                    known_names: &known_names,
+                                },
+                            );
+                            let (final_text, spacing_decided) =
+                                (joined.text, joined.spacing_decided);
 
                             if final_text.is_empty() {
                                 finish_without_text(&ah, input_silent, sample_count, stop_time);
@@ -1568,6 +1582,8 @@ impl ShortcutAction for TranscribeAction {
                                         } else {
                                             if sensitive {
                                                 utils::paste_secret(final_text, ah_clone.clone())
+                                            } else if spacing_decided {
+                                                utils::paste_spaced(final_text, ah_clone.clone())
                                             } else {
                                                 utils::paste(final_text, ah_clone.clone())
                                             }
