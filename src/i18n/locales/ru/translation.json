@@ -22,7 +22,8 @@
     "about": "О программе",
     "appearance": "Appearance",
     "label": "Sections",
-    "vocabulary": "Vocabulary"
+    "vocabulary": "Vocabulary",
+    "context": "Context"
   },
   "onboarding": {
     "customModelDescription": "Официально не поддерживается",
@@ -1363,6 +1364,17 @@
       "learnedSummary": "Total: {{count}} · pending: {{pending}}",
       "reasoningHint": "A reasoning model makes fewer mistakes: choose one in Models.",
       "expert": "learned-word sound, correction threshold"
+    },
+    "context": {
+      "subtitle": "What Handy Flow reads around the cursor to adapt your dictation, and what it sends to the model.",
+      "statusOff": "Handy Flow doesn't read the screen.",
+      "statusLocal": "Read on your PC, nothing is sent.",
+      "statusSent": "The text around the cursor is sent to the model. Excluded: {{apps}} apps, {{sites}} sites.",
+      "exclusions": "Exclusions",
+      "exclusionsHelp": "In these apps and sites, nothing is read or sent, the text is not pasted automatically, and corrections are not learned.",
+      "exclusionsSummary": "Apps: {{apps}} · sites: {{sites}}",
+      "lastAt": "Last dictation: {{time}}",
+      "expert": "sources, limits, VS Code"
     }
   },
   "footer": {

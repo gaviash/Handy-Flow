@@ -8,6 +8,7 @@ export { PostProcessingSettings } from "./post-processing/PostProcessingSettings
 export { ModelsSettings } from "./models/ModelsSettings";
 export { AppearanceSettings } from "./appearance/AppearanceSettings";
 export { VocabularySettings } from "./vocabulary/VocabularySettings";
+export { ContextPage } from "./context/ContextPage";
 
 // Individual setting components
 export { MicrophoneSelector } from "./MicrophoneSelector";

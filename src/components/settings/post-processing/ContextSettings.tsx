@@ -1,7 +1,5 @@
 import React, { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { ContextParts, ContextReports } from "./ContextReports";
-import { ToggleSwitch } from "../../ui/ToggleSwitch";
 import { SettingContainer } from "../../ui/SettingContainer";
 import { Textarea } from "../../ui/Textarea";
 import { Input } from "../../ui/Input";
@@ -66,60 +64,5 @@ export const UserName: React.FC = () => {
         onBlur={() => updateSetting("user_name", name)}
       />
     </SettingContainer>
-  );
-};
-
-/** Handy Adaptive (F97, F33, F114): what is read, what is sent, and the last send. */
-export const ContextSettings: React.FC = () => {
-  const { t } = useTranslation();
-  const { getSetting, updateSetting, isUpdating } = useSettings();
-
-  return (
-    <>
-      <ToggleSwitch
-        checked={getSetting("context_enabled") ?? true}
-        onChange={(v) => updateSetting("context_enabled", v)}
-        isUpdating={isUpdating("context_enabled")}
-        label={t("settings.postProcessing.context.read.label")}
-        description={t("settings.postProcessing.context.read.description")}
-        descriptionMode="tooltip"
-        grouped={true}
-      />
-      <ToggleSwitch
-        checked={getSetting("context_send_enabled") ?? true}
-        onChange={(v) => updateSetting("context_send_enabled", v)}
-        isUpdating={isUpdating("context_send_enabled")}
-        label={t("settings.postProcessing.context.send.label")}
-        description={t("settings.postProcessing.context.send.description")}
-        descriptionMode="tooltip"
-        grouped={true}
-      />
-      <ToggleSwitch
-        checked={getSetting("vscode_screen_reader") ?? true}
-        onChange={(v) => updateSetting("vscode_screen_reader", v)}
-        isUpdating={isUpdating("vscode_screen_reader")}
-        label={t("settings.postProcessing.context.vscode.label")}
-        description={t("settings.postProcessing.context.vscode.description")}
-        descriptionMode="tooltip"
-        grouped={true}
-      />
-      <ExclusionList
-        settingKey="context_excluded_apps"
-        label={t("settings.postProcessing.context.excludedApps.label")}
-        description={t(
-          "settings.postProcessing.context.excludedApps.description",
-        )}
-      />
-      <ExclusionList
-        settingKey="context_excluded_domains"
-        label={t("settings.postProcessing.context.excludedDomains.label")}
-        description={t(
-          "settings.postProcessing.context.excludedDomains.description",
-        )}
-      />
-      <ContextParts setting="rewrite_context" />
-      <ContextParts setting="transform_context" />
-      <ContextReports />
-    </>
   );
 };

@@ -50,7 +50,7 @@ export const AsrContextSettings: React.FC<{
       disabled={disabled}
       label={t(key(label))}
       description={t(key("description"))}
-      descriptionMode="tooltip"
+      descriptionMode={part === "screen" ? "inline" : "tooltip"}
       grouped={true}
     />
   );

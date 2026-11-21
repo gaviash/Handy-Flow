@@ -22,7 +22,8 @@
     "about": "À propos",
     "appearance": "Apparence",
     "label": "Sections",
-    "vocabulary": "Vocabulaire"
+    "vocabulary": "Vocabulaire",
+    "context": "Contexte"
   },
   "onboarding": {
     "customModelDescription": "Non officiellement pris en charge",
@@ -1363,6 +1364,17 @@
       "learnedSummary": "Total : {{count}} · en attente : {{pending}}",
       "reasoningHint": "Un modèle qui raisonne se trompe moins : choisissez-en un dans Modèles.",
       "expert": "son du mot appris, seuil de correction"
+    },
+    "context": {
+      "subtitle": "Ce que Handy Flow lit autour du curseur pour adapter votre dictée, et ce qu'il envoie au modèle.",
+      "statusOff": "Handy Flow ne lit pas l'écran.",
+      "statusLocal": "Lu sur votre PC, rien n'est envoyé.",
+      "statusSent": "Le texte autour du curseur est envoyé au modèle. Exclus : {{apps}} applications, {{sites}} sites.",
+      "exclusions": "Exclusions",
+      "exclusionsHelp": "Dans ces applications et ces sites, rien n'est lu ni envoyé, le texte n'est pas collé automatiquement et les corrections ne sont pas apprises.",
+      "exclusionsSummary": "Applications : {{apps}} · sites : {{sites}}",
+      "lastAt": "Dernière dictée : {{time}}",
+      "expert": "sources, limites, VS Code"
     }
   },
   "footer": {

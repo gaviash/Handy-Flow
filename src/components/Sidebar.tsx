@@ -10,6 +10,7 @@ import {
   SlidersHorizontal,
   Sparkles,
   BookOpen,
+  Eye,
 } from "lucide-react";
 import HandyFlowWordmark from "./icons/HandyFlowWordmark";
 import { useSettings } from "../hooks/useSettings";
@@ -22,6 +23,7 @@ import {
   ModelsSettings,
   AppearanceSettings,
   VocabularySettings,
+  ContextPage,
 } from "./settings";
 
 export type SidebarSection = keyof typeof SECTIONS_CONFIG;
@@ -68,6 +70,12 @@ export const SECTIONS_CONFIG = {
     labelKey: "sidebar.vocabulary",
     icon: BookOpen,
     component: VocabularySettings,
+    enabled: () => true,
+  },
+  context: {
+    labelKey: "sidebar.context",
+    icon: Eye,
+    component: ContextPage,
     enabled: () => true,
   },
   history: {

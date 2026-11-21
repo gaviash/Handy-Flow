@@ -62,6 +62,7 @@ const PAGES_WITH_OWN_TITLE: SidebarSection[] = [
   "about",
   "models",
   "vocabulary",
+  "context",
 ];
 
 const renderSettingsContent = (

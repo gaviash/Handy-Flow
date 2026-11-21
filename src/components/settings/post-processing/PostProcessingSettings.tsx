@@ -15,7 +15,6 @@ import { Input } from "../../ui/Input";
 import { FeatureSummary } from "../models/FeatureModelsCard";
 import { ShortcutInput } from "../ShortcutInput";
 import { PostProcessTimeout } from "./PostProcessTimeout";
-import { ContextSettings } from "./ContextSettings";
 import { StyleSettings } from "./StyleSettings";
 import { TransformSettings } from "./TransformSettings";
 import { useSettings } from "../../../hooks/useSettings";
@@ -354,10 +353,6 @@ export const PostProcessingSettings: React.FC<{
 
       <SettingsGroup title={t("settings.postProcessing.styles.title")}>
         <StyleSettings />
-      </SettingsGroup>
-
-      <SettingsGroup title={t("settings.postProcessing.context.title")}>
-        <ContextSettings />
       </SettingsGroup>
 
       <SettingsGroup title={t("settings.postProcessing.prompts.title")}>

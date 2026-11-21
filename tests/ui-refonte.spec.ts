@@ -140,3 +140,22 @@ test("only a pending learned word shows when it expires", async ({ page }) => {
     /.+/,
   );
 });
+
+test("turning sending off changes what the Context page says", async ({
+  page,
+}) => {
+  await mockTauri(page, {
+    settings: { context_enabled: true, context_send_enabled: true },
+  });
+  await page.goto("/");
+  await page.getByRole("button", { name: "Context", exact: true }).click();
+  await expect(
+    page.getByText(/The text around the cursor is sent to the model/),
+  ).toBeVisible();
+  await page
+    .getByRole("checkbox", { name: "Send Context to the LLM" })
+    .click({ force: true });
+  await expect(
+    page.getByText("Read on your PC, nothing is sent."),
+  ).toBeVisible();
+});
