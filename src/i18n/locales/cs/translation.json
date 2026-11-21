@@ -505,7 +505,22 @@
           "toggle": "Klepněte na zkratku pro zahájení nahrávání, klepněte znovu pro zastavení"
         }
       },
-      "dictationShortcut": "Dictation shortcut"
+      "dictationShortcut": "Dictation shortcut",
+      "shortcuts": "Shortcuts",
+      "shortcutsExpert": "hold threshold",
+      "micExpert": "input channel, laptop lid closed",
+      "sounds": "Sounds",
+      "startup": "Startup",
+      "defaultMic": "Default microphone",
+      "statusRaw": "{{shortcut}}: dictation as is",
+      "statusEnhanced": "{{shortcut}}: enhanced dictation",
+      "statusMic": "Microphone: {{mic}}",
+      "languagesSummary": "{{spoken}} · interface {{app}}",
+      "soundsOn": "On · {{volume}} %",
+      "soundsOff": "Off",
+      "startsWithWindows": "Starts with Windows",
+      "startsByHand": "Started by hand",
+      "hidden": "hidden"
     },
     "models": {
       "title": "Modely",

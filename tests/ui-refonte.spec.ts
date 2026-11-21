@@ -7,6 +7,7 @@ test("a failed save rolls back and says so", async ({ page }) => {
     errors: { change_audio_feedback_setting: "disk full" },
   });
   await page.goto("/");
+  await page.getByRole("button", { name: /^Sounds/ }).click();
   const toggle = page.getByRole("checkbox", { name: "Audio Feedback" });
   await toggle.click({ force: true });
   await expect(page.getByText("Setting not saved").first()).toBeVisible();
@@ -242,4 +243,13 @@ test("the provider sub-page only summarises and links to Models", async ({
   await expect(
     page.getByRole("group", { name: "Learning validator" }),
   ).toBeVisible();
+});
+
+test("General names the enhanced shortcut only when the rewrite is on", async ({
+  page,
+}) => {
+  await mockTauri(page, { settings: { post_process_enabled: false } });
+  await page.goto("/");
+  await expect(page.getByText(/: dictation as is/)).toBeVisible();
+  await expect(page.getByText(/enhanced dictation/)).toHaveCount(0);
 });

@@ -2,9 +2,6 @@ import React from "react";
 import { useTranslation } from "react-i18next";
 import { ModelUnloadTimeoutSetting } from "../ModelUnloadTimeout";
 import { SettingsGroup } from "../../ui/SettingsGroup";
-import { StartHidden } from "../StartHidden";
-import { AutostartToggle } from "../AutostartToggle";
-import { ShowTrayIcon } from "../ShowTrayIcon";
 import { PasteMethodSetting } from "../PasteMethod";
 import { TypingToolSetting } from "../TypingTool";
 import { ClipboardHandlingSetting } from "../ClipboardHandling";
@@ -34,9 +31,6 @@ export const AdvancedSettings: React.FC<{ onShowAppearance?: () => void }> = ({
   return (
     <div className="max-w-3xl w-full mx-auto space-y-6">
       <SettingsGroup title={t("settings.advanced.groups.app")}>
-        <StartHidden descriptionMode="tooltip" grouped={true} />
-        <AutostartToggle descriptionMode="tooltip" grouped={true} />
-        <ShowTrayIcon descriptionMode="tooltip" grouped={true} />
         <div className="row-setting px-4">
           <button
             type="button"

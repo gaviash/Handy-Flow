@@ -63,6 +63,7 @@ test("French shortcut choices explain how recording starts and stops", async ({
 }) => {
   await mockTauri(page, { settings: { app_language: "fr" } });
   await page.goto("/");
+  await page.getByRole("button", { name: /^Raccourcis/ }).click();
   await page
     .getByRole("button", {
       name: "Maintenez pour enregistrer ; appuyez pour démarrer ou arrêter",
@@ -362,7 +363,7 @@ for (const palette of PALETTE_IDS)
       await page.emulateMedia({ reducedMotion: "reduce" });
       await page.goto("/");
       await expect(
-        page.getByRole("checkbox", { name: "Mute While Recording" }),
+        page.getByRole("button", { name: /^Shortcuts/ }),
       ).toBeVisible();
       await expect(page).toHaveScreenshot(`general-${palette}-${theme}.png`);
       await page

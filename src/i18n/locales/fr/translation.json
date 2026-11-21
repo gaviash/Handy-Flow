@@ -505,7 +505,22 @@
           "toggle": "Appuyez sur le raccourci pour démarrer l'enregistrement, appuyez à nouveau pour arrêter"
         }
       },
-      "dictationShortcut": "Raccourci de dictée"
+      "dictationShortcut": "Raccourci de dictée",
+      "shortcuts": "Raccourcis",
+      "shortcutsExpert": "seuil de maintien",
+      "micExpert": "canal d'entrée, écran du portable fermé",
+      "sounds": "Sons",
+      "startup": "Démarrage",
+      "defaultMic": "Micro par défaut",
+      "statusRaw": "{{shortcut}} : dictée telle quelle",
+      "statusEnhanced": "{{shortcut}} : dictée améliorée",
+      "statusMic": "Micro : {{mic}}",
+      "languagesSummary": "{{spoken}} · interface {{app}}",
+      "soundsOn": "Activés · {{volume}} %",
+      "soundsOff": "Coupés",
+      "startsWithWindows": "Au démarrage de Windows",
+      "startsByHand": "Lancé à la main",
+      "hidden": "caché"
     },
     "models": {
       "title": "Modèles",
