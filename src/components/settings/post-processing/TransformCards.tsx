@@ -19,6 +19,9 @@ export const TRANSFORM_IDS = [
 ];
 export type TransformId = string;
 
+/** A slot in use: anything typed in it, name or instruction, keeps it. */
+const used = (x?: { name: string; instruction: string }) =>
+  !!(x?.name.trim() || x?.instruction.trim());
 const slot = (id: TransformId) =>
   id.startsWith("transform_") ? Number(id.slice("transform_".length)) - 1 : -1;
 const b = (id: string, key: string) =>
@@ -31,7 +34,7 @@ function useTransform(id: TransformId) {
   const saved = (getSetting("transforms") ?? [])[slot(id)];
   return {
     saved,
-    empty: slot(id) >= 0 && !saved?.name.trim(),
+    empty: slot(id) >= 0 && !used(saved),
     title: saved?.name.trim() || t(b(id, "name")),
     description: saved?.instruction.trim() || t(b(id, "description")),
   };
@@ -95,7 +98,7 @@ export function useFreeSlot(): TransformId | undefined {
   const { getSetting } = useSettings();
   const transforms = getSetting("transforms") ?? [];
   return TRANSFORM_IDS.find(
-    (id) => slot(id) >= 0 && !transforms[slot(id)]?.name.trim(),
+    (id) => slot(id) >= 0 && !used(transforms[slot(id)]),
   );
 }
 
@@ -108,7 +111,7 @@ export const TransformCards: React.FC<{
   const { getSetting } = useSettings();
   const transforms = getSetting("transforms") ?? [];
   const shown = TRANSFORM_IDS.filter(
-    (id) => slot(id) < 0 || transforms[slot(id)]?.name.trim(),
+    (id) => slot(id) < 0 || used(transforms[slot(id)]),
   );
   const free = useFreeSlot();
   return (
@@ -150,7 +153,7 @@ export const TransformEditor: React.FC<{
   onDeleted?: () => void;
 }> = ({ id, onDeleted }) => {
   const { t } = useTranslation();
-  const { getSetting, updateSetting } = useSettings();
+  const { getSetting, updateSetting, resetBinding } = useSettings();
   const transforms = getSetting("transforms") ?? [];
   const index = slot(id);
   const saved = transforms[index];
@@ -205,13 +208,15 @@ export const TransformEditor: React.FC<{
               onBlur={save}
             />
           </SettingContainer>
-          {saved?.name.trim() && (
+          {used(saved) && (
             <div className="px-4 py-3">
               <Button
                 variant="danger-ghost"
                 size="sm"
                 onClick={() => {
                   write({ name: "", instruction: "" });
+                  // Release its shortcut: a deleted transformation catches no keys.
+                  resetBinding(id);
                   onDeleted?.();
                 }}
               >

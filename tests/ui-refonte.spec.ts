@@ -489,4 +489,31 @@ test("'New transformation' creates a fourth one, and it can be deleted", async (
     .getByRole("button", { name: "Delete this transformation" })
     .click();
   await expect.poll(async () => (await saved())?.[3]?.name).toBe("");
+  // Its shortcut is released too, so its keys stop being caught.
+  await expect
+    .poll(async () =>
+      (await mock.calls()).find((c) => c.cmd === "reset_binding"),
+    )
+    .toMatchObject({ args: { id: "transform_4" } });
+});
+
+test("a transformation with only an instruction keeps its card", async ({
+  page,
+}) => {
+  await mockTauri(page, {
+    settings: {
+      transforms: [
+        { name: "", instruction: "Make it shorter." },
+        { name: "Plus formel", instruction: "Make it more formal." },
+        { name: "En anglais", instruction: "Translate it into English." },
+      ],
+    },
+  });
+  await page.goto("/");
+  await page
+    .getByRole("button", { name: "Transformations", exact: true })
+    .click();
+  await expect(
+    page.getByRole("button", { name: /Make it shorter/ }),
+  ).toBeVisible();
 });
