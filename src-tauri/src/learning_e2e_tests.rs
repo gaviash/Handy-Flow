@@ -5,8 +5,11 @@
 use crate::adaptive::context_block;
 use crate::asr_context::{build, AsrCaps, AsrContextSettings, AsrSources};
 use crate::context::{extract_terms, Content, LlmContext, Style, Tone};
-use crate::learning::{candidates, mark_used, prune, record_word, replace_heard, Memory, WordKind};
+use crate::learning::{
+    candidates, mark_used, prune, record_decision, replace_heard, Memory, WordKind,
+};
 use crate::recall::relevant_terms;
+use crate::validator::decide;
 
 const NOW: i64 = 100 * 86_400;
 
@@ -45,18 +48,28 @@ fn plain_terms_of(m: &Memory) -> Vec<String> {
         .collect()
 }
 
-/// One dictation corrected by the user: what the observation would learn.
-fn correct(m: &mut Memory, pasted: &str, kept: &str) {
-    for c in candidates(pasted, kept) {
-        record_word(m, &c, NOW);
+/// One dictation corrected by the user, decided with the validator's reply
+/// (`None`: no validator, the local fallback decides).
+fn correct_with(m: &mut Memory, pasted: &str, kept: &str, reply: Option<&str>) {
+    for (c, d) in decide(candidates(pasted, kept), reply) {
+        record_decision(m, c, &d, NOW);
     }
 }
 
+/// One dictation corrected by the user, without a validator.
+fn correct(m: &mut Memory, pasted: &str, kept: &str) {
+    correct_with(m, pasted, kept, None);
+}
+
 /// The term learned from one corrected sentence, if any.
-fn learned(pasted: &str, kept: &str) -> Option<String> {
+fn learned_with(pasted: &str, kept: &str, reply: Option<&str>) -> Option<String> {
     let mut m = Memory::default();
-    correct(&mut m, pasted, kept);
+    correct_with(&mut m, pasted, kept, reply);
     m.words.iter().find(|w| w.active).map(|w| w.term.clone())
+}
+
+fn learned(pasted: &str, kept: &str) -> Option<String> {
+    learned_with(pasted, kept, None)
 }
 
 #[test]
@@ -166,6 +179,65 @@ fn golden_learning_filter_l01_to_l08() {
         ),
         some("Ombrevex")
     ); // L08
+}
+
+#[test]
+fn golden_learning_filter_l01_to_l08_with_the_validator() {
+    let accept = |heard: &str, term: &str, kind: &str| {
+        format!(r#"{{"accepted":[{{"heard":"{heard}","term":"{term}","kind":"{kind}"}}]}}"#)
+    };
+    let none = r#"{"accepted":[]}"#;
+    let some = |t: &str| Some(t.to_string());
+    let cases: [(&str, &str, String, Option<String>); 7] = [
+        (
+            "Merci Jordan, à demain.",
+            "Merci Jordane, à demain.",
+            accept("Jordan", "Jordane", "name"),
+            some("Jordane"),
+        ), // L01
+        (
+            "Nous utilisons Plurixan demain.",
+            "Nous utilisons Plorixane demain.",
+            accept("Plurixan", "Plorixane", "name"),
+            some("Plorixane"),
+        ), // L02
+        (
+            "On migre la base Postgré demain.",
+            "On migre la base PostgreSQL demain.",
+            accept("Postgré", "PostgreSQL", "technical"),
+            some("PostgreSQL"),
+        ), // L03
+        (
+            "On se voit mardi soir.",
+            "On se voit jeudi soir.",
+            none.into(),
+            None,
+        ), // L04, guarded before any call
+        (
+            "Le projet avance bien.",
+            "Le projets avance bien.",
+            none.into(),
+            None,
+        ), // L05
+        (
+            "Testons quelle solution.",
+            "Testons Kelmorine solution.",
+            none.into(),
+            None,
+        ), // L07, refused
+        (
+            "Le module ombrevecs est prêt.",
+            "Le module Ombrevex est prêt.",
+            accept("ombrevecs", "Ombrevex", "technical"),
+            some("Ombrevex"),
+        ), // L08
+    ];
+    for (pasted, kept, reply, expected) in cases {
+        assert_eq!(learned_with(pasted, kept, Some(&reply)), expected, "{kept}");
+    }
+    // L04/L05 never reach the validator.
+    assert!(candidates("On se voit mardi soir.", "On se voit jeudi soir.").is_empty());
+    assert!(candidates("Le projet avance bien.", "Le projets avance bien.").is_empty());
 }
 
 #[test]
