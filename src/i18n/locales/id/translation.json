@@ -1469,5 +1469,13 @@
   },
   "about": {
     "forkOf": "Based on Handy, MIT license"
+  },
+  "status": {
+    "ok": "Ready",
+    "warn": "Needs setup",
+    "off": "Off"
+  },
+  "expert": {
+    "title": "Expert settings"
   }
 }

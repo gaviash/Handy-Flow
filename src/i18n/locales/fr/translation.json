@@ -1469,5 +1469,13 @@
   },
   "about": {
     "forkOf": "Basé sur Handy, licence MIT"
+  },
+  "status": {
+    "ok": "Prêt",
+    "warn": "À configurer",
+    "off": "Désactivé"
+  },
+  "expert": {
+    "title": "Réglages experts"
   }
 }
