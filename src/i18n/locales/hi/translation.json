@@ -762,7 +762,12 @@
           "traditionalTw": "पारंपरिक (ताइवान)",
           "traditionalHk": "पारंपरिक (हांगकांग)"
         }
-      }
+      },
+      "insertion": "Text insertion",
+      "insertionExpert": "paste delays, reliable paste",
+      "captureExpert": "audio capture",
+      "trailingSpaceOn": "trailing space",
+      "trailingSpaceOff": "no trailing space"
     },
     "postProcessing": {
       "hotkey": {

@@ -19,18 +19,10 @@ test("finding added models has an accessible name and description", async ({
   );
 });
 
-test("dictation pill settings are grouped in appearance and linked from advanced", async ({
-  page,
-}) => {
+test("dictation pill settings are grouped in appearance", async ({ page }) => {
   const backend = await mockTauri(page);
   await page.goto("/");
-  await page.getByRole("button", { name: "Advanced", exact: true }).click();
-  await expect(
-    page.getByRole("radio", { name: "Live", exact: true }),
-  ).toHaveCount(0);
-  await page
-    .getByRole("button", { name: "Dictation pill → Appearance" })
-    .click();
+  await page.getByRole("button", { name: "Appearance", exact: true }).click();
   const group = page.locator("#dictation-pill");
   await expect(group.getByRole("radio", { name: "Expressive" })).toBeVisible();
   await expect(group.getByRole("radio", { name: "Live" })).toBeVisible();

@@ -2,14 +2,12 @@ import React from "react";
 import { useTranslation } from "react-i18next";
 import { LogLevelSelector } from "./LogLevelSelector";
 import { LiveLogViewer } from "./LiveLogViewer";
-import { PasteDelay } from "./PasteDelay";
-import { ReliablePasteToggle } from "./ReliablePaste";
-import { RecordingBuffer } from "./RecordingBuffer";
 import { SettingsGroup } from "../../ui/SettingsGroup";
-import { AlwaysOnMicrophone } from "../AlwaysOnMicrophone";
 import { UpdateChecksToggle } from "../UpdateChecksToggle";
 import { WhatsNewPreview } from "./WhatsNewPreview";
 import { KeyboardDiagnostic } from "./KeyboardDiagnostic";
+import { KeyboardImplementationSelector } from "./KeyboardImplementationSelector";
+import { ExperimentalToggle } from "../ExperimentalToggle";
 import { DebugRun, OnboardingPreview } from "./OnboardingPreview";
 import type { OnboardingStep } from "../../onboarding/onboardingStore";
 
@@ -49,17 +47,11 @@ export const DebugSettings: React.FC<DebugSettingsProps> = ({
           grouped={true}
         />
         <UpdateChecksToggle descriptionMode="tooltip" grouped={true} />
-        <PasteDelay descriptionMode="tooltip" grouped={true} />
-        <PasteDelay
+        <ExperimentalToggle descriptionMode="tooltip" grouped={true} />
+        <KeyboardImplementationSelector
           descriptionMode="tooltip"
           grouped={true}
-          settingKey="paste_delay_after_ms"
-          labelKey="settings.debug.pasteDelayAfter.title"
-          descriptionKey="settings.debug.pasteDelayAfter.description"
         />
-        <ReliablePasteToggle descriptionMode="tooltip" grouped={true} />
-        <RecordingBuffer descriptionMode="tooltip" grouped={true} />
-        <AlwaysOnMicrophone descriptionMode="tooltip" grouped={true} />
         <KeyboardDiagnostic />
         <LiveLogViewer descriptionMode="tooltip" grouped={true} />
       </SettingsGroup>

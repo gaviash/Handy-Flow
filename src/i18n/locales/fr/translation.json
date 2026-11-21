@@ -762,7 +762,12 @@
           "traditionalTw": "Traditionnel (Taïwan)",
           "traditionalHk": "Traditionnel (Hong Kong)"
         }
-      }
+      },
+      "insertion": "Insertion du texte",
+      "insertionExpert": "délais de collage, collage fiable",
+      "captureExpert": "capture audio",
+      "trailingSpaceOn": "espace final",
+      "trailingSpaceOff": "sans espace final"
     },
     "postProcessing": {
       "hotkey": {

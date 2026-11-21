@@ -28,8 +28,6 @@ import {
   type OnboardingStep as OnboardingPreviewStep,
 } from "./components/onboarding/onboardingStore";
 import {
-  AdvancedSettings,
-  AppearanceSettings,
   DebugSettings,
   ModelsSettings,
   VocabularySettings,
@@ -65,6 +63,7 @@ const PAGES_WITH_OWN_TITLE: SidebarSection[] = [
   "postprocessing",
   "vocabulary",
   "context",
+  "advanced",
 ];
 
 const renderSettingsContent = (
@@ -73,7 +72,6 @@ const renderSettingsContent = (
   onRunOnboarding: () => void,
   onRunModelMigration: () => void,
   onSectionChange: (section: SidebarSection, topic?: ModelsTopic) => void,
-  focusPill: boolean,
   modelsTopic: ModelsTopic | null,
 ) => {
   if (section === "models") {
@@ -100,15 +98,6 @@ const renderSettingsContent = (
       />
     );
   }
-  if (section === "advanced") {
-    return (
-      <AdvancedSettings
-        onShowAppearance={() => onSectionChange("appearance")}
-      />
-    );
-  }
-  if (section === "appearance")
-    return <AppearanceSettings focusPill={focusPill} />;
   if (section === "debug") {
     return (
       <DebugSettings
@@ -136,7 +125,6 @@ function App() {
   const [migrationModelId, setMigrationModelId] = useState<string | null>(null);
   const [currentSection, setCurrentSection] =
     useState<SidebarSection>("general");
-  const [focusPill, setFocusPill] = useState(false);
   // The Models topic a link asked for; cleared when the sidebar is used.
   const [modelsTopic, setModelsTopic] = useState<ModelsTopic | null>(null);
   // Bumped by each sidebar click, so the active tab reopens on its overview.
@@ -439,7 +427,6 @@ function App() {
           <Sidebar
             activeSection={section}
             onSectionChange={(section) => {
-              setFocusPill(false);
               setModelsTopic(null);
               setVisit((n) => n + 1);
               setCurrentSection(section);
@@ -465,11 +452,9 @@ function App() {
                   runOnboarding,
                   runModelMigration,
                   (section, topic) => {
-                    setFocusPill(section === "appearance");
                     setModelsTopic(topic ?? null);
                     setCurrentSection(section);
                   },
-                  focusPill,
                   modelsTopic,
                 )}
               </div>

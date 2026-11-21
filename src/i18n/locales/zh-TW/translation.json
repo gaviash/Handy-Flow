@@ -762,7 +762,12 @@
           "traditionalTw": "繁體（臺灣）",
           "traditionalHk": "繁體（香港）"
         }
-      }
+      },
+      "insertion": "Text insertion",
+      "insertionExpert": "paste delays, reliable paste",
+      "captureExpert": "audio capture",
+      "trailingSpaceOn": "trailing space",
+      "trailingSpaceOff": "no trailing space"
     },
     "postProcessing": {
       "hotkey": {

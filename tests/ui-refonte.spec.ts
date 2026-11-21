@@ -335,3 +335,19 @@ test("'Change in Models' lands on Usage by feature, the sidebar on the overview"
     page.getByRole("button", { name: /^Usage by feature/ }),
   ).toBeVisible();
 });
+
+test("Advanced shows text insertion as a card and folds audio capture", async ({
+  page,
+}) => {
+  await mockTauri(page, { settings: { experimental_enabled: false } });
+  await page.goto("/");
+  await page.getByRole("button", { name: "Advanced", exact: true }).click();
+  await page.getByRole("button", { name: /^Text insertion/ }).click();
+  await expect(
+    page.getByRole("heading", { level: 1, name: "Text insertion" }),
+  ).toBeVisible();
+  await page.getByRole("button", { name: "Advanced" }).last().click();
+  // Formerly behind Experimental: now reachable without it.
+  await page.getByText("Expert settings").click();
+  await expect(page.getByText("Silence detector").first()).toBeVisible();
+});

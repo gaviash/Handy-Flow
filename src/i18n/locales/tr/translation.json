@@ -762,7 +762,12 @@
           "traditionalTw": "Geleneksel (Tayvan)",
           "traditionalHk": "Geleneksel (Hong Kong)"
         }
-      }
+      },
+      "insertion": "Text insertion",
+      "insertionExpert": "paste delays, reliable paste",
+      "captureExpert": "audio capture",
+      "trailingSpaceOn": "trailing space",
+      "trailingSpaceOff": "no trailing space"
     },
     "postProcessing": {
       "hotkey": {
