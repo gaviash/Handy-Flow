@@ -1,3 +1,4 @@
+import { PostProcessingSettings } from "@/components/settings/post-processing/PostProcessingSettings";
 import {
   useCallback,
   useEffect,
@@ -67,6 +68,11 @@ const renderSettingsContent = (
         onChangeLanguages={() => onSectionChange("general")}
         onShowReformulation={() => onSectionChange("postprocessing")}
       />
+    );
+  }
+  if (section === "postprocessing") {
+    return (
+      <PostProcessingSettings onShowModels={() => onSectionChange("models")} />
     );
   }
   if (section === "advanced") {

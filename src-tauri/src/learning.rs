@@ -132,6 +132,22 @@ pub struct Learned {
     /// A pending word (seen once, needs a second sighting) is not used yet.
     #[serde(default = "yes")]
     pub active: bool,
+    /// Pasted texts that held the term (Wispr `frequencyUsed`, E78).
+    #[serde(default)]
+    pub used: u32,
+    #[serde(default)]
+    pub source: Source,
+}
+
+/// Where a learned entry comes from (EX-6.1). The user's own words are
+/// `settings.custom_words`, not entries here.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize, Type)]
+#[serde(rename_all = "snake_case")]
+pub enum Source {
+    #[default]
+    UserEdits,
+    /// Reserved: words read on screen (Wispr `app_context`, off there too).
+    AppContext,
 }
 
 fn yes() -> bool {
@@ -166,6 +182,82 @@ pub struct Memory {
     pub words: Vec<Learned>,
     #[serde(default)]
     pub rules: Vec<StyleRule>,
+    /// Unix seconds of the one re-validation of pending words (EX-5); 0 = not yet.
+    #[serde(default)]
+    pub revalidated_at: i64,
+    /// Pairs the user undid, `(heard, term)` lowercased: never learned again (EX-6.2).
+    #[serde(default)]
+    pub refused: Vec<(String, String)>,
+    /// What learning decided over the last 30 days (EX-7.2).
+    #[serde(default)]
+    pub events: Vec<Event>,
+}
+
+/// One learning decision, kept 30 days for the counters.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct Event {
+    pub at: i64,
+    /// "observed", "learned", "pending" or "rejected:<reason>".
+    pub what: String,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Outcome {
+    Observed,
+    Learned,
+    Pending,
+    Rejected(&'static str),
+}
+
+/// The counters shown in Settings → Learning.
+#[derive(Debug, Clone, Default, PartialEq, Serialize, Type)]
+pub struct LearningStats {
+    pub observed: u32,
+    pub learned: u32,
+    pub pending: u32,
+    pub rejected: u32,
+    /// Rejections per reason, most frequent first.
+    pub rejected_by: Vec<(String, u32)>,
+}
+
+const STATS_DAYS: i64 = 30;
+const EVENTS_MAX: usize = 5000;
+
+/// Counts one decision and forgets those older than 30 days.
+pub(crate) fn note(m: &mut Memory, o: Outcome, now: i64) {
+    let what = match o {
+        Outcome::Observed => "observed".to_string(),
+        Outcome::Learned => "learned".to_string(),
+        Outcome::Pending => "pending".to_string(),
+        Outcome::Rejected(r) => format!("rejected:{r}"),
+    };
+    m.events.retain(|e| e.at > now - STATS_DAYS * 86_400);
+    m.events.push(Event { at: now, what });
+    if m.events.len() > EVENTS_MAX {
+        m.events.remove(0);
+    }
+}
+
+pub(crate) fn stats(m: &Memory, now: i64) -> LearningStats {
+    let mut s = LearningStats::default();
+    for e in m.events.iter().filter(|e| e.at > now - STATS_DAYS * 86_400) {
+        match e.what.as_str() {
+            "observed" => s.observed += 1,
+            "learned" => s.learned += 1,
+            "pending" => s.pending += 1,
+            other => {
+                s.rejected += 1;
+                let reason = other.strip_prefix("rejected:").unwrap_or(other);
+                match s.rejected_by.iter_mut().find(|(r, _)| r == reason) {
+                    Some((_, n)) => *n += 1,
+                    None => s.rejected_by.push((reason.to_string(), 1)),
+                }
+            }
+        }
+    }
+    s.rejected_by
+        .sort_by(|a, b| b.1.cmp(&a.1).then(a.0.cmp(&b.0)));
+    s
 }
 
 pub const WORDS_MAX: usize = 2000;
@@ -179,6 +271,9 @@ fn parse_memory(json: &[u8]) -> Memory {
             serde_json::from_slice::<Vec<Learned>>(json).map(|words| Memory {
                 words,
                 rules: Vec::new(),
+                revalidated_at: 0,
+                refused: Vec::new(),
+                events: Vec::new(),
             })
         })
         .unwrap_or_default()
@@ -193,12 +288,17 @@ pub(crate) fn prune(m: &mut Memory, now: i64) {
         let term = w.term.clone();
         w.heard.retain(|h| !is_grammar_change(h, &term));
     }
+    // Wispr never expires its dictionary: only pending words leave.
     m.words
-        .retain(|w| w.last_seen >= expired && !w.heard.is_empty());
+        .retain(|w| (w.active || w.last_seen >= expired) && !w.heard.is_empty());
     m.rules.retain(|r| r.active || r.last_seen >= expired);
     if m.words.len() > WORDS_MAX {
-        m.words
-            .sort_by(|a, b| b.count.cmp(&a.count).then(b.last_seen.cmp(&a.last_seen)));
+        m.words.sort_by(|a, b| {
+            b.used
+                .cmp(&a.used)
+                .then(b.count.cmp(&a.count))
+                .then(b.last_seen.cmp(&a.last_seen))
+        });
         m.words.truncate(WORDS_MAX);
     }
     if m.rules.len() > RULES_MAX {
@@ -237,34 +337,39 @@ fn add_heard(l: &mut Learned, heard: String) -> bool {
     true
 }
 
-/// Corrections worth learning (F85–F87): runs of 1 to 4 substituted words
-/// between unchanged words, whose corrected form looks like a name or a term
-/// (capital, digit or `_`), stays close to what was inserted (≤ 0.6) and is
-/// not a truncation. Case-only, meaning changes, common-word fixes and
-/// rewrites give nothing. At most 4 per dictation.
-/// Also misheard common words (1 to 3 words, close spelling, no meaning word),
-/// which stay pending until seen twice (see [`record_word`]).
-/// Each rejected run is logged with a reason, never with its text.
-pub fn candidates(inserted: &str, fin: &str) -> Vec<Candidate> {
-    let reject = |reason: &str| log::debug!("Learning: rejected ({reason})");
+/// Corrections worth learning (F85–F87, EX-2.1): runs of 1 to 4 substituted
+/// words between unchanged words. Each run is either a [`Candidate`] for the
+/// validator, however far it sounds (`.env` ← « point oeuvre »), or
+/// [`Local::Guarded`] by a rule that decides alone: rewrite, case only,
+/// truncation or plural, possessive or contraction, meaning word, grammar.
+/// Candidates that look like names come first, at most 4 per dictation.
+pub fn local_candidates(inserted: &str, fin: &str) -> Vec<Local> {
     let a: Vec<&str> = inserted.split_whitespace().collect();
     let b: Vec<&str> = fin.split_whitespace().collect();
     let tags = align(&a, &b);
+    // Dictated words that changed; text typed after the dictation (Ins) is
+    // no rewrite of it.
     let edited = tags
         .iter()
-        .filter(|t| t.0 != Tag::Same && t.0 != Tag::Case)
+        .filter(|t| matches!(t.0, Tag::Sub | Tag::Del))
         .count();
-    // A rewrite, not a correction.
-    if edited * 2 > a.len().max(b.len()) {
-        reject("rewrite");
-        return Vec::new();
+    // A rewrite, not a correction (spec §8.7: > 30 words; or most of a
+    // dictation long enough to tell).
+    if edited > 30 || (a.len() >= 4 && edited * 2 > a.len()) {
+        return vec![Local::Guarded("rewrite")];
     }
+    // A leading dot stays: `.env` is a file name.
     let trim = |w: &str| {
-        w.trim_matches(|c: char| !c.is_alphanumeric() && c != '_')
-            .to_string()
+        let w = w
+            .trim_end_matches(|c: char| !c.is_alphanumeric() && c != '_')
+            .trim_start_matches(|c: char| !c.is_alphanumeric() && c != '_' && c != '.');
+        if w.chars().any(char::is_alphanumeric) {
+            w.to_string()
+        } else {
+            String::new()
+        }
     };
     let mut out = Vec::new();
-    let mut far = Vec::new();
     let mut k = 0;
     let changed = |t: &(Tag, Option<usize>, Option<usize>)| !matches!(t.0, Tag::Same | Tag::Case);
     // Punctuation after a word ends a term: "Quen, GEMA" → "Qwen, gemma" is two.
@@ -287,7 +392,7 @@ pub fn candidates(inserted: &str, fin: &str) -> Vec<Candidate> {
         let run = &tags[start..k];
         // A split or merge ("GPTOC" → "GPT OSS") still holds a substitution.
         if !run.iter().any(|t| t.0 == Tag::Sub) {
-            reject("no_substitution");
+            out.push(Local::Guarded("no_substitution"));
             continue;
         }
         let bounded = |t: Option<&(Tag, Option<usize>, Option<usize>)>| {
@@ -295,13 +400,13 @@ pub fn candidates(inserted: &str, fin: &str) -> Vec<Candidate> {
         };
         let after_item = start.checked_sub(1).is_some_and(|s| ends_item(&tags[s]));
         if run.len() > 4 {
-            reject("too_long");
+            out.push(Local::Guarded("too_long"));
             continue;
         }
         if !(after_item || bounded(start.checked_sub(1).and_then(|s| tags.get(s))))
             || !(ends_item(&tags[k - 1]) || bounded(tags.get(k)))
         {
-            reject("unbounded");
+            out.push(Local::Guarded("unbounded"));
             continue;
         }
         let heard = run
@@ -334,36 +439,44 @@ pub fn candidates(inserted: &str, fin: &str) -> Vec<Candidate> {
         // writes it in lowercase ("Coen" → "qwen").
         let looks_like_term = capital(&term, term_opens)
             || capital(&heard, heard_opens)
-            || term.chars().any(|c| c.is_ascii_digit() || c == '_');
-        // Truncation, plural, conjugation: one form extends the other.
-        let affix =
-            hk.starts_with(&tk) || tk.starts_with(&hk) || hk.ends_with(&tk) || tk.ends_with(&hk);
-        let d = distance(&hk, &tk);
-        let kind = if term.is_empty() {
-            Err("no_substitution")
-        } else if affix {
-            Err("affix")
-        } else if looks_like_term {
-            if d <= 0.6 {
-                Ok(WordKind::Term)
-            } else {
-                Err("too_far")
-            }
-        } else if run.len() > 3 {
-            Err("too_long")
-        } else if has_meaning_word(&hk) || has_meaning_word(&tk) {
-            Err("meaning_word")
-        } else if is_grammar_change(&hk, &tk) {
-            Err("grammar")
-        } else if d <= MISHEARD_DISTANCE {
-            Ok(WordKind::Misheard)
+            || term.chars().any(|c| c.is_ascii_digit() || c == '_')
+            || term.starts_with('.');
+        // A name may lengthen what was heard (Jordan → Jordane, E218), never
+        // shorten it (E227). A common word's plural is grammar; another affix
+        // (slope → slop, prêt → prête) is the validator's call.
+        let affix = if looks_like_term {
+            hk.starts_with(&tk) || hk.ends_with(&tk)
         } else {
-            Err("too_far")
+            is_plural(&hk, &tk) || is_plural(&tk, &hk)
         };
-        match kind {
-            Ok(kind) => out.push(Candidate { term, heard, kind }),
-            // Too far alone, but kept in case the same word is fixed twice here.
-            Err("too_far") if d <= LOOSE_DISTANCE => far.push(Candidate {
+        // EX-4 (L07): a name far from a single common word replaces that
+        // word, it is not what the recognizer heard ("quelle" → "Kelmorine").
+        let common_source = looks_like_term
+            && !hk.contains(' ')
+            && crate::lexicon::is_common(&hk)
+            && distance(&hk, &tk) > 0.6;
+        let guard = if term.is_empty() || heard.is_empty() {
+            Some("no_substitution")
+        } else if common_source {
+            Some("common_source")
+        } else if is_possessive_or_contraction(&hk, &tk) {
+            Some("possessive")
+        } else if affix {
+            Some("affix")
+        } else if looks_like_term {
+            None
+        } else if run.len() > 3 {
+            Some("too_long")
+        } else if has_meaning_word(&hk) || has_meaning_word(&tk) {
+            Some("meaning_word")
+        } else if is_grammar_change(&hk, &tk) {
+            Some("grammar")
+        } else {
+            None
+        };
+        out.push(match guard {
+            Some(reason) => Local::Guarded(reason),
+            None => Local::Candidate(Candidate {
                 term,
                 heard,
                 kind: if looks_like_term {
@@ -372,26 +485,60 @@ pub fn candidates(inserted: &str, fin: &str) -> Vec<Candidate> {
                     WordKind::Misheard
                 },
             }),
-            Err(reason) => reject(reason),
-        }
+        });
     }
-    // F-same-dictation: a word fixed twice in one dictation ("chef", "jeff" →
-    // "jev") is learned even when one form was too far on its own.
-    let same = |t: &str| {
-        out.iter()
-            .chain(&far)
-            .filter(|c| c.term.to_lowercase() == t.to_lowercase())
-            .count()
-    };
-    let repeated: Vec<Candidate> = far.iter().filter(|c| same(&c.term) >= 2).cloned().collect();
-    for c in &far {
-        if same(&c.term) < 2 {
-            reject("too_far");
+    // Names first (Wispr E76), 4 candidates at most.
+    let (mut names, rest): (Vec<Local>, Vec<Local>) = out
+        .into_iter()
+        .partition(|l| matches!(l, Local::Candidate(c) if c.kind == WordKind::Term));
+    names.extend(rest);
+    let mut sent = 0;
+    names.retain(|l| match l {
+        Local::Candidate(_) => {
+            sent += 1;
+            sent <= 4
         }
-    }
-    out.extend(repeated);
-    out.truncate(4);
-    out
+        Local::Guarded(_) => true,
+    });
+    names
+}
+
+/// The candidates alone, guards logged by reason (never with their text).
+#[cfg(test)]
+pub fn candidates(inserted: &str, fin: &str) -> Vec<Candidate> {
+    local_candidates(inserted, fin)
+        .into_iter()
+        .filter_map(|l| match l {
+            Local::Candidate(c) => Some(c),
+            Local::Guarded(reason) => {
+                log::debug!("Learning: guarded ({reason})");
+                None
+            }
+        })
+        .collect()
+}
+
+/// A local verdict on one changed run.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum Local {
+    Candidate(Candidate),
+    Guarded(&'static str),
+}
+
+/// `long` is `short` with a plural ending.
+fn is_plural(short: &str, long: &str) -> bool {
+    long.strip_prefix(short)
+        .is_some_and(|d| matches!(d, "s" | "x" | "es"))
+}
+
+/// "John" → "John's", "do not" → "don't": not a word to learn (Wispr §9.2).
+fn is_possessive_or_contraction(heard: &str, term: &str) -> bool {
+    let (h, t) = (heard.replace('’', "'"), term.replace('’', "'"));
+    let possessive = |a: &str, b: &str| b.strip_suffix("'s").or(b.strip_suffix('\'')) == Some(a);
+    let words = |s: &str| s.split(' ').count();
+    possessive(&h, &t)
+        || possessive(&t, &h)
+        || (h.contains('\'') != t.contains('\'') && words(&h) != words(&t))
 }
 
 /// A correction the layer may learn (F85–F87).
@@ -401,14 +548,6 @@ pub struct Candidate {
     pub heard: String,
     pub kind: WordKind,
 }
-
-/// "gag" / "log" = 0.67: common words get more slack than names, and the
-/// meaning-word list plus two sightings guard against meaning changes.
-const MISHEARD_DISTANCE: f64 = 0.7;
-
-/// "chef" / "jev" = 0.75: allowed only for a word fixed twice in one
-/// dictation, or one the judge calls technical.
-const LOOSE_DISTANCE: f64 = 0.8;
 
 /// Words whose swap changes the meaning ("mardi" → "jeudi", "oui" → "non"):
 /// never learned as misheard, however close they sound.
@@ -556,22 +695,6 @@ fn has_meaning_word(s: &str) -> bool {
         .any(|w| MEANING_WORDS.contains(&w) || crate::adaptive::FR_COMMON_NAMES.contains(&w))
 }
 
-/// Whether `heard` → `term` can be a misheard common word (also checked on
-/// what the LLM judge proposes).
-pub fn is_misheard_pair(heard: &str, term: &str) -> bool {
-    close_pair(heard, term, MISHEARD_DISTANCE) && !is_grammar_change(heard, term)
-}
-
-fn close_pair(heard: &str, term: &str, max: f64) -> bool {
-    let (h, t) = (heard.to_lowercase(), term.to_lowercase());
-    !h.is_empty()
-        && !t.is_empty()
-        && h != t
-        && !has_meaning_word(&h)
-        && !has_meaning_word(&t)
-        && distance(&h, &t) <= max
-}
-
 /// Whether `text` holds `word` as a whole word; both already lowercased.
 pub(crate) fn contains_word(text: &str, word: &str) -> bool {
     !word.is_empty()
@@ -584,28 +707,36 @@ pub(crate) fn contains_word(text: &str, word: &str) -> bool {
 
 /// Restarts the 30 days of every active word the user said: its term or one
 /// of its heard forms, as a whole word in `spoken` (the raw transcription).
-/// Pending words still need a second correction. `true` when one was found.
-pub(crate) fn mark_used(m: &mut Memory, spoken: &str, now: i64) -> bool {
+/// Counts one use of each term written in `kept`, the pasted text (Wispr
+/// `frequencyUsed`, E78). Pending words still need a second correction.
+/// `true` when a word changed.
+pub(crate) fn mark_used(m: &mut Memory, spoken: &str, kept: &str, now: i64) -> bool {
     let text = unify(spoken).to_lowercase();
-    let mut found = false;
+    let kept = unify(kept).to_lowercase();
+    let mut changed = false;
     for w in m.words.iter_mut().filter(|w| w.active) {
         let said = std::iter::once(&w.term)
             .chain(&w.heard)
             .any(|f| contains_word(&text, &unify(f).to_lowercase()));
         if said {
             w.last_seen = now;
-            found = true;
+            changed = true;
+        }
+        if contains_word(&kept, &unify(&w.term).to_lowercase()) {
+            w.used += 1;
+            changed = true;
         }
     }
-    found
+    changed
 }
 
 /// After a dictation: keeps the learned words the user said for 30 more
-/// days. `spoken` is the raw transcription, never the rewrite: a word the
-/// rewrite writes on its own must not keep itself alive.
-pub fn touch_used(app: &AppHandle, spoken: &str) {
+/// days and counts the ones the pasted text holds. `spoken` is the raw
+/// transcription: a word the rewrite writes on its own must not keep itself
+/// alive.
+pub fn touch_used(app: &AppHandle, spoken: &str, kept: &str) {
     with_memory(app, |m| {
-        if mark_used(m, spoken, chrono::Utc::now().timestamp()) {
+        if mark_used(m, spoken, kept, chrono::Utc::now().timestamp()) {
             save(app, m);
         }
     });
@@ -643,6 +774,9 @@ pub(crate) fn record_word(m: &mut Memory, c: &Candidate, now: i64) -> Option<Lea
         Some(l) => {
             l.count += 1;
             l.last_seen = now;
+            if c.kind == WordKind::Term {
+                l.kind = WordKind::Term;
+            }
             let new_form = add_heard(l, c.heard.clone());
             let activated = !l.active && l.count >= 2;
             l.active |= activated;
@@ -666,6 +800,8 @@ pub(crate) fn record_word(m: &mut Memory, c: &Candidate, now: i64) -> Option<Lea
                 last_seen: now,
                 kind: c.kind,
                 active,
+                used: 0,
+                source: Source::UserEdits,
             });
             active.then(|| LearnedNews::Word {
                 term: c.term.clone(),
@@ -674,12 +810,21 @@ pub(crate) fn record_word(m: &mut Memory, c: &Candidate, now: i64) -> Option<Lea
     }
 }
 
-/// Undoes one heard form; a word left with none goes.
+/// Undoes one heard form; a word left with none goes. The pair is refused
+/// from now on.
 pub(crate) fn drop_form(m: &mut Memory, term: &str, heard: &str) {
+    refuse(m, heard, term);
     for w in m.words.iter_mut().filter(|w| same_term(&w.term, term)) {
         w.heard.retain(|h| !same_term(h, heard));
     }
     m.words.retain(|w| !w.heard.is_empty());
+}
+
+fn refuse(m: &mut Memory, heard: &str, term: &str) {
+    let pair = (heard.to_lowercase(), term.to_lowercase());
+    if !m.refused.contains(&pair) {
+        m.refused.push(pair);
+    }
 }
 
 // ---------------------------------------------------------------- memory
@@ -693,33 +838,7 @@ fn memory_path(app: &AppHandle) -> Option<PathBuf> {
 }
 
 #[cfg(windows)]
-mod dpapi {
-    use windows::Win32::Foundation::{LocalFree, HLOCAL};
-    use windows::Win32::Security::Cryptography::{
-        CryptProtectData, CryptUnprotectData, CRYPT_INTEGER_BLOB,
-    };
-
-    /// Encrypts or decrypts with the Windows account's key (D11).
-    pub fn run(data: &[u8], protect: bool) -> Option<Vec<u8>> {
-        let input = CRYPT_INTEGER_BLOB {
-            cbData: data.len() as u32,
-            pbData: data.as_ptr() as *mut u8,
-        };
-        let mut out = CRYPT_INTEGER_BLOB::default();
-        // SAFETY: the input outlives the call; the output is copied then freed.
-        unsafe {
-            let ok = if protect {
-                CryptProtectData(&input, None, None, None, None, 0, &mut out)
-            } else {
-                CryptUnprotectData(&input, None, None, None, None, 0, &mut out)
-            };
-            ok.ok()?;
-            let bytes = std::slice::from_raw_parts(out.pbData, out.cbData as usize).to_vec();
-            let _ = LocalFree(Some(HLOCAL(out.pbData as *mut _)));
-            Some(bytes)
-        }
-    }
-}
+use crate::dpapi;
 
 #[cfg(not(windows))]
 mod dpapi {
@@ -764,11 +883,12 @@ fn save(app: &AppHandle, m: &mut Memory) {
     }
 }
 
-/// Learned spellings for the rewrite of `transcription`: those it sounds
-/// like first, then the most used (≤ 40).
+/// The learned dictionary for the rewrite of `transcription` (≤ 80): the
+/// words it sounds like with their heard forms, then every other active name.
 pub fn terms_for(app: &AppHandle, transcription: &str) -> Vec<String> {
+    let now = chrono::Utc::now().timestamp();
     with_memory(app, |m| {
-        crate::recall::relevant_terms(&m.words, transcription, 40)
+        crate::recall::relevant_terms(&m.words, transcription, now, 80)
     })
 }
 
@@ -787,84 +907,18 @@ pub fn all_rules(app: &AppHandle) -> Vec<String> {
     with_memory(app, |m| m.rules.iter().map(|r| r.rule.clone()).collect())
 }
 
-/// Applies the judge's verdicts with the local guards; returns what became
-/// usable (terms and rules) to announce.
+/// Applies the judge's style verdicts; returns the rules that became usable.
 pub(crate) fn apply_verdicts(
     m: &mut Memory,
     verdicts: &[crate::judge::Verdict],
-    local: &[Candidate],
-    inserted: &str,
-    kept: &str,
     now: i64,
 ) -> Vec<LearnedNews> {
-    let (inserted, kept) = (unify(inserted).to_lowercase(), unify(kept).to_lowercase());
     // A rule repeated within one reply is still one sighting.
     let mut counted_rules: Vec<usize> = Vec::new();
     use crate::judge::VerdictKind;
     let mut news = Vec::new();
     for v in verdicts {
         match v.kind {
-            VerdictKind::Misheard => {
-                let (Some(heard), Some(term)) = (v.heard.as_deref(), v.term.as_deref()) else {
-                    continue;
-                };
-                let (heard, term) = (heard.trim(), term.trim());
-                // Already counted by the local layer this dictation: the judge
-                // only says whether it is technical.
-                let counted = local.iter().any(|c| same_term(&c.term, term));
-                let max = if v.technical {
-                    LOOSE_DISTANCE
-                } else {
-                    MISHEARD_DISTANCE
-                };
-                // A technical word may be short (npm, Vue); a common one never
-                // learns a grammar fix.
-                if !counted
-                    && (!close_pair(heard, term, max)
-                        || (!v.technical && is_grammar_change(heard, term)))
-                {
-                    log::debug!("Learning: judge item rejected (not a misheard pair)");
-                    continue;
-                }
-                // The judge may invent a pair: both forms must be in the texts.
-                if !counted
-                    && !(contains_word(&inserted, &unify(heard).to_lowercase())
-                        && contains_word(&kept, &unify(term).to_lowercase()))
-                {
-                    log::debug!("Learning: judge item rejected (not in the texts)");
-                    continue;
-                }
-                // A technical word is a term: forced in the rewrite, kept by the
-                // grammar purge.
-                let kind = if v.technical {
-                    WordKind::Term
-                } else {
-                    WordKind::Misheard
-                };
-                let c = Candidate {
-                    term: term.into(),
-                    heard: heard.into(),
-                    kind,
-                };
-                let mut new = if counted {
-                    None
-                } else {
-                    record_word(m, &c, now)
-                };
-                // A technical or rare, hard-to-say word is usable at once.
-                if v.technical {
-                    if let Some(l) = m.words.iter_mut().find(|l| same_term(&l.term, term)) {
-                        l.kind = WordKind::Term;
-                        if !l.active {
-                            l.active = true;
-                            new = Some(LearnedNews::Word {
-                                term: l.term.clone(),
-                            });
-                        }
-                    }
-                }
-                news.extend(new);
-            }
             VerdictKind::StyleRule | VerdictKind::Filler => {
                 // The judge's number, else the same text: a rule repeated
                 // without `same_as` still counts as a second sighting.
@@ -938,26 +992,19 @@ fn remap_same_as(
 /// Stores the judge's verdicts and announces what became usable.
 /// `rules_sent` is the numbered list the judge saw: rules may have been
 /// deleted or pruned during the call, so `same_as` is matched by text.
-pub fn record_verdicts(
-    app: &AppHandle,
-    verdicts: &[crate::judge::Verdict],
-    rules_sent: &[String],
-    local: &[Candidate],
-    inserted: &str,
-    kept: &str,
-) {
+pub fn record_verdicts(app: &AppHandle, verdicts: &[crate::judge::Verdict], rules_sent: &[String]) {
     if verdicts.is_empty() {
         return;
     }
     let now = chrono::Utc::now().timestamp();
     let news = with_memory(app, |m| {
         let verdicts = remap_same_as(verdicts, rules_sent, &m.rules);
-        let news = apply_verdicts(m, &verdicts, local, inserted, kept, now);
+        let news = apply_verdicts(m, &verdicts, now);
         save(app, m);
         news
     });
     if !news.is_empty() {
-        log::info!("Learning: the judge made {} item(s) usable", news.len());
+        log::info!("Learning: the judge made {} rule(s) usable", news.len());
         let _ = app.emit("learned-words", &news);
         announce(app, &news);
     }
@@ -974,31 +1021,167 @@ pub fn active_rules(app: &AppHandle, app_name: &str) -> Vec<String> {
     })
 }
 
-/// Records the corrections found; returns them all (pending ones too).
-fn learn(app: &AppHandle, inserted: &str, fin: &str) -> Vec<Candidate> {
-    let found = candidates(inserted, fin);
-    if found.is_empty() {
-        return found;
+/// Stores one validated candidate: active at once, pending a second
+/// sighting, or nothing.
+pub(crate) fn record_decision(
+    m: &mut Memory,
+    mut c: Candidate,
+    d: &crate::validator::Decision,
+    now: i64,
+) -> Option<LearnedNews> {
+    use crate::validator::Decision;
+    // Undone while the validator was answering: stays undone.
+    if memory_guard(m, &c) == Some("undone") {
+        return None;
     }
-    let now = chrono::Utc::now().timestamp();
-    // F95: new spellings are announced once, grouped, with an undo.
-    let mut new_terms = Vec::new();
-    with_memory(app, |m| {
-        for c in &found {
-            log::info!(
-                "Learned a spelling ({} chars, {:?})",
-                c.term.chars().count(),
-                c.kind
-            );
-            new_terms.extend(record_word(m, c, now));
+    c.kind = match d {
+        Decision::Active => WordKind::Term,
+        Decision::Pending => WordKind::Misheard,
+        Decision::Rejected(_) => return None,
+    };
+    log::info!(
+        "Learned a spelling ({} chars, {:?})",
+        c.term.chars().count(),
+        d
+    );
+    record_word(m, &c, now)
+}
+
+/// EX-5: pending words sent once to the validator, one candidate per word
+/// (its latest heard form). Empty once done.
+pub(crate) fn pending_candidates(m: &Memory) -> Vec<Candidate> {
+    if m.revalidated_at != 0 {
+        return Vec::new();
+    }
+    m.words
+        .iter()
+        .filter(|w| !w.active)
+        .filter_map(|w| {
+            Some(Candidate {
+                term: w.term.clone(),
+                heard: w.heard.last()?.clone(),
+                kind: w.kind,
+            })
+        })
+        .collect()
+}
+
+/// The validator's reply on pending words: accepted → active, refused →
+/// removed; a void or missing reply changes nothing (retried at next start).
+pub(crate) fn apply_revalidation(
+    m: &mut Memory,
+    sent: &[Candidate],
+    reply: Option<&str>,
+    now: i64,
+) -> Vec<LearnedNews> {
+    let Some(accepted) = reply.and_then(|r| crate::validator::parse_reply(r, sent)) else {
+        return Vec::new();
+    };
+    let mut news = Vec::new();
+    let mut note_later = Vec::new();
+    for c in sent {
+        let ok = accepted.iter().any(|(a, _)| a == c);
+        if let Some(w) = m
+            .words
+            .iter_mut()
+            .find(|w| !w.active && same_term(&w.term, &c.term))
+        {
+            if ok {
+                w.active = true;
+                w.kind = WordKind::Term;
+                note_later.push(Outcome::Learned);
+                news.push(LearnedNews::Word {
+                    term: w.term.clone(),
+                });
+            } else {
+                w.heard.clear();
+                note_later.push(Outcome::Rejected("refused"));
+            }
         }
-        save(app, m);
-    });
-    if !new_terms.is_empty() {
-        let _ = app.emit("learned-words", &new_terms);
-        announce(app, &new_terms);
     }
-    found
+    for o in note_later {
+        note(m, o, now);
+    }
+    m.words.retain(|w| !w.heard.is_empty());
+    m.revalidated_at = now;
+    news
+}
+
+/// EX-5: once after startup, the words still pending go to the validator.
+pub async fn revalidate_pending(app: AppHandle) {
+    let now = chrono::Utc::now().timestamp();
+    let sent = with_memory(&app, |m| {
+        let sent = pending_candidates(m);
+        if sent.is_empty() && m.revalidated_at == 0 {
+            m.revalidated_at = now;
+            save(&app, m);
+        }
+        sent
+    });
+    if sent.is_empty() {
+        return;
+    }
+    let reply = crate::validator::ask(&app, crate::validator::message("", "", &sent)).await;
+    let news = with_memory(&app, |m| {
+        let news = apply_revalidation(m, &sent, reply.as_deref(), now);
+        if reply.is_some() {
+            save(&app, m);
+        }
+        news
+    });
+    log::info!(
+        "Learning: {} pending word(s) re-validated, {} made usable",
+        sent.len(),
+        news.len()
+    );
+    if !news.is_empty() {
+        let _ = app.emit("learned-words", &news);
+        announce(&app, &news);
+    }
+}
+
+/// Stores the decided candidates and announces what became usable (F95:
+/// once, grouped, with an undo).
+fn record_decisions(app: &AppHandle, decided: Vec<(Candidate, crate::validator::Decision)>) {
+    let now = chrono::Utc::now().timestamp();
+    let news: Vec<LearnedNews> = with_memory(app, |m| {
+        let news = decided
+            .into_iter()
+            .filter_map(|(c, d)| {
+                use crate::validator::Decision;
+                let o = match &d {
+                    Decision::Active => Outcome::Learned,
+                    Decision::Pending => Outcome::Pending,
+                    Decision::Rejected(r) => Outcome::Rejected(r),
+                };
+                note(m, o, now);
+                record_decision(m, c, &d, now)
+            })
+            .collect();
+        save(app, m);
+        news
+    });
+    if !news.is_empty() {
+        let _ = app.emit("learned-words", &news);
+        announce(app, &news);
+    }
+}
+
+/// What memory alone decides about a candidate: a pair the user undid, or a
+/// word already active with this heard form (nothing to ask).
+pub(crate) fn memory_guard(m: &Memory, c: &Candidate) -> Option<&'static str> {
+    let pair = (c.heard.to_lowercase(), c.term.to_lowercase());
+    if m.refused.contains(&pair) {
+        return Some("undone");
+    }
+    m.words
+        .iter()
+        .any(|w| {
+            w.active
+                && same_term(&w.term, &c.term)
+                && w.heard.iter().any(|h| same_term(h, &c.heard))
+        })
+        .then_some("known")
 }
 
 /// F95, as Wispr: the overlay pill says what was learned, over the window the
@@ -1050,6 +1233,13 @@ pub fn count(app: &AppHandle) -> usize {
 #[specta::specta]
 pub fn get_learned_words(app: AppHandle) -> Vec<Learned> {
     with_memory(&app, |m| m.words.clone())
+}
+
+/// EX-7.2: what learning decided over the last 30 days.
+#[tauri::command]
+#[specta::specta]
+pub fn get_learning_stats(app: AppHandle) -> LearningStats {
+    with_memory(&app, |m| stats(m, chrono::Utc::now().timestamp()))
 }
 
 #[tauri::command]
@@ -1230,6 +1420,151 @@ pub fn locate(text: &str, inserted: &str, caret: usize) -> Option<(String, Strin
     ))
 }
 
+/// A heard form that can't be an ordinary word: a capital after its first
+/// char, a digit or `_` ("RandyFlow", "jf2"), or a word missing from the
+/// lexicon ("corvanti"; never "cloud", EX-4).
+fn no_real_word(form: &str) -> bool {
+    form.chars().skip(1).any(char::is_uppercase)
+        || form.chars().any(|c| c.is_ascii_digit() || c == '_')
+        || form.split(' ').any(|w| !crate::lexicon::is_common(w))
+}
+
+/// Spec §6 rule 5, §9.4: when no rewrite ran, a confirmed name replaces its
+/// heard forms, as whole words, case-insensitively.
+/// Only forms that can't be a real word are replaced ("cloud" is left to the
+/// rewrite's context check).
+pub(crate) fn replace_heard(text: &str, words: &[Learned]) -> String {
+    let mut out = text.to_string();
+    for w in words
+        .iter()
+        .filter(|w| w.active && w.kind == WordKind::Term && w.count + w.used >= 2)
+    {
+        for h in w.heard.iter().filter(|h| no_real_word(h)) {
+            // `\b` does not consume the separator: "RandyFlow RandyFlow" both match.
+            let re = regex::Regex::new(&format!(r"(?i)\b{}\b", regex::escape(h)));
+            if let Ok(re) = re {
+                out = re.replace_all(&out, regex::NoExpand(&w.term)).into_owned();
+            }
+        }
+    }
+    out
+}
+
+/// [`replace_heard`] with the user's learned words.
+pub fn apply_learned(app: &AppHandle, text: &str) -> String {
+    with_memory(app, |m| replace_heard(text, &m.words))
+}
+
+/// Chars kept on each side of a terminal dictation as its anchors.
+const TERMINAL_ANCHOR: usize = 200;
+
+/// A terminal's caret offset doesn't map to the tail it is read from, so a
+/// terminal is watched by its text alone.
+fn can_observe(caret_known: bool, terminal: bool) -> bool {
+    caret_known || terminal
+}
+
+/// The anchors of a terminal dictation in the tail of its buffer: up to 200
+/// chars each side of its only occurrence. Twice or more (scrollback, output
+/// printed since): `None` (spec R6, anchor_ambiguous).
+pub fn locate_tail(text: &str, inserted: &str) -> Option<(String, String)> {
+    let mut found = text.match_indices(inserted).map(|(i, _)| i);
+    let i = found.next().filter(|_| !inserted.is_empty())?;
+    if found.next().is_some() {
+        return None;
+    }
+    let before: Vec<char> = text[..i].chars().collect();
+    let before: String = before[before.len().saturating_sub(TERMINAL_ANCHOR)..]
+        .iter()
+        .collect();
+    let after: String = text[i + inserted.len()..]
+        .chars()
+        .take(TERMINAL_ANCHOR)
+        .collect();
+    Some((before, after))
+}
+
+/// A terminal dictation's region in a tail read: after the only occurrence of
+/// `before`, up to `after`, or `lines` lines when nothing followed it, so
+/// output printed below never joins the region.
+pub fn region_near<'a>(text: &'a str, before: &str, after: &str, lines: usize) -> Option<&'a str> {
+    // Without a before-anchor, output scrolled into place could pass for the
+    // dictation (spec R6): the region can't be trusted.
+    if before.is_empty() {
+        return None;
+    }
+    let start = {
+        let mut at = text.match_indices(before).map(|(i, _)| i);
+        let i = at.next()?;
+        if at.next().is_some() {
+            return None;
+        }
+        i + before.len()
+    };
+    let rest = &text[start..];
+    let end = if after.is_empty() {
+        rest.match_indices('\n')
+            .nth(lines.max(1) - 1)
+            .map_or(rest.len(), |(i, _)| i)
+    } else {
+        rest.find(after)?
+    };
+    Some(&rest[..end]).filter(|r| !r.trim().is_empty())
+}
+
+/// Why an observation ended (Wispr's end reasons, EX-3).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum End {
+    Window,
+    NextDictation,
+    Emptied,
+    AroundChanged,
+    NotFound,
+    Unreadable,
+}
+
+/// Whether an ended observation may teach anything: never when the text was
+/// lost or unreadable, nor when the final reading failed (R7, uncertain);
+/// after a change around it, only when the dictation is still intact.
+pub fn learnable(end: End, final_read_ok: bool, intact: bool) -> bool {
+    match end {
+        End::NotFound | End::Unreadable => false,
+        End::AroundChanged => final_read_ok && intact,
+        _ => final_read_ok,
+    }
+}
+
+/// The region to learn from once an observation ends. `final_read` is the
+/// field read once more at the end event (`None`: that read failed);
+/// `bounded`: the dictation had text on both sides; `region` cuts it out.
+pub fn finish(
+    last: Option<String>,
+    final_read: Option<String>,
+    bounded: bool,
+    end: End,
+    region: &dyn Fn(&str) -> Option<String>,
+) -> Option<String> {
+    // The final reading failed: uncertain, nothing learned (R7).
+    let text = final_read?;
+    // Sent or cleared: the last reading is what the user kept.
+    if text.trim().is_empty() {
+        return last.filter(|_| learnable(end, true, true));
+    }
+    match region(&text) {
+        Some(r) => learnable(end, true, true).then_some(r),
+        // Text changed around it (Wispr anchor_mismatch_transcript_intact).
+        None => {
+            let intact = bounded || last.as_ref().is_some_and(|l| text.contains(l.as_str()));
+            let end = if end == End::NotFound || end == End::Unreadable {
+                end
+            } else {
+                End::AroundChanged
+            };
+            last.filter(|_| learnable(end, true, intact))
+        }
+    }
+}
+
 /// F80–F83: watches the field the text was pasted into, then learns from the
 /// last reading whose anchors still hold.
 pub fn observe(
@@ -1238,16 +1573,18 @@ pub fn observe(
     inserted: &str,
     history_id: Option<i64>,
     app_name: String,
+    terminal: bool,
 ) {
     if !crate::settings::get_settings(app).learning_enabled {
         return;
     }
-    if !field.caret_known {
+    if !can_observe(field.caret_known, terminal) {
         log::debug!("Learning: not observing, the field's caret position is unknown");
         return;
     }
     let caret = field.before.chars().count();
     let inserted = unify(inserted.trim());
+    let lines = inserted.lines().count().max(1);
     let id = OBSERVATION.fetch_add(1, Ordering::SeqCst) + 1;
     let app = app.clone();
     let _ = std::thread::Builder::new()
@@ -1260,45 +1597,56 @@ pub fn observe(
             let started = Instant::now();
             let mut last: Option<String> = None;
             let mut anchors: Option<(String, String)> = None;
-            // Lengths only in the log: the text itself stays private.
-            let mut ended = "the 60 s window closed";
-            // A newer dictation ended this one: learn from the last reading,
-            // never read its field again.
+            let cut = |text: &str, anchors: &Option<(String, String)>| {
+                let (before, after) = anchors.as_ref()?;
+                if terminal {
+                    region_near(text, before, after, lines)
+                } else {
+                    region(text, before, after)
+                }
+                .map(|r| r.trim().to_string())
+            };
+            // A newer dictation ended this one: one immediate reading, then
+            // never its field again.
+            let mut end = End::Window;
             while started.elapsed() < WINDOW {
                 if OBSERVATION.load(Ordering::SeqCst) != id {
-                    ended = "a newer dictation started";
+                    end = End::NextDictation;
                     break;
                 }
-                match crate::context::read_watched().map(|t| unify(&t)) {
-                    // An empty field was sent or cleared: keep the last reading.
+                match crate::context::read_watched(terminal).map(|t| unify(&t)) {
                     Some(text) if !text.trim().is_empty() => {
                         if anchors.is_none() {
-                            anchors = locate(&text, &inserted, caret);
+                            anchors = if terminal {
+                                locate_tail(&text, &inserted)
+                            } else {
+                                locate(&text, &inserted, caret)
+                            };
                         }
-                        match &anchors {
+                        if anchors.is_none() {
                             // The paste can take a moment to show up.
-                            None if started.elapsed() < Duration::from_secs(3) => {}
-                            None => {
-                                ended = "the pasted text never showed up in the field";
+                            if started.elapsed() >= Duration::from_secs(3) {
+                                end = End::NotFound;
                                 log::debug!("Learning: {}", mismatch(&text, &inserted));
                                 break;
                             }
-                            Some((before, after)) => match region(&text, before, after) {
-                                Some(r) => last = Some(r.trim().to_string()),
+                        } else {
+                            match cut(&text, &anchors) {
+                                Some(r) => last = Some(r),
                                 // Text typed outside the dictation (Wispr: anchor_mismatch).
                                 None => {
-                                    ended = "the text around the dictation changed";
+                                    end = End::AroundChanged;
                                     break;
                                 }
-                            },
+                            }
                         }
                     }
                     Some(_) => {
-                        ended = "the field was emptied (sent)";
+                        end = End::Emptied;
                         break;
                     }
                     None => {
-                        ended = "the field could no longer be read";
+                        end = End::Unreadable;
                         break;
                     }
                 }
@@ -1306,26 +1654,70 @@ pub fn observe(
                 // (Wispr learns from the last reading before the send, E224).
                 std::thread::sleep(Duration::from_millis(300));
             }
-            let found = match &last {
-                Some(fin) if fin != &inserted => learn(&app, &inserted, fin),
-                _ => Vec::new(),
+            // EX-3: one more reading at the end event, no 300 ms wait.
+            let final_read = match end {
+                End::NotFound | End::Unreadable => None,
+                _ => crate::context::read_watched(terminal).map(|t| unify(&t)),
             };
+            let bounded = anchors
+                .as_ref()
+                .is_some_and(|(b, a)| !b.trim().is_empty() && !a.trim().is_empty());
+            let last = finish(last, final_read, bounded, end, &|t| cut(t, &anchors));
+            let ended = format!("{end:?}");
+            let edited = last.as_ref().filter(|fin| *fin != &inserted);
+            let locals = edited
+                .map(|fin| local_candidates(&inserted, fin))
+                .unwrap_or_default();
+            let now = chrono::Utc::now().timestamp();
+            // Guards decide first: local rules, then what memory already says.
+            let found: Vec<Candidate> = with_memory(&app, |m| {
+                if edited.is_some() {
+                    note(m, Outcome::Observed, now);
+                }
+                let mut found = Vec::new();
+                for l in locals {
+                    let reason = match l {
+                        Local::Guarded(reason) => Err(reason),
+                        Local::Candidate(c) => match memory_guard(m, &c) {
+                            Some(reason) => Err(reason),
+                            None => Ok(c),
+                        },
+                    };
+                    match reason {
+                        Ok(c) => found.push(c),
+                        Err(reason) => {
+                            log::debug!("Learning: candidate → guarded ({reason})");
+                            note(m, Outcome::Rejected(reason), now);
+                        }
+                    }
+                }
+                if edited.is_some() {
+                    save(&app, m);
+                }
+                found
+            });
             log::debug!(
-                "Learning: observation ended ({ended}); edited: {}, learned: {}",
-                last.as_ref().is_some_and(|fin| fin != &inserted),
+                "Learning: observation ended ({ended}); edited: {}, candidates: {}",
+                edited.is_some(),
                 found.len()
             );
-            // The judge reads the correction in the background (style rules,
-            // misheard words the local layer couldn't tell).
-            let settings = crate::settings::get_settings(&app);
-            if let Some(fin) = last.as_ref().filter(|fin| *fin != &inserted) {
-                if crate::judge::judge_allowed(&settings) {
+            if let Some(fin) = edited {
+                // EX-2: the validator decides each candidate in the background.
+                if !found.is_empty() {
+                    let (app, inserted, fin) = (app.clone(), inserted.clone(), fin.clone());
+                    tauri::async_runtime::spawn(async move {
+                        let decided =
+                            crate::validator::validate(&app, &inserted, &fin, found).await;
+                        record_decisions(&app, decided);
+                    });
+                }
+                // The judge reads the correction for style rules and fillers.
+                if crate::judge::judge_allowed(&crate::settings::get_settings(&app)) {
                     tauri::async_runtime::spawn(crate::judge::run(
                         app.clone(),
                         inserted.clone(),
                         fin.clone(),
                         app_name.clone(),
-                        found.clone(),
                     ));
                 }
             }
@@ -1344,9 +1736,217 @@ pub fn observe(
 mod tests {
     use super::*;
 
-    /// Texts holding every form the verdict tests use.
-    const T_IN: &str = "conflig jeffu chefo mardi";
-    const T_KEPT: &str = "config jevu jeudi";
+    /// The region between two anchors, as `observe` reads it.
+    fn between<'a>(b: &'a str, a: &'a str) -> impl Fn(&str) -> Option<String> + 'a {
+        move |t: &str| region(t, b, a).map(|r| r.trim().to_string())
+    }
+
+    #[test]
+    fn learning_stats_count_the_last_30_days() {
+        let day = 86_400;
+        let mut m = Memory::default();
+        note(&mut m, Outcome::Observed, 0);
+        note(&mut m, Outcome::Observed, 40 * day);
+        note(&mut m, Outcome::Learned, 40 * day);
+        note(&mut m, Outcome::Pending, 41 * day);
+        note(&mut m, Outcome::Rejected("grammar"), 41 * day);
+        note(&mut m, Outcome::Rejected("refused"), 42 * day);
+        note(&mut m, Outcome::Rejected("grammar"), 42 * day);
+        let s = stats(&m, 45 * day);
+        assert_eq!((s.observed, s.learned, s.pending, s.rejected), (1, 1, 1, 3));
+        assert_eq!(
+            s.rejected_by,
+            vec![("grammar".to_string(), 2), ("refused".to_string(), 1)]
+        );
+        // Older than 30 days: dropped from storage too.
+        assert_eq!(m.events.len(), 6);
+    }
+
+    #[test]
+    fn an_undone_pair_is_never_learned_again() {
+        let mut m = Memory::default();
+        let c = super::candidates("Merci Jeff, à demain.", "Merci Jev, à demain.");
+        assert_eq!(memory_guard(&m, &c[0]), None);
+        record_word(&mut m, &c[0], 0);
+        // Known and active with this form: nothing to ask.
+        assert_eq!(memory_guard(&m, &c[0]), Some("known"));
+        // The notification's Undo: gone, and refused from now on.
+        drop_form(&mut m, "Jev", "Jeff");
+        assert!(m.words.is_empty());
+        assert_eq!(memory_guard(&m, &c[0]), Some("undone"));
+        // Another form of the same word is still welcome.
+        let other = Candidate {
+            term: "Jev".into(),
+            heard: "Chef".into(),
+            kind: WordKind::Term,
+        };
+        assert_eq!(memory_guard(&m, &other), None);
+        // Survives a save.
+        let back = parse_memory(&serde_json::to_vec(&m).unwrap());
+        assert_eq!(memory_guard(&back, &c[0]), Some("undone"));
+        // An answer still in flight can't bring it back.
+        let d = crate::validator::Decision::Active;
+        assert!(record_decision(&mut m, c[0].clone(), &d, 2).is_none());
+        assert!(m.words.is_empty());
+    }
+
+    #[test]
+    fn entries_say_where_they_come_from() {
+        let mut m = Memory::default();
+        record_word(
+            &mut m,
+            &super::candidates("Merci Jeff.", "Merci Jev.")[0],
+            0,
+        );
+        assert_eq!(m.words[0].source, Source::UserEdits);
+        // Older memory has no source: the user's edits.
+        let l: Learned =
+            serde_json::from_str(r#"{"term":"Qwen","heard":"Quen","count":1,"last_seen":0}"#)
+                .unwrap();
+        assert_eq!(l.source, Source::UserEdits);
+    }
+
+    #[test]
+    fn pending_words_are_revalidated_once() {
+        let pending = |term: &str, heard: &str| Learned {
+            term: term.into(),
+            heard: vec![heard.into()],
+            count: 1,
+            last_seen: 0,
+            kind: WordKind::Misheard,
+            active: false,
+            used: 0,
+            source: Default::default(),
+        };
+        let mut m = Memory {
+            words: vec![
+                pending("specs", "spikes"),
+                pending("slop", "slope"),
+                pending("devra correspondre", "devrait correspondre"),
+            ],
+            ..Default::default()
+        };
+        let sent = pending_candidates(&m);
+        assert_eq!(sent.len(), 3);
+        // Void or unreachable: nothing changes, retried at the next start.
+        assert!(apply_revalidation(&mut m, &sent, None, 5).is_empty());
+        assert!(apply_revalidation(&mut m, &sent, Some("nope"), 5).is_empty());
+        assert_eq!((m.words.len(), m.revalidated_at), (3, 0));
+        let reply = r#"{"accepted":[{"heard":"spikes","term":"specs","kind":"technical"},
+            {"heard":"slope","term":"slop","kind":"technical"}]}"#;
+        let news = apply_revalidation(&mut m, &sent, Some(reply), 5);
+        assert_eq!(news.len(), 2);
+        let terms: Vec<(&str, bool, WordKind)> = m
+            .words
+            .iter()
+            .map(|w| (w.term.as_str(), w.active, w.kind))
+            .collect();
+        assert_eq!(
+            terms,
+            vec![
+                ("specs", true, WordKind::Term),
+                ("slop", true, WordKind::Term)
+            ]
+        );
+        assert_eq!(m.revalidated_at, 5);
+        // Done once: nothing is sent again.
+        assert!(pending_candidates(&m).is_empty());
+    }
+
+    #[test]
+    fn only_a_certain_end_is_learnable() {
+        assert!(learnable(End::Window, true, false));
+        assert!(learnable(End::NextDictation, true, false));
+        assert!(learnable(End::Emptied, true, false));
+        assert!(!learnable(End::Window, false, true), "final reading failed");
+        assert!(!learnable(End::AroundChanged, true, false));
+        assert!(learnable(End::AroundChanged, true, true));
+        assert!(!learnable(End::NotFound, true, true));
+        assert!(!learnable(End::Unreadable, true, true));
+    }
+
+    #[test]
+    fn an_observation_ends_with_a_final_reading() {
+        let r = between("Salut ", " !");
+        let last = || Some("Jef".to_string());
+        // O01: the window closes; the final reading holds a later fix.
+        assert_eq!(
+            finish(last(), Some("Salut Jev !".into()), true, End::Window, &r),
+            Some("Jev".into())
+        );
+        // O02 / L08: fixed then sent at once; a final reading that still holds
+        // the fix wins over the last poll.
+        assert_eq!(
+            finish(last(), Some("Salut Jev !".into()), true, End::Emptied, &r),
+            Some("Jev".into())
+        );
+        // Sent: the field is empty now, the last reading is what was sent.
+        assert_eq!(
+            finish(last(), Some(String::new()), true, End::Emptied, &r),
+            last()
+        );
+        // O03: a newer dictation ends it; one immediate reading.
+        assert_eq!(
+            finish(
+                last(),
+                Some("Salut Jev !".into()),
+                true,
+                End::NextDictation,
+                &r
+            ),
+            Some("Jev".into())
+        );
+        // The final reading failed: uncertain, nothing learned (R7).
+        assert_eq!(finish(last(), None, true, End::Window, &r), None);
+        // O06: text typed around it, anchors bounded on both sides: last reading.
+        assert_eq!(
+            finish(
+                last(),
+                Some("Bon. Salut Jef ! Ok".into()),
+                true,
+                End::AroundChanged,
+                &r
+            ),
+            last()
+        );
+        // Unbounded region, but the pasted text is still there unchanged: last reading.
+        assert_eq!(
+            finish(
+                last(),
+                Some("Bon. Jef ! Ok".into()),
+                false,
+                End::AroundChanged,
+                &r
+            ),
+            last()
+        );
+        // Unbounded and gone: nothing.
+        assert_eq!(
+            finish(
+                last(),
+                Some("Tout autre chose".into()),
+                false,
+                End::AroundChanged,
+                &r
+            ),
+            None
+        );
+        // O08: never found, or no longer readable: nothing.
+        assert_eq!(
+            finish(last(), Some("Salut Jev !".into()), true, End::NotFound, &r),
+            None
+        );
+        assert_eq!(
+            finish(
+                last(),
+                Some("Salut Jev !".into()),
+                true,
+                End::Unreadable,
+                &r
+            ),
+            None
+        );
+    }
 
     #[test]
     fn tracks_the_dictation_with_wispr_anchors() {
@@ -1515,6 +2115,202 @@ mod tests {
     }
 
     #[test]
+    fn a_confirmed_term_replaces_a_heard_form_that_is_no_real_word() {
+        let words = [word("Handy Flow", "RandyFlow", 2, 0, WordKind::Term, true)];
+        assert_eq!(
+            replace_heard("Ouvre RandyFlow.", &words),
+            "Ouvre Handy Flow."
+        );
+        assert_eq!(replace_heard("ouvre randyflow", &words), "ouvre Handy Flow");
+    }
+
+    #[test]
+    fn a_heard_form_that_is_a_real_word_is_never_replaced_blindly() {
+        // Without the LLM there is no context check: "cloud", "Jeff" stay.
+        let words = [
+            word("Claude", "Cloud", 5, 0, WordKind::Term, true),
+            word("Jev", "Jeff", 5, 0, WordKind::Term, true),
+        ];
+        assert_eq!(
+            replace_heard("On héberge ça dans le cloud. Merci Jeff.", &words),
+            "On héberge ça dans le cloud. Merci Jeff."
+        );
+    }
+
+    #[test]
+    fn pending_misheard_or_once_seen_words_never_replace() {
+        let words = [
+            word("Handy Flow", "RandyFlow", 1, 0, WordKind::Term, true),
+            word("SuperApp", "SuprApp2", 3, 0, WordKind::Misheard, true),
+            word("Broker Name", "BrokerName", 3, 0, WordKind::Term, false),
+        ];
+        let t = "RandyFlow SuprApp2 BrokerName";
+        assert_eq!(replace_heard(t, &words), t);
+    }
+
+    #[test]
+    fn only_whole_words_are_replaced() {
+        let words = [word("Handy Flow", "RandyFlow", 2, 0, WordKind::Term, true)];
+        assert_eq!(replace_heard("RandyFlows", &words), "RandyFlows");
+    }
+
+    #[test]
+    fn a_terminal_region_is_found_near_its_anchors_while_output_scrolls() {
+        let before = "PS C:\\> claude\n> ";
+        let after = "\n  ? for shortcuts";
+        let field = format!("old output\nmore output\n{before}merci Jev{after}");
+        assert_eq!(region_near(&field, before, after, 1), Some("merci Jev"));
+    }
+
+    #[test]
+    fn an_ambiguous_terminal_anchor_ends_the_observation() {
+        assert_eq!(region_near("> a\n> merci Jev\n?", "> ", "\n?", 1), None);
+    }
+
+    #[test]
+    fn an_empty_after_anchor_takes_as_many_lines_as_were_pasted() {
+        assert_eq!(
+            region_near("out\n> merci Jev", "out\n> ", "", 1),
+            Some("merci Jev")
+        );
+        // Output printed after the dictation is never part of the region.
+        assert_eq!(
+            region_near("out\n> merci Jev\nCompiling handy", "out\n> ", "", 1),
+            Some("merci Jev")
+        );
+    }
+
+    #[test]
+    fn an_empty_before_anchor_never_makes_a_terminal_region() {
+        // Pasted at the very start of the read: scrolled output could take its
+        // place under the same after-anchor, so the region can't be trusted.
+        assert_eq!(
+            region_near(
+                "merci Jev
+footer",
+                "",
+                "
+footer",
+                1
+            ),
+            None
+        );
+    }
+
+    #[test]
+    fn adjacent_heard_forms_are_all_replaced() {
+        let words = [word("Handy Flow", "RandyFlow", 2, 0, WordKind::Term, true)];
+        assert_eq!(
+            replace_heard("RandyFlow RandyFlow", &words),
+            "Handy Flow Handy Flow"
+        );
+    }
+
+    #[test]
+    fn two_empty_anchors_never_make_a_region() {
+        assert_eq!(region_near("anything printed", "", "", 1), None);
+    }
+
+    #[test]
+    fn the_terminal_dictation_must_appear_once_in_the_tail() {
+        let (b, a) = locate_tail("out\n> merci Jeff", "merci Jeff").unwrap();
+        assert_eq!((b.as_str(), a.as_str()), ("out\n> ", ""));
+        // Twice (scrollback, or output printed after the paste): abandon, spec R6.
+        assert_eq!(
+            locate_tail("> merci Jeff\nok\n> merci Jeff", "merci Jeff"),
+            None
+        );
+        // Anchors keep at most 200 chars on each side.
+        let long = format!("{}> merci Jeff", "x".repeat(500));
+        assert_eq!(
+            locate_tail(&long, "merci Jeff").unwrap().0.chars().count(),
+            200
+        );
+    }
+
+    #[test]
+    fn a_terminal_is_observed_without_a_known_caret() {
+        assert!(can_observe(false, true));
+        assert!(!can_observe(false, false));
+        assert!(can_observe(true, false));
+    }
+
+    const A05_PASTED: &str =
+        "Nous allons organiser une réunion la semaine prochaine pour parler du budget.";
+    const A05_EDITED: &str =
+        "Finalement on annule tout et on reprend le dossier en janvier avec une autre equipe.";
+
+    #[test]
+    fn golden_alignment_cases() {
+        let pair = |t: &str, h: &str| vec![(t.to_string(), h.to_string())];
+        assert_eq!(
+            candidates(
+                "Nous installons Corvanti ce soir.",
+                "Nous installons Quorvantis ce soir."
+            ),
+            pair("Quorvantis", "Corvanti")
+        ); // A01
+        assert_eq!(
+            candidates(
+                "Le dossier est suivi par Aurélie Kenen.",
+                "Le dossier est suivi par Aurélie Quennehen."
+            ),
+            pair("Quennehen", "Kenen")
+        ); // A03
+        assert!(super::candidates("Je pars à Paris demain.", "Je pars à PARIS demain.").is_empty()); // A04
+        assert!(super::candidates(A05_PASTED, A05_EDITED).is_empty()); // A05
+    }
+
+    #[test]
+    fn golden_a02_a_two_word_name_is_learned_as_one_phrase() {
+        // Handy keeps phrase mode on (spec §9.2.0), unlike this Wispr account.
+        assert_eq!(
+            candidates(
+                "Je travaille avec Kazimierz Bignowski sur le projet.",
+                "Je travaille avec Kasimir Zbignowski sur le projet."
+            ),
+            vec![(
+                "Kasimir Zbignowski".to_string(),
+                "Kazimierz Bignowski".to_string()
+            )]
+        );
+    }
+
+    #[test]
+    fn a_one_word_dictation_can_be_corrected() {
+        // Internal capital: a term even at the start of the field.
+        assert_eq!(
+            candidates("Postgre", "PostgreSQL"),
+            vec![("PostgreSQL".to_string(), "Postgre".to_string())]
+        );
+    }
+
+    #[test]
+    fn typing_after_the_dictation_is_not_a_rewrite() {
+        assert_eq!(
+            candidates(
+                "Merci Jeff.",
+                "Merci Jev. Et voici une longue suite tapée ensuite au clavier"
+            ),
+            vec![("Jev".to_string(), "Jeff".to_string())]
+        );
+    }
+
+    #[test]
+    fn a_name_may_extend_what_was_heard_but_not_truncate_it() {
+        // L01 (E218): Wispr learns Jordane←Jordan. E227: a truncated name is refused.
+        assert_eq!(
+            candidates("Merci Jordan, à demain.", "Merci Jordane, à demain."),
+            vec![("Jordane".to_string(), "Jordan".to_string())]
+        );
+        assert!(
+            super::candidates("Merci Jordane, à demain.", "Merci Jordan, à demain.").is_empty()
+        );
+        // A common word keeps the plural/conjugation guard (L05).
+        assert!(super::candidates("Le projet avance bien.", "Le projets avance bien.").is_empty());
+    }
+
+    #[test]
     fn grammar_changes_are_never_misheard() {
         for (a, b) in [
             ("Il et parti hier soir.", "Il est parti hier soir."),
@@ -1548,6 +2344,8 @@ mod tests {
             last_seen: now,
             kind,
             active: true,
+            used: 0,
+            source: Default::default(),
         };
         let mut m = Memory::default();
         m.words.push(word("est", "et", WordKind::Misheard));
@@ -1567,10 +2365,12 @@ mod tests {
             last_seen: 0,
             kind: WordKind::Term,
             active: true,
+            used: 0,
+            source: Default::default(),
         });
-        assert!(mark_used(&mut m, "on compare quen et gemma", 500));
+        assert!(mark_used(&mut m, "on compare quen et gemma", "", 500));
         assert_eq!(m.words[0].last_seen, 500);
-        assert!(!mark_used(&mut m, "on compare queneau", 900)); // not a whole word
+        assert!(!mark_used(&mut m, "on compare queneau", "", 900)); // not a whole word
         assert_eq!(m.words[0].last_seen, 500);
     }
 
@@ -1598,66 +2398,42 @@ mod tests {
     }
 
     #[test]
-    fn judge_pairs_must_be_in_the_texts() {
-        use crate::judge::{Verdict, VerdictKind};
-        let v = Verdict {
-            kind: VerdictKind::Misheard,
-            heard: Some("dashbord".into()),
-            term: Some("dashboard".into()),
-            rule: None,
-            same_as: None,
-            consistent_with_history: false,
-            technical: true,
-        };
-        let kept = "le dashboard est prêt";
-        let mut m = Memory::default();
-        let news = apply_verdicts(&mut m, &[v.clone()], &[], "le tableau est prêt", kept, 0);
-        assert!(news.is_empty() && m.words.is_empty());
-        let news = apply_verdicts(&mut m, &[v], &[], "le dashbord est prêt", kept, 0);
-        let word = LearnedNews::Word {
-            term: "dashboard".into(),
-        };
-        assert_eq!(news, vec![word]);
-    }
-
-    #[test]
     fn a_style_rule_needs_two_sightings() {
         use crate::judge::{Verdict, VerdictKind};
         let rule = "Toujours vouvoyer.";
         let v = |same_as| Verdict {
             kind: VerdictKind::StyleRule,
-            heard: None,
-            term: None,
             rule: Some(rule.into()),
             same_as,
             consistent_with_history: true,
-            technical: false,
         };
         let mut m = Memory::default();
-        assert!(apply_verdicts(&mut m, &[v(None)], &[], "a", "b", 0).is_empty());
+        assert!(apply_verdicts(&mut m, &[v(None)], 0).is_empty());
         assert!(!m.rules[0].active);
-        let news = apply_verdicts(&mut m, &[v(Some(0))], &[], "a", "b", 1);
+        let news = apply_verdicts(&mut m, &[v(Some(0))], 1);
         assert!(m.rules[0].active);
         assert_eq!(news, vec![LearnedNews::Rule { rule: rule.into() }]);
     }
 
     #[test]
-    fn technical_judge_words_are_terms_even_short() {
-        use crate::judge::{Verdict, VerdictKind};
-        let v = Verdict {
-            kind: VerdictKind::Misheard,
-            heard: Some("vu".into()),
-            term: Some("Vue".into()),
-            rule: None,
-            same_as: None,
-            consistent_with_history: false,
-            technical: true,
-        };
-        let mut m = Memory::default();
-        apply_verdicts(&mut m, &[v], &[], "on code en vu", "on code en Vue", 0);
-        assert_eq!(m.words.len(), 1);
-        assert!(m.words[0].active);
-        assert_eq!(m.words[0].kind, WordKind::Term);
+    fn only_a_plural_or_a_shortened_name_is_guarded_as_an_affix() {
+        // A plural stays local (L05); a name is never shortened (E227).
+        assert!(super::candidates("Le projet avance bien.", "Le projets avance bien.").is_empty());
+        assert!(
+            super::candidates("Merci Jordane, à demain.", "Merci Jordan, à demain.").is_empty()
+        );
+        // Another shortened common word goes to the validator.
+        let c = super::candidates("C'est du slope pur.", "C'est du slop pur.");
+        assert_eq!(c.len(), 1);
+        assert_eq!((c[0].heard.as_str(), c[0].term.as_str()), ("slope", "slop"));
+    }
+
+    #[test]
+    fn a_short_technical_word_is_a_term_candidate() {
+        // "vu" → "Vue": short, but a term for the validator, never a grammar fix.
+        let c = super::candidates("on code en vu", "on code en Vue");
+        assert_eq!(c.len(), 1);
+        assert_eq!(c[0].kind, WordKind::Term);
     }
 
     #[test]
@@ -1665,16 +2441,13 @@ mod tests {
         use crate::judge::{Verdict, VerdictKind};
         let v = Verdict {
             kind: VerdictKind::StyleRule,
-            heard: None,
-            term: None,
             rule: Some("Toujours vouvoyer.".into()),
             same_as: None,
             consistent_with_history: false,
-            technical: false,
         };
         let mut m = Memory::default();
-        apply_verdicts(&mut m, &[v.clone()], &[], "a", "b", 0);
-        apply_verdicts(&mut m, &[v], &[], "a", "b", 1);
+        apply_verdicts(&mut m, &[v.clone()], 0);
+        apply_verdicts(&mut m, &[v], 1);
         assert_eq!(m.rules.len(), 1);
         assert!(m.rules[0].active);
     }
@@ -1684,15 +2457,12 @@ mod tests {
         use crate::judge::{Verdict, VerdictKind};
         let v = Verdict {
             kind: VerdictKind::StyleRule,
-            heard: None,
-            term: None,
             rule: Some("Toujours vouvoyer.".into()),
             same_as: None,
             consistent_with_history: false,
-            technical: false,
         };
         let mut m = Memory::default();
-        apply_verdicts(&mut m, &[v.clone(), v], &[], "a", "b", 0);
+        apply_verdicts(&mut m, &[v.clone(), v], 0);
         assert_eq!((m.rules.len(), m.rules[0].count), (1, 1));
         assert!(!m.rules[0].active);
     }
@@ -1723,8 +2493,6 @@ mod tests {
         assert!(super::candidates("la réunion est mardi", "la réunion est jeudi").is_empty());
         assert!(super::candidates("je dis oui merci", "je dis non merci").is_empty());
         assert!(super::candidates("on part à deux", "on part à trois").is_empty());
-        assert!(!is_misheard_pair("mardi", "jeudi"));
-        assert!(is_misheard_pair("conflig", "config"));
     }
 
     #[test]
@@ -1739,12 +2507,9 @@ mod tests {
         };
         let v = |same_as, text: Option<&str>| Verdict {
             kind: VerdictKind::StyleRule,
-            heard: None,
-            term: None,
             rule: text.map(Into::into),
             same_as,
             consistent_with_history: true,
-            technical: false,
         };
         let sent = vec!["A".to_string(), "B".to_string()];
         // "A" was deleted during the call: the judge's 1 ("B") is now 0, its 0
@@ -1761,7 +2526,7 @@ mod tests {
         let out = remap_same_as(&verdicts, &sent, &m.rules);
         let got: Vec<_> = out.iter().map(|v| v.same_as).collect();
         assert_eq!(got, vec![Some(0), None]);
-        apply_verdicts(&mut m, &out, &[], T_IN, T_KEPT, 1);
+        apply_verdicts(&mut m, &out, 1);
         let rules: Vec<_> = m.rules.iter().map(|r| r.rule.as_str()).collect();
         assert_eq!(rules, vec!["B", "C"], "the deleted rule never comes back");
         assert_eq!(m.rules[0].count, 2);
@@ -1770,121 +2535,48 @@ mod tests {
     #[test]
     fn verdicts_respect_the_guards() {
         use crate::judge::{Verdict, VerdictKind};
-        let v = |kind, heard: Option<&str>, term: Option<&str>, rule: Option<&str>, same_as, ok| {
-            Verdict {
-                kind,
-                heard: heard.map(Into::into),
-                term: term.map(Into::into),
-                rule: rule.map(Into::into),
-                same_as,
-                consistent_with_history: ok,
-                technical: false,
-            }
+        let v = |kind, rule: Option<&str>, same_as, ok| Verdict {
+            kind,
+            rule: rule.map(Into::into),
+            same_as,
+            consistent_with_history: ok,
         };
         let mut m = Memory::default();
-        // A meaning change learns nothing, even proposed as misheard.
+        // A meaning change learns nothing.
         apply_verdicts(
             &mut m,
-            &[
-                v(
-                    VerdictKind::Misheard,
-                    Some("mardi"),
-                    Some("jeudi"),
-                    None,
-                    None,
-                    true,
-                ),
-                v(VerdictKind::ContentChange, None, None, None, None, true),
-            ],
-            &[],
-            T_IN,
-            T_KEPT,
+            &[v(VerdictKind::ContentChange, None, None, true)],
             0,
         );
         assert!(m.words.is_empty() && m.rules.is_empty());
-        // A misheard word from the judge is pending until seen twice too.
-        apply_verdicts(
-            &mut m,
-            &[v(
-                VerdictKind::Misheard,
-                Some("conflig"),
-                Some("config"),
-                None,
-                None,
-                true,
-            )],
-            &[],
-            T_IN,
-            T_KEPT,
-            0,
-        );
-        assert!(!m.words[0].active);
         // A lone rule not backed by history waits for a second sighting.
         let rule = "Préférer « de manière claire et concise ».";
         apply_verdicts(
             &mut m,
-            &[v(
-                VerdictKind::StyleRule,
-                None,
-                None,
-                Some(rule),
-                None,
-                false,
-            )],
-            &[],
-            T_IN,
-            T_KEPT,
+            &[v(VerdictKind::StyleRule, Some(rule), None, false)],
             0,
         );
         assert!(!m.rules[0].active);
         let on = apply_verdicts(
             &mut m,
-            &[v(
-                VerdictKind::StyleRule,
-                None,
-                None,
-                Some("…"),
-                Some(0),
-                false,
-            )],
-            &[],
-            T_IN,
-            T_KEPT,
+            &[v(VerdictKind::StyleRule, Some("…"), Some(0), false)],
             1,
         );
         assert!(m.rules[0].active && m.rules[0].count == 2);
         assert_eq!(on, vec![LearnedNews::Rule { rule: rule.into() }]);
         // Even "consistent with history", a new rule waits for a second sighting.
-        apply_verdicts(
-            &mut m,
-            &[v(
-                VerdictKind::Filler,
-                None,
-                None,
-                Some("Supprimer « donc voilà »."),
-                None,
-                true,
-            )],
-            &[],
-            T_IN,
-            T_KEPT,
-            2,
+        let filler = v(
+            VerdictKind::Filler,
+            Some("Supprimer « donc voilà »."),
+            None,
+            true,
         );
+        apply_verdicts(&mut m, &[filler], 2);
         assert!(!m.rules[1].active);
         // A `same_as` out of range is a new rule, not a crash.
         apply_verdicts(
             &mut m,
-            &[v(
-                VerdictKind::StyleRule,
-                None,
-                None,
-                Some("Autre."),
-                Some(99),
-                false,
-            )],
-            &[],
-            T_IN,
-            T_KEPT,
+            &[v(VerdictKind::StyleRule, Some("Autre."), Some(99), false)],
             3,
         );
         assert_eq!(m.rules.len(), 3);
@@ -1905,6 +2597,8 @@ mod tests {
             last_seen,
             kind,
             active,
+            used: 0,
+            source: Default::default(),
         }
     }
 
@@ -1922,7 +2616,7 @@ mod tests {
 
     #[test]
     fn a_word_fixed_twice_in_one_dictation_is_learned() {
-        // "chefo" → "jevu" alone is too far (0.8); with "jeffu" → "jevu" it counts.
+        // "chefo" → "jevu" is far (0.8); with "jeffu" → "jevu" it is a second sighting.
         let c = super::candidates(
             "le chefo est prêt et le jeffu aussi",
             "le jevu est prêt et le jevu aussi",
@@ -1934,9 +2628,13 @@ mod tests {
         }
         assert_eq!(m.words.len(), 1);
         assert!(m.words[0].active);
-        assert_eq!(m.words[0].heard, vec!["jeffu", "chefo"]);
-        // Alone, "chefo" → "jevu" still learns nothing.
-        assert!(super::candidates("le chefo est prêt", "le jevu est prêt").is_empty());
+        assert_eq!(m.words[0].heard, vec!["chefo", "jeffu"]);
+        // Alone, "chefo" → "jevu" (0.8) goes to the validator; without one it waits.
+        let alone = super::candidates("le chefo est prêt", "le jevu est prêt");
+        assert_eq!(
+            crate::validator::fallback(&alone[0]),
+            crate::validator::Decision::Pending
+        );
         // Case doesn't split a word in two.
         record_word(
             &mut m,
@@ -1948,48 +2646,6 @@ mod tests {
             1,
         );
         assert_eq!(m.words.len(), 1);
-    }
-
-    #[test]
-    fn a_technical_word_is_learned_at_once() {
-        use crate::judge::{Verdict, VerdictKind};
-        let v = |heard: &str, technical| Verdict {
-            kind: VerdictKind::Misheard,
-            heard: Some(heard.into()),
-            term: Some("jevu".into()),
-            rule: None,
-            same_as: None,
-            consistent_with_history: false,
-            technical,
-        };
-        // Not technical: one correction stays pending.
-        let mut m = Memory::default();
-        apply_verdicts(&mut m, &[v("jeffu", false)], &[], T_IN, T_KEPT, 0);
-        assert!(!m.words[0].active);
-        // Technical: usable at once, even a farther form ("chefo", 0.8).
-        let mut m = Memory::default();
-        let news = apply_verdicts(&mut m, &[v("chefo", true)], &[], T_IN, T_KEPT, 0);
-        assert!(m.words[0].active);
-        assert_eq!(
-            news,
-            vec![LearnedNews::Word {
-                term: "jevu".into()
-            }]
-        );
-        // Found locally this dictation: not counted twice, only promoted.
-        let local = super::candidates("le jeffu est prêt", "le jevu est prêt");
-        let mut m = Memory::default();
-        record_word(&mut m, &local[0], 0);
-        apply_verdicts(&mut m, &[v("jeffu", false)], &local, T_IN, T_KEPT, 0);
-        assert!(!m.words[0].active && m.words[0].count == 1);
-        apply_verdicts(&mut m, &[v("jeffu", true)], &local, T_IN, T_KEPT, 0);
-        assert!(m.words[0].active && m.words[0].count == 1);
-        // Still no meaning change, technical or not.
-        let mut m = Memory::default();
-        let mut mj = v("mardi", true);
-        mj.term = Some("jeudi".into());
-        apply_verdicts(&mut m, &[mj], &[], T_IN, T_KEPT, 0);
-        assert!(m.words.is_empty());
     }
 
     #[test]
@@ -2009,10 +2665,10 @@ mod tests {
             true,
         ));
         prune(&mut m, 31 * day);
-        // Active or pending, a word unused for 30 days goes.
+        // A pending word unused for 30 days goes; an active one stays (Wispr).
         assert_eq!(
             m.words.iter().map(|w| w.term.as_str()).collect::<Vec<_>>(),
-            vec!["Kubernetes"]
+            vec!["Qwen", "Kubernetes"]
         );
         m.words = (0..WORDS_MAX + 5)
             .map(|i| word(&format!("w{i}"), "", 1, i as i64, WordKind::Term, true))
@@ -2038,6 +2694,7 @@ mod tests {
         assert!(mark_used(
             &mut m,
             "J'utilise qwen et Node.js, le config dit partir.",
+            "",
             9
         ));
         let seen = |t: &str| m.words.iter().find(|w| w.term == t).unwrap().last_seen;
@@ -2046,6 +2703,42 @@ mod tests {
         // Pending: dictating it proves nothing. Inside "partir": not the word.
         assert_eq!(seen("config"), 0);
         assert_eq!(seen("art"), 0);
-        assert!(!mark_used(&mut m, "rien ici", 10));
+        assert!(!mark_used(&mut m, "rien ici", "", 10));
+    }
+
+    #[test]
+    fn an_active_word_survives_a_year_without_use() {
+        let mut m = Memory::default();
+        m.words
+            .push(word("Jev", "Jeff", 5, 0, WordKind::Term, true));
+        prune(&mut m, 365 * 86_400);
+        assert!(m.words.iter().any(|w| w.term == "Jev"));
+    }
+
+    #[test]
+    fn a_pending_word_still_expires_after_30_days() {
+        let mut m = Memory::default();
+        m.words
+            .push(word("slop", "slope", 1, 0, WordKind::Misheard, false));
+        prune(&mut m, 31 * 86_400);
+        assert!(m.words.is_empty());
+    }
+
+    #[test]
+    fn the_term_in_the_pasted_text_counts_one_use() {
+        let mut m = Memory::default();
+        m.words
+            .push(word("Jev", "Jeff", 5, 0, WordKind::Term, true));
+        assert!(mark_used(&mut m, "merci jeff", "Merci Jev.", 7));
+        assert_eq!(m.words[0].used, 1);
+    }
+
+    #[test]
+    fn a_heard_form_alone_refreshes_but_does_not_count() {
+        let mut m = Memory::default();
+        m.words
+            .push(word("Jev", "Jeff", 5, 0, WordKind::Term, true));
+        assert!(mark_used(&mut m, "merci jeff", "Merci Jeff.", 7));
+        assert_eq!((m.words[0].last_seen, m.words[0].used), (7, 0));
     }
 }

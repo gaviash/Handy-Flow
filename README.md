@@ -10,7 +10,7 @@ Fork non officiel de [Handy](https://github.com/cjpais/Handy), sans lien avec se
 2. Décompressez-le où vous voulez, par exemple sur le Bureau.
 3. Lancez `Handy Flow.exe`. Un premier écran vous guide : micro, raccourci, choix du modèle.
 
-La version est portable. Vos réglages, votre historique, vos mots appris et vos clés d'API restent dans le dossier `Data` à côté de l'exe. Pour changer de PC, copiez le dossier entier.
+La version est portable. Vos réglages, votre historique, vos mots appris et vos clés d'API restent dans le dossier `Data` à côté de l'exe. Pour changer de PC, copiez le dossier entier et ressaisissez vos clés d’API. Windows chiffre ces clés pour le compte qui les a enregistrées.
 
 **Mises à jour.** Au démarrage, Handy Flow regarde s'il existe une nouvelle release. Si oui, « Mise à jour disponible » apparaît en bas de la fenêtre. Un clic télécharge la mise à jour, vérifie sa signature, remplace les fichiers et redémarre l'application. Le dossier `Data` n'est jamais touché.
 
@@ -43,7 +43,7 @@ Pendant la dictée, une pastille apparaît en bas de l'écran. En mode **Live**,
 
 **Réécriture.** Elle passe par un modèle de langage (LLM) chez le fournisseur de votre choix : OpenAI, Anthropic, OpenRouter, ou tout service compatible avec l'API d'OpenAI. Un second fournisseur peut prendre le relais si le premier ne répond pas. Il reçoit le texte dicté et un contexte minimal, et vous choisissez quelles parties du contexte lui envoyer dans **Post-traitement**.
 
-Les clés d'API se saisissent dans l'application et restent sur votre PC.
+Dans **Modèles**, configurez vos fournisseurs et leurs clés d’API, puis associez un modèle à chaque fonction. Les clés restent sur votre PC.
 
 ## Confidentialité
 

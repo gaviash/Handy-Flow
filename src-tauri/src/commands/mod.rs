@@ -40,7 +40,14 @@ pub fn get_app_dir_path(app: AppHandle) -> Result<String, String> {
 #[tauri::command]
 #[specta::specta]
 pub fn get_app_settings(app: AppHandle) -> Result<AppSettings, String> {
-    Ok(get_settings(&app))
+    let mut settings = get_settings(&app);
+    settings
+        .post_process_api_keys
+        .retain(|_, key| !key.trim().is_empty());
+    for key in settings.post_process_api_keys.values_mut() {
+        *key = "configured".into();
+    }
+    Ok(settings)
 }
 
 #[tauri::command]

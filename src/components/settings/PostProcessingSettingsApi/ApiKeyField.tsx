@@ -7,10 +7,11 @@ interface ApiKeyFieldProps {
   disabled: boolean;
   placeholder?: string;
   className?: string;
+  id?: string;
 }
 
 export const ApiKeyField: React.FC<ApiKeyFieldProps> = React.memo(
-  ({ value, onBlur, disabled, placeholder, className = "" }) => {
+  ({ value, onBlur, disabled, placeholder, className = "", id }) => {
     const [localValue, setLocalValue] = useState(value);
 
     // Sync with prop changes
@@ -20,6 +21,7 @@ export const ApiKeyField: React.FC<ApiKeyFieldProps> = React.memo(
 
     return (
       <Input
+        id={id}
         type="password"
         value={localValue}
         onChange={(event) => setLocalValue(event.target.value)}

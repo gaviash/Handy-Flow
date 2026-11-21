@@ -1,6 +1,6 @@
 [package]
 name = "handy"
-version = "0.2.6"
+version = "0.2.8"
 description = "Handy"
 authors = ["cjpais"]
 edition = "2021"
@@ -82,6 +82,7 @@ sha2 = "0.10"
 # Portable self-update (self_update.rs); all already in the tree via tauri-plugin-updater.
 semver = "1"
 base64 = "0.22"
+tempfile = "3"
 minisign-verify = "0.2"
 zip = { version = "4", default-features = false, features = ["deflate-flate2"] }
 libc = "0.2"
@@ -219,7 +220,6 @@ tao = { git = "https://github.com/cjpais/tao", rev = "c3bee28c1d446d95f08c95c3b6
 tao-macros = { git = "https://github.com/cjpais/tao", rev = "c3bee28c1d446d95f08c95c3b6f8d4bde052b876" }
 
 [dev-dependencies]
-tempfile = "3"
 # Test-only tokio features for the local socket servers exercising the
 # resumable HTTP downloader; normal builds keep the leaner feature set.
 tokio = { version = "1.43.0", features = ["macros", "net", "io-util", "sync", "time", "rt-multi-thread"] }

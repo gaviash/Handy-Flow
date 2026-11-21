@@ -1,8 +1,14 @@
+import { FeatureSummary } from "../models/FeatureModelsCard";
 import React, { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { ask, save } from "@tauri-apps/plugin-dialog";
 import { listen } from "@tauri-apps/api/event";
-import { commands, type Learned, type StyleRule } from "@/bindings";
+import {
+  commands,
+  type Learned,
+  type LearningStats,
+  type StyleRule,
+} from "@/bindings";
 import { ToggleSwitch } from "../../ui/ToggleSwitch";
 import { SettingContainer } from "../../ui/SettingContainer";
 import { Button } from "../../ui/Button";
@@ -23,15 +29,19 @@ const inkLeft = (lastSeen: number) => {
 };
 
 /** Handy Adaptive (F96, F97, F113): learned spellings, delete, clear, export. */
-export const LearningSettings: React.FC = () => {
+export const LearningSettings: React.FC<{ onShowModels?: () => void }> = ({
+  onShowModels,
+}) => {
   const { t, i18n } = useTranslation();
   const { getSetting, updateSetting, isUpdating } = useSettings();
   const [words, setWords] = useState<Learned[]>([]);
   const [rules, setRules] = useState<StyleRule[]>([]);
+  const [stats, setStats] = useState<LearningStats | null>(null);
   const refresh = () =>
     Promise.all([
       commands.getLearnedWords().then(setWords),
       commands.getStyleRules().then(setRules),
+      commands.getLearningStats().then(setStats),
     ]);
   const pending = (
     <span className="text-xs text-mid-gray">
@@ -59,12 +69,7 @@ export const LearningSettings: React.FC = () => {
         title: t("settings.postProcessing.learning.words.exportError"),
       });
   };
-  // Which provider the correction judge calls; null = it can't run.
-  const [judge, setJudge] = useState<string | null>(null);
   const judgeOn = getSetting("learning_judge_enabled") ?? true;
-  useEffect(() => {
-    commands.getJudgeProvider().then(setJudge);
-  }, [judgeOn]);
 
   return (
     <>
@@ -95,15 +100,7 @@ export const LearningSettings: React.FC = () => {
         descriptionMode="tooltip"
         grouped={true}
       />
-      {judgeOn && (
-        <p className="row-setting px-4 pb-3 -mt-2 text-xs text-ink-3">
-          {judge
-            ? t("settings.postProcessing.learning.judge.status", {
-                provider: judge,
-              })
-            : t("settings.postProcessing.learning.judge.none")}
-        </p>
-      )}
+      <FeatureSummary feature="LearningValidator" onShowModels={onShowModels} />
       <SettingContainer
         title={t("settings.postProcessing.learning.words.label")}
         description={t("settings.postProcessing.learning.words.description")}
@@ -111,6 +108,11 @@ export const LearningSettings: React.FC = () => {
         grouped={true}
       >
         <div className="w-full space-y-2">
+          {stats && (
+            <p className="text-xs text-mid-gray">
+              {t("settings.postProcessing.learning.stats", { ...stats })}
+            </p>
+          )}
           {words.length === 0 ? (
             <div className="py-2 text-center">
               <EmptyMascot page="learned-words" size={36} />

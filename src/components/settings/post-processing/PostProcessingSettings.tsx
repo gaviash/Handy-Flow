@@ -1,9 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { Trans, useTranslation } from "react-i18next";
-import { RefreshCcw } from "lucide-react";
-import { commands, type PostProcessApiFormat } from "@/bindings";
+import { commands } from "@/bindings";
 
-import { Alert } from "../../ui/Alert";
 import {
   Dropdown,
   SettingContainer,
@@ -11,14 +9,9 @@ import {
   Textarea,
 } from "@/components/ui";
 import { Button } from "../../ui/Button";
-import { ResetButton } from "../../ui/ResetButton";
 import { Input } from "../../ui/Input";
 
-import { ProviderSelect } from "../PostProcessingSettingsApi/ProviderSelect";
-import { BaseUrlField } from "../PostProcessingSettingsApi/BaseUrlField";
-import { ApiKeyField } from "../PostProcessingSettingsApi/ApiKeyField";
-import { ModelSelect } from "../PostProcessingSettingsApi/ModelSelect";
-import { usePostProcessProviderState } from "../PostProcessingSettingsApi/usePostProcessProviderState";
+import { FeatureSummary } from "../models/FeatureModelsCard";
 import { ShortcutInput } from "../ShortcutInput";
 import { PostProcessTimeout } from "./PostProcessTimeout";
 import { ContextSettings } from "./ContextSettings";
@@ -28,195 +21,16 @@ import { SnippetSettings } from "./SnippetSettings";
 import { TransformSettings } from "./TransformSettings";
 import { useSettings } from "../../../hooks/useSettings";
 
-const PostProcessingSettingsApiComponent: React.FC = () => {
-  const { t } = useTranslation();
-  const state = usePostProcessProviderState();
-
-  return (
-    <>
-      <SettingContainer
-        title={t("settings.postProcessing.api.provider.title")}
-        description={t("settings.postProcessing.api.provider.description")}
-        descriptionMode="tooltip"
-        layout="horizontal"
-        grouped={true}
-      >
-        <div className="flex items-center gap-2">
-          <ProviderSelect
-            options={state.providerOptions}
-            value={state.selectedProviderId}
-            onChange={state.handleProviderSelect}
-          />
-        </div>
-      </SettingContainer>
-
-      {state.isAppleProvider ? (
-        state.appleIntelligenceUnavailable ? (
-          <Alert variant="error" contained>
-            {t("settings.postProcessing.api.appleIntelligence.unavailable")}
-          </Alert>
-        ) : null
-      ) : (
-        <>
-          {state.isCustomProvider && (
-            <SettingContainer
-              title={t("settings.postProcessing.api.apiFormat.title")}
-              description={t(
-                "settings.postProcessing.api.apiFormat.description",
-              )}
-              descriptionMode="tooltip"
-              layout="horizontal"
-              grouped={true}
-            >
-              <Dropdown
-                options={[
-                  {
-                    value: "openai",
-                    label: t(
-                      "settings.postProcessing.api.apiFormat.options.openai",
-                    ),
-                  },
-                  {
-                    value: "anthropic",
-                    label: t(
-                      "settings.postProcessing.api.apiFormat.options.anthropic",
-                    ),
-                  },
-                ]}
-                selectedValue={state.apiFormat}
-                onSelect={(value) =>
-                  state.handleApiFormatChange(value as PostProcessApiFormat)
-                }
-                disabled={state.isApiFormatUpdating}
-              />
-            </SettingContainer>
-          )}
-
-          {state.selectedProvider?.allow_base_url_edit && (
-            <SettingContainer
-              title={t("settings.postProcessing.api.baseUrl.title")}
-              description={t("settings.postProcessing.api.baseUrl.description")}
-              descriptionMode="tooltip"
-              layout="horizontal"
-              grouped={true}
-            >
-              <div className="flex items-center gap-2">
-                <BaseUrlField
-                  value={state.baseUrl}
-                  onBlur={state.handleBaseUrlChange}
-                  placeholder={
-                    state.apiFormat === "anthropic"
-                      ? t(
-                          "settings.postProcessing.api.baseUrl.placeholderAnthropic",
-                        )
-                      : t("settings.postProcessing.api.baseUrl.placeholder")
-                  }
-                  disabled={state.isBaseUrlUpdating}
-                  className="min-w-[380px]"
-                />
-              </div>
-            </SettingContainer>
-          )}
-
-          <SettingContainer
-            title={t("settings.postProcessing.api.apiKey.title")}
-            description={t("settings.postProcessing.api.apiKey.description")}
-            descriptionMode="tooltip"
-            layout="horizontal"
-            grouped={true}
-          >
-            <div className="flex items-center gap-2">
-              <ApiKeyField
-                value={state.apiKey}
-                onBlur={state.handleApiKeyChange}
-                placeholder={t(
-                  "settings.postProcessing.api.apiKey.placeholder",
-                )}
-                disabled={state.isApiKeyUpdating}
-                className="min-w-[320px]"
-              />
-            </div>
-          </SettingContainer>
-        </>
-      )}
-
-      {!state.isAppleProvider && (
-        <SettingContainer
-          title={t("settings.postProcessing.api.model.title")}
-          description={
-            state.isCustomProvider
-              ? t("settings.postProcessing.api.model.descriptionCustom")
-              : t("settings.postProcessing.api.model.descriptionDefault")
-          }
-          descriptionMode="tooltip"
-          layout="stacked"
-          grouped={true}
-        >
-          <div className="flex items-center gap-2">
-            <ModelSelect
-              value={state.model}
-              options={state.modelOptions}
-              disabled={state.isModelUpdating}
-              isLoading={state.isFetchingModels}
-              placeholder={
-                state.modelOptions.length > 0
-                  ? t(
-                      "settings.postProcessing.api.model.placeholderWithOptions",
-                    )
-                  : t("settings.postProcessing.api.model.placeholderNoOptions")
-              }
-              onSelect={state.handleModelSelect}
-              onCreate={state.handleModelCreate}
-              onBlur={() => {}}
-              className="flex-1 min-w-[380px]"
-            />
-            <ResetButton
-              onClick={state.handleRefreshModels}
-              disabled={state.isFetchingModels}
-              ariaLabel={t("settings.postProcessing.api.model.refreshModels")}
-              className="flex h-10 w-10 items-center justify-center"
-            >
-              <RefreshCcw
-                className={`h-4 w-4 ${state.isFetchingModels ? "animate-spin" : ""}`}
-              />
-            </ResetButton>
-          </div>
-        </SettingContainer>
-      )}
-      <FallbackProvider />
-    </>
-  );
-};
-
-/** Groq ↔ Cloudflare: who answers when the main provider fails. */
-const FallbackProvider: React.FC = () => {
-  const { t } = useTranslation();
-  const { getSetting, updateSetting } = useSettings();
-  const main = getSetting("post_process_provider_id");
-  const options = [
-    { value: "", label: t("settings.postProcessing.api.fallback.none") },
-    ...(getSetting("post_process_providers") ?? [])
-      .filter((p) => p.id !== main && p.id !== "apple_intelligence")
-      .map((p) => ({ value: p.id, label: p.label })),
-  ];
-  return (
-    <SettingContainer
-      title={t("settings.postProcessing.api.fallback.title")}
-      description={t("settings.postProcessing.api.fallback.description")}
-      descriptionMode="tooltip"
-      layout="horizontal"
-      grouped={true}
-    >
-      <Dropdown
-        options={options}
-        selectedValue={getSetting("post_process_fallback_provider_id") ?? ""}
-        onSelect={(value) =>
-          updateSetting("post_process_fallback_provider_id", value)
-        }
-      />
-    </SettingContainer>
-  );
-};
+const PostProcessingSettingsApiComponent = ({
+  onShowModels,
+}: {
+  onShowModels?: () => void;
+}) => (
+  <>
+    <FeatureSummary feature="Rewrite" onShowModels={onShowModels} />
+    <FeatureSummary feature="RewriteFallback" />
+  </>
+);
 
 const PostProcessingSettingsPromptsComponent: React.FC = () => {
   const { t } = useTranslation();
@@ -505,7 +319,9 @@ export const PostProcessingSettingsPrompts = React.memo(
 );
 PostProcessingSettingsPrompts.displayName = "PostProcessingSettingsPrompts";
 
-export const PostProcessingSettings: React.FC = () => {
+export const PostProcessingSettings: React.FC<{
+  onShowModels?: () => void;
+}> = ({ onShowModels }) => {
   const { t } = useTranslation();
 
   return (
@@ -519,7 +335,7 @@ export const PostProcessingSettings: React.FC = () => {
       </SettingsGroup>
 
       <SettingsGroup title={t("settings.postProcessing.api.title")}>
-        <PostProcessingSettingsApi />
+        <PostProcessingSettingsApi onShowModels={onShowModels} />
         <PostProcessTimeout />
       </SettingsGroup>
 
@@ -537,7 +353,7 @@ export const PostProcessingSettings: React.FC = () => {
       </SettingsGroup>
 
       <SettingsGroup title={t("settings.postProcessing.learning.title")}>
-        <LearningSettings />
+        <LearningSettings onShowModels={onShowModels} />
       </SettingsGroup>
 
       <SettingsGroup title={t("settings.postProcessing.prompts.title")}>

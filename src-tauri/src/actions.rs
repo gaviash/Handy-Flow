@@ -2,6 +2,7 @@
 use crate::apple_intelligence;
 use crate::audio_feedback::{play_feedback_sound, play_feedback_sound_blocking, SoundType};
 use crate::audio_toolkit::VadPolicy;
+use crate::features::{feature_target, Feature, Reasoning};
 use crate::managers::audio::{recording_notice_code, AudioRecordingManager};
 use crate::managers::history::HistoryManager;
 use crate::managers::model::ModelManager;
@@ -154,17 +155,7 @@ async fn transform_text(
     context: Option<&crate::context::LlmContext>,
     report: Option<u64>,
 ) -> Option<String> {
-    let provider = settings.active_post_process_provider().cloned()?;
-    let model = settings
-        .post_process_models
-        .get(&provider.id)
-        .cloned()
-        .unwrap_or_default();
-    let key = settings
-        .post_process_api_keys
-        .get(&provider.id)
-        .cloned()
-        .unwrap_or_default();
+    let (provider, key, model, reasoning) = rewrite_target(settings)?;
     let message = crate::adaptive::transform_user_message(instruction, text, context);
     crate::context::record_sent(report, &message);
     let call = crate::llm_client::send_chat_completion_with_schema(
@@ -174,7 +165,7 @@ async fn transform_text(
         message.clone(),
         Some(crate::adaptive::TRANSFORM_PROMPT.to_string()),
         None,
-        skips_reasoning(&provider.id),
+        rewrite_reasoning(&provider.id, reasoning),
     );
     let mut reply = tokio::time::timeout(Duration::from_secs(12), call)
         .await
@@ -188,6 +179,7 @@ async fn transform_text(
         let spare = ask_fallback(
             settings,
             &provider.id,
+            &model,
             message,
             crate::adaptive::TRANSFORM_PROMPT,
         );
@@ -216,9 +208,20 @@ fn house_framing(prompt_id: &str, prompt: &str) -> Option<String> {
     }
 }
 
-/// Providers asked to skip reasoning: it adds seconds and rarely helps a rewrite.
-fn skips_reasoning(provider_id: &str) -> bool {
-    matches!(provider_id, "custom" | "openrouter" | "cloudflare")
+fn rewrite_target(settings: &AppSettings) -> Option<crate::features::Target> {
+    if settings.features.rewrite.provider_id.is_empty() {
+        return None;
+    }
+    feature_target(settings, Feature::Rewrite)
+        .or_else(|| feature_target(settings, Feature::RewriteFallback))
+}
+
+// Preserve the default request shape for rewrite providers that never got an Off field.
+fn rewrite_reasoning(provider_id: &str, reasoning: Reasoning) -> Option<Reasoning> {
+    (reasoning != Reasoning::Off
+        || matches!(provider_id, "custom" | "openrouter" | "cloudflare")
+        || provider_id.starts_with("custom-"))
+    .then_some(reasoning)
 }
 
 /// Groq ↔ Cloudflare: when the main provider fails, the fallback provider set
@@ -226,37 +229,27 @@ fn skips_reasoning(provider_id: &str) -> bool {
 async fn ask_fallback(
     settings: &AppSettings,
     failed_id: &str,
+    failed_model: &str,
     user: String,
     system: &str,
 ) -> Option<Result<Option<String>, String>> {
-    let id = settings.post_process_fallback_provider_id.as_str();
-    if id.is_empty() || id == failed_id {
+    let (provider, key, model, reasoning) = feature_target(settings, Feature::RewriteFallback)?;
+    if provider.id == failed_id && model == failed_model {
         return None;
     }
-    let provider = settings.post_process_provider(id)?.clone();
-    let model = settings
-        .post_process_models
-        .get(id)
-        .filter(|m| !m.trim().is_empty())?;
-    let key = settings
-        .post_process_api_keys
-        .get(id)
-        .cloned()
-        .unwrap_or_default();
-    // A local custom server (Ollama) needs no key; a cloud provider does.
-    if key.is_empty() && id != "custom" {
-        return None;
-    }
-    warn!("Main provider '{failed_id}' failed; asking fallback '{id}'");
+    warn!(
+        "Main provider '{failed_id}' failed; asking fallback '{}'",
+        provider.id
+    );
     Some(
         crate::llm_client::send_chat_completion_with_schema(
             &provider,
             key,
-            model,
+            &model,
             user,
             Some(system.to_string()),
             None,
-            skips_reasoning(id),
+            rewrite_reasoning(&provider.id, reasoning),
         )
         .await,
     )
@@ -367,13 +360,14 @@ fn strip_invisible_chars(s: &str) -> String {
 /// reasoning, and some local servers put the reasoning text into `content`
 /// instead of a separate field — without this the user would get the model's
 /// chain of thought pasted along with the cleaned transcription.
-fn strip_think_block(s: &str) -> &str {
-    if let Some(rest) = s.trim_start().strip_prefix("<think>") {
-        if let Some(end) = rest.find("</think>") {
-            return rest[end + "</think>".len()..].trim_start();
-        }
+pub(crate) fn strip_think_block(mut content: &str) -> &str {
+    while let Some(thought) = content.trim_start().strip_prefix("<think>") {
+        let Some((_, visible)) = thought.split_once("</think>") else {
+            return "";
+        };
+        content = visible.trim_start();
     }
-    s
+    content
 }
 
 /// Build a system prompt from the user's prompt template.
@@ -451,27 +445,10 @@ async fn post_process_transcription(
         return PostProcessOutcome::Skipped;
     }
 
-    let provider = match settings.active_post_process_provider().cloned() {
-        Some(provider) => provider,
-        None => {
-            debug!("Post-processing enabled but no provider is selected");
-            return PostProcessOutcome::Failed;
-        }
-    };
-
-    let model = settings
-        .post_process_models
-        .get(&provider.id)
-        .cloned()
-        .unwrap_or_default();
-
-    if model.trim().is_empty() {
-        debug!(
-            "Post-processing skipped because provider '{}' has no model configured",
-            provider.id
-        );
+    let Some((provider, api_key, model, reasoning)) = rewrite_target(settings) else {
+        debug!("Post-processing enabled but no usable model is selected");
         return PostProcessOutcome::Failed;
-    }
+    };
 
     let selected_prompt_id = match &settings.post_process_selected_prompt_id {
         Some(id) => id.clone(),
@@ -506,16 +483,7 @@ async fn post_process_transcription(
         provider.id, model
     );
 
-    let api_key = settings
-        .post_process_api_keys
-        .get(&provider.id)
-        .cloned()
-        .unwrap_or_default();
-
-    // Ask these providers to skip reasoning/thinking — post-processing rarely
-    // benefits from it and it adds seconds of latency. llm_client picks the
-    // field the endpoint understands and retries without it if rejected.
-    let disable_reasoning = skips_reasoning(&provider.id);
+    let reasoning = rewrite_reasoning(&provider.id, reasoning);
 
     // Handy Adaptive framing: instructions in the system message, the
     // dictation (and context) framed as data in the user message, plain-text reply.
@@ -532,7 +500,7 @@ async fn post_process_transcription(
                 message.clone(),
                 Some(system_prompt.clone()),
                 None,
-                disable_reasoning,
+                reasoning,
             )
             .await;
             // Groq's free tier caps each model's tokens per day: once 120b is out
@@ -551,7 +519,7 @@ async fn post_process_transcription(
                     message.clone(),
                     Some(system_prompt.clone()),
                     None,
-                    disable_reasoning,
+                    reasoning,
                 )
                 .await;
             }
@@ -569,7 +537,8 @@ async fn post_process_transcription(
                 provider.id,
                 reply.as_ref().err()
             );
-            if let Some(spare) = ask_fallback(settings, &provider.id, message, &system_prompt).await
+            if let Some(spare) =
+                ask_fallback(settings, &provider.id, &model, message, &system_prompt).await
             {
                 reply = spare;
             }
@@ -667,7 +636,7 @@ async fn post_process_transcription(
             user_content,
             Some(system_prompt),
             Some(json_schema),
-            disable_reasoning,
+            reasoning,
         )
         .await
         {
@@ -723,7 +692,7 @@ async fn post_process_transcription(
         api_key,
         &model,
         processed_prompt,
-        disable_reasoning,
+        reasoning,
     )
     .await
     {
@@ -749,6 +718,18 @@ async fn post_process_transcription(
             PostProcessOutcome::Failed
         }
     }
+}
+
+/// Spec §6 rule 5: the learned names are applied locally only when no
+/// rewrite came out, for a plain dictation, never in a private field.
+/// R1: a password, excluded or unchecked field is never watched, so none of
+/// its text reaches the learning validator or the judge.
+fn observable(sensitive: bool, excluded: bool, unchecked: bool) -> bool {
+    !sensitive && !excluded && !unchecked
+}
+
+fn learned_fallback(rewrote: bool, instruct: bool, snippet: bool, private: bool) -> bool {
+    !rewrote && !instruct && !snippet && !private
 }
 
 pub(crate) struct ProcessedTranscription {
@@ -1040,9 +1021,11 @@ impl ShortcutAction for TranscribeAction {
         // destination. Read it now, alongside the transcription. The WAV save
         // waits only for the password check (F79: nothing kept).
         let (sensitive_tx, sensitive_rx) = std::sync::mpsc::channel::<bool>();
-        // Handy Adaptive (spec §7): the app and text before the cursor, for an
-        // ASR model that takes context. Never from a password or excluded field.
-        let (screen_tx, screen_rx) = std::sync::mpsc::channel::<Option<(String, String)>>();
+        // Handy Adaptive (spec §7): the app, the text before the cursor and the
+        // names around it, for an ASR model that takes context. Never from a
+        // password, an excluded field or an unchecked one.
+        let (screen_tx, screen_rx) =
+            std::sync::mpsc::channel::<Option<crate::asr_context::AsrScreen>>();
         // The speech API never hears a password or an excluded app's field.
         let (private_tx, private_rx) = std::sync::mpsc::channel::<bool>();
         let ctx_settings = get_settings(app);
@@ -1056,14 +1039,24 @@ impl ShortcutAction for TranscribeAction {
             // Windows: a password check that didn't happen counts as private.
             let unchecked = cfg!(target_os = "windows") && !capture.password_checked;
             let _ = private_tx.send(capture.sensitive || capture.excluded || unchecked);
-            let screen = (!capture.sensitive && !capture.excluded).then(|| {
+            let screen = (!capture.sensitive && !capture.excluded && !unchecked).then(|| {
                 let before = capture
                     .field
                     .as_ref()
                     .filter(|f| f.caret_known)
                     .map(|f| crate::context::redact(&crate::context::tail(&f.before, 200)))
                     .unwrap_or_default();
-                (capture.process.clone(), before)
+                crate::asr_context::AsrScreen {
+                    app: capture.process.clone(),
+                    before,
+                    // Spec R10 / Wispr E140: the window's names bias the ASR.
+                    terms: capture
+                        .names
+                        .iter()
+                        .chain(&capture.terms)
+                        .cloned()
+                        .collect(),
+                }
             });
             let _ = screen_tx.send(screen);
             capture
@@ -1170,6 +1163,8 @@ impl ShortcutAction for TranscribeAction {
                         cloud = None;
                     }
                     let mut screen_waited = None;
+                    // Kept for the local model when the speech API fails.
+                    let mut screen_kept = None;
                     let wants_context = match &cloud {
                         Some(_) => asr.enabled,
                         None => tm.asr_context_wanted(),
@@ -1178,7 +1173,8 @@ impl ShortcutAction for TranscribeAction {
                         let wait = Duration::from_millis(asr.capture_wait_ms);
                         let screen = screen_rx.recv_timeout(wait).ok();
                         screen_waited = Some(screen.is_some());
-                        tm.set_asr_screen(screen.flatten());
+                        screen_kept = screen.flatten();
+                        tm.set_asr_screen(screen_kept.clone());
                     }
                     let transcription_time = Instant::now();
                     let mut cloud_report = None;
@@ -1215,9 +1211,7 @@ impl ShortcutAction for TranscribeAction {
                                     // Speech may still be there: the local model decides.
                                     warn!("Speech API '{label}' returned no text; using the local model");
                                     report.cloud_error = Some("empty result".into());
-                                    tm.set_asr_screen(
-                                        report.app.clone().zip(report.before.clone()),
-                                    );
+                                    tm.set_asr_screen(screen_kept.clone());
                                 } else {
                                     // The live decode, if any, is no longer needed.
                                     tm.cancel_stream();
@@ -1226,7 +1220,7 @@ impl ShortcutAction for TranscribeAction {
                             }
                             Some(Err(e)) => {
                                 warn!("Speech API '{label}' failed ({e}); using the local model");
-                                tm.set_asr_screen(report.app.clone().zip(report.before.clone()));
+                                tm.set_asr_screen(screen_kept.clone());
                                 report.cloud_error = Some(e);
                             }
                         }
@@ -1308,7 +1302,10 @@ impl ShortcutAction for TranscribeAction {
                             // F79: a password field gets the raw transcript, nothing sent or kept.
                             let sensitive = capture.sensitive;
                             let excluded = capture.excluded;
+                            // Windows: a password check that didn't happen counts as private.
+                            let unchecked = cfg!(windows) && !capture.password_checked;
                             let (field, terminal) = (capture.field.clone(), capture.terminal);
+                            let (screen_names, content) = (capture.names.clone(), capture.content);
                             let ctx_settings = get_settings(&ah);
                             // F120: a trigger said on its own inserts its snippet as is.
                             let snippet = (!sensitive)
@@ -1453,6 +1450,27 @@ impl ShortcutAction for TranscribeAction {
                                 return;
                             }
 
+                            // Spec §6 rule 5: no rewrite came out (not asked, failed,
+                            // skipped, rejected, timed out), so the confirmed learned
+                            // names are applied locally. A plain dictation only, never
+                            // a private field.
+                            let processed = if learned_fallback(
+                                processed.post_processed_text.is_some(),
+                                instruct,
+                                snippet.is_some(),
+                                sensitive || excluded || unchecked,
+                            ) {
+                                ProcessedTranscription {
+                                    final_text: crate::learning::apply_learned(
+                                        &ah,
+                                        &processed.final_text,
+                                    ),
+                                    ..processed
+                                }
+                            } else {
+                                processed
+                            };
+
                             // Handy Adaptive: the observation records what the user kept.
                             let observed_app = app_label.clone();
                             // What the user said, before any rewrite: it keeps the
@@ -1478,23 +1496,22 @@ impl ShortcutAction for TranscribeAction {
                                     Ok(entry) => history_id = Some(entry.id),
                                     Err(err) => error!("Failed to save history entry: {}", err),
                                 }
+                                // The spellings the rewrite was given, to check later.
+                                if let (Some(id), Some(c), true) =
+                                    (history_id, llm_context.as_ref(), post_process)
+                                {
+                                    let terms: Vec<String> =
+                                        c.terms.iter().chain(&c.names).cloned().collect();
+                                    if let Err(err) = hm.set_context_terms(id, &terms) {
+                                        error!("Failed to record the rewrite's terms: {}", err);
+                                    }
+                                }
                             }
 
                             // The user's hook only changes what gets pasted;
                             // history above keeps the text as produced.
-                            let Some(final_text) = complete_unless_cancelled(
-                                crate::transcription_hook::apply(
-                                    &ah,
-                                    // F70: fit the text to the cursor it goes to.
-                                    match &field {
-                                        Some(f) => crate::adaptive::join_at_cursor(
-                                            f,
-                                            &processed.final_text,
-                                            terminal,
-                                        ),
-                                        None => processed.final_text,
-                                    },
-                                ),
+                            let Some(hooked) = complete_unless_cancelled(
+                                crate::transcription_hook::apply(&ah, processed.final_text),
                                 || rm.was_cancelled_since(cancel_generation),
                             )
                             .await
@@ -1504,6 +1521,30 @@ impl ShortcutAction for TranscribeAction {
                                 set_tray_state(&ah, TrayIconState::Idle);
                                 return;
                             };
+                            // EX-1: fit the text to the cursor it goes to; a private
+                            // field gets it as produced.
+                            let known_names: Vec<String> = screen_names
+                                .into_iter()
+                                .chain(crate::learning::plain_terms(&ah))
+                                .chain(ctx_settings.custom_words.iter().cloned())
+                                .chain(Some(ctx_settings.user_name.trim().to_string()))
+                                .filter(|n| !n.is_empty())
+                                .collect();
+                            let joined = crate::junction::join(
+                                &hooked,
+                                &crate::junction::JoinContext {
+                                    field: field
+                                        .as_ref()
+                                        .filter(|_| !(sensitive || excluded || unchecked)),
+                                    style: content
+                                        .map(|c| ctx_settings.styles.tone(c.style()))
+                                        .unwrap_or_default(),
+                                    content,
+                                    known_names: &known_names,
+                                },
+                            );
+                            let (final_text, spacing_decided) =
+                                (joined.text, joined.spacing_decided);
 
                             if final_text.is_empty() {
                                 finish_without_text(&ah, input_silent, sample_count, stop_time);
@@ -1515,8 +1556,10 @@ impl ShortcutAction for TranscribeAction {
                                 // F80: the pasted text is watched for the user's corrections.
                                 let observed = field
                                     .clone()
-                                    .filter(|_| !sensitive && !excluded && !terminal)
+                                    .filter(|_| observable(sensitive, excluded, unchecked))
                                     .map(|f| (f, final_text.clone(), history_id, observed_app));
+                                // What was pasted counts the learned words it holds.
+                                let kept = final_text.clone();
                                 // Taken before the paste thread exists, and so
                                 // before the next session can start.
                                 let session = RECORDING_SESSION.load(Ordering::SeqCst);
@@ -1545,6 +1588,8 @@ impl ShortcutAction for TranscribeAction {
                                         } else {
                                             if sensitive {
                                                 utils::paste_secret(final_text, ah_clone.clone())
+                                            } else if spacing_decided {
+                                                utils::paste_spaced(final_text, ah_clone.clone())
                                             } else {
                                                 utils::paste(final_text, ah_clone.clone())
                                             }
@@ -1563,7 +1608,9 @@ impl ShortcutAction for TranscribeAction {
                                                     "Text pasted successfully in {:?}",
                                                     paste_time.elapsed()
                                                 );
-                                                crate::learning::touch_used(&ah_clone, &spoken);
+                                                crate::learning::touch_used(
+                                                    &ah_clone, &spoken, &kept,
+                                                );
                                                 if let Some((f, text, id, app)) = &observed {
                                                     crate::learning::observe(
                                                         &ah_clone,
@@ -1571,6 +1618,7 @@ impl ShortcutAction for TranscribeAction {
                                                         text,
                                                         *id,
                                                         app.clone(),
+                                                        terminal,
                                                     );
                                                 }
                                                 // Leave a newer session's notice alone.
@@ -1794,10 +1842,36 @@ pub static ACTION_MAP: Lazy<HashMap<String, Arc<dyn ShortcutAction>>> = Lazy::ne
 #[cfg(test)]
 mod tests {
     use super::{
-        complete_unless_cancelled, house_framing, is_blank_transcription,
-        non_blank_post_processed_text, post_process_transcription, should_use_streaming_overlay,
-        strip_invisible_chars, strip_think_block, transform_text, PostProcessOutcome,
+        complete_unless_cancelled, house_framing, is_blank_transcription, learned_fallback,
+        non_blank_post_processed_text, observable, post_process_transcription,
+        should_use_streaming_overlay, strip_invisible_chars, strip_think_block, transform_text,
+        PostProcessOutcome,
     };
+
+    #[test]
+    fn a_private_field_is_never_observed() {
+        assert!(observable(false, false, false));
+        assert!(!observable(true, false, false));
+        assert!(!observable(false, true, false));
+        // The password check didn't answer: private too (spec R1).
+        assert!(!observable(false, false, true));
+    }
+
+    #[test]
+    fn fallback_runs_after_a_rejected_rewrite() {
+        // No rewrite text came out (failed, skipped, rejected, timed out, not asked).
+        assert!(learned_fallback(false, false, false, false));
+        // A rewrite came out: the LLM already checked the context.
+        assert!(!learned_fallback(true, false, false, false));
+    }
+
+    #[test]
+    fn no_fallback_for_a_password_field() {
+        assert!(!learned_fallback(false, false, false, true));
+        // Nor for an instruction or a snippet.
+        assert!(!learned_fallback(false, true, false, false));
+        assert!(!learned_fallback(false, false, true, false));
+    }
 
     #[test]
     fn prompts_without_output_placeholder_get_house_framing() {
@@ -1834,7 +1908,11 @@ mod tests {
         let provider_id = provider.id.clone();
         settings
             .post_process_models
-            .insert(provider_id, "model".to_string());
+            .insert(provider_id.clone(), "model".to_string());
+        settings
+            .post_process_api_keys
+            .insert(provider_id, "key".into());
+        crate::features::migrate(&mut settings);
         settings.post_process_selected_prompt_id =
             settings.post_process_prompts.first().map(|p| p.id.clone());
         settings
@@ -1880,7 +1958,8 @@ mod tests {
         );
 
         let mut settings = post_process_settings("http://127.0.0.1:1");
-        settings.post_process_models.clear();
+        settings.features.rewrite.model.clear();
+        settings.features.rewrite_fallback = Default::default();
         assert_eq!(
             run_post_process(&settings, "hello"),
             PostProcessOutcome::Failed
@@ -1907,6 +1986,18 @@ mod tests {
     #[test]
     fn the_fallback_provider_answers_when_the_main_one_fails() {
         let settings = with_fallback(r#"{"choices":[{"message":{"content":"Relais OK."}}]}"#);
+        assert_eq!(
+            run_post_process(&settings, "relais ok"),
+            PostProcessOutcome::Done("Relais OK.".to_string())
+        );
+    }
+
+    #[test]
+    fn fallback_answers_when_the_rewrite_key_is_missing() {
+        let mut settings = with_fallback(r#"{"choices":[{"message":{"content":"Relais OK."}}]}"#);
+        settings
+            .post_process_api_keys
+            .remove(&settings.features.rewrite.provider_id);
         assert_eq!(
             run_post_process(&settings, "relais ok"),
             PostProcessOutcome::Done("Relais OK.".to_string())
@@ -1941,7 +2032,7 @@ mod tests {
         let refusal =
             r#"{"choices":[{"message":{"content":"I'm sorry, but I can't help with that."}}]}"#;
         let mut settings = post_process_settings(&serve_once(refusal));
-        settings.post_process_fallback_provider_id.clear();
+        settings.features.rewrite_fallback = Default::default();
         assert_eq!(
             tauri::async_runtime::block_on(transform_text(
                 &settings,
@@ -2062,10 +2153,7 @@ mod tests {
             "Mentions <think> mid-sentence."
         );
         // Unclosed block: leave untouched rather than guess
-        assert_eq!(
-            strip_think_block("<think>never closed"),
-            "<think>never closed"
-        );
+        assert_eq!(strip_think_block("<think>never closed"), "");
     }
 
     #[test]

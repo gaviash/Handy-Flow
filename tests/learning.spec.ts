@@ -85,15 +85,111 @@ test("a failed export says so", async ({ page }) => {
   ).toBeVisible();
 });
 
-test("the judge shows which provider it uses", async ({ page }) => {
-  await mockTauri(page, { results: { get_judge_provider: "OpenAI" } });
+function status(
+  problem: string | null = null,
+  automatic = false,
+  provider_label = "Groq",
+) {
+  return {
+    feature: "LearningValidator",
+    provider_label,
+    model: "gpt-oss",
+    automatic,
+    problem,
+    reasoning: "Medium",
+    model_reasons: true,
+  };
+}
+
+test("the validator shows the effective provider and model", async ({
+  page,
+}) => {
+  await mockTauri(page, {
+    results: { get_feature_statuses: [status(null, false, "OpenAI")] },
+  });
   await openLearning(page);
-  await expect(page.getByText("Correction Judge")).toBeVisible();
-  await expect(page.getByText("Uses OpenAI")).toBeVisible();
+  await expect(page.getByText(/Uses OpenAI · gpt-oss/)).toBeVisible();
 });
 
-test("without a provider the judge says it is inactive", async ({ page }) => {
-  await mockTauri(page, { results: { get_judge_provider: null } });
+test("without a usable model the validator is inactive", async ({ page }) => {
+  await mockTauri(page, {
+    results: { get_feature_statuses: [status("NoModel")] },
+  });
   await openLearning(page);
-  await expect(page.getByText(/Inactive: no API key/)).toBeVisible();
+  await expect(page.getByText(/Inactive · no usable model/)).toBeVisible();
+});
+
+test("the validator summary links to the model picker", async ({ page }) => {
+  await mockTauri(page, { results: { get_feature_statuses: [status()] } });
+  await openLearning(page);
+  await page.getByRole("button", { name: "Change in Models" }).last().click();
+  await expect(
+    page.getByRole("group", { name: "Learning validator" }),
+  ).toBeVisible();
+});
+
+test("the validator shows why context sharing prevents it from running", async ({
+  page,
+}) => {
+  await mockTauri(page, {
+    results: { get_feature_statuses: [status("ContextOff")] },
+  });
+  await openLearning(page);
+  await expect(
+    page.getByText(/Inactive · context sharing is off/),
+  ).toBeVisible();
+});
+
+test("the automatic validator shows the effective model and reasoning level", async ({
+  page,
+}) => {
+  await mockTauri(page, {
+    results: { get_feature_statuses: [status(null, true)] },
+  });
+  await openLearning(page);
+  await expect(
+    page.getByText(/Automatic · Groq · gpt-oss · reasoning Medium/),
+  ).toBeVisible();
+});
+
+test("the validator status is re-read after a setting is saved", async ({
+  page,
+}) => {
+  const mock = await mockTauri(page, {
+    results: { get_feature_statuses: [status()] },
+  });
+  await openLearning(page);
+  await expect(page.getByText(/Uses Groq/)).toBeVisible();
+  const reads = async () =>
+    (await mock.calls()).filter((c) => c.cmd === "get_feature_statuses").length;
+  const before = await reads();
+  const sound = page.getByRole("checkbox", {
+    name: "Sound When a Word Is Learned",
+  });
+  await sound.scrollIntoViewIfNeeded();
+  await sound.click({ force: true });
+  await expect.poll(reads).toBeGreaterThan(before);
+});
+
+test("the last 30 days of learning are counted", async ({ page }) => {
+  await mockTauri(page, {
+    results: {
+      get_learning_stats: {
+        observed: 12,
+        learned: 5,
+        pending: 2,
+        rejected: 4,
+        rejected_by: [
+          ["grammar", 3],
+          ["refused", 1],
+        ],
+      },
+    },
+  });
+  await openLearning(page);
+  await expect(
+    page.getByText(
+      "Last 30 days: 12 corrections observed · 5 words learned · 2 pending · 4 rejected",
+    ),
+  ).toBeVisible();
 });

@@ -62,6 +62,7 @@ impl CloudAsrSettings {
         Ok(())
     }
 
+    #[cfg(all(test, target_os = "windows"))]
     pub fn model(&self) -> &str {
         self.models
             .get(&self.provider_id)
@@ -71,7 +72,7 @@ impl CloudAsrSettings {
 }
 
 /// A usable speech API: provider, key and model all set.
-#[derive(Debug, Clone)]
+#[derive(Clone)]
 pub struct CloudAsr {
     pub provider: PostProcessProvider,
     pub key: String,
@@ -82,32 +83,19 @@ pub struct CloudAsr {
 /// The speech API to use, or `None` for the local model (none chosen, or no
 /// key or model for it).
 pub fn configured(settings: &AppSettings) -> Option<CloudAsr> {
-    let cfg = &settings.cloud_asr;
-    let id = cfg.provider_id.as_str();
-    if id.is_empty() {
+    use crate::features::{feature_target, Feature};
+    let Some((provider, key, model, _)) = feature_target(settings, Feature::TranscriptionApi)
+    else {
+        if !settings.features.transcription_api.provider_id.is_empty() {
+            log::warn!("Speech API is not configured with a usable model; using the local model");
+        }
         return None;
-    }
-    let provider = settings.post_process_provider(id)?.clone();
-    let key = settings
-        .post_process_api_keys
-        .get(id)
-        .cloned()
-        .unwrap_or_default();
-    // A local custom server needs no key; a cloud provider does.
-    if key.trim().is_empty() && id != "custom" {
-        log::warn!("Speech API '{id}' has no API key; using the local model");
-        return None;
-    }
-    let model = cfg.model().to_string();
-    if model.is_empty() {
-        log::warn!("Speech API '{id}' has no model; using the local model");
-        return None;
-    }
+    };
     Some(CloudAsr {
         provider,
         key,
         model,
-        timeout: Duration::from_secs(cfg.timeout_secs),
+        timeout: Duration::from_secs(settings.cloud_asr.timeout_secs),
     })
 }
 
@@ -212,10 +200,11 @@ pub async fn transcribe(
     })?;
     let status = response.status();
     if !status.is_success() {
-        return Err(format!(
-            "HTTP {status}{}",
-            error_message(&response.text().await.unwrap_or_default())
-        ));
+        let mut body = response.text().await.unwrap_or_default();
+        if !asr.key.is_empty() {
+            body = body.replace(&asr.key, "[REDACTED]");
+        }
+        return Err(format!("HTTP {status}{}", error_message(&body)));
     }
     let reply: Reply = response
         .json()
@@ -279,13 +268,14 @@ mod tests {
         let mut s = crate::settings::get_default_settings();
         assert!(configured(&s).is_none(), "local by default");
         s.cloud_asr.provider_id = "groq".into();
+        crate::features::migrate(&mut s);
         s.post_process_api_keys.insert("groq".into(), String::new());
         assert!(configured(&s).is_none(), "no key");
         s.post_process_api_keys.insert("groq".into(), "k".into());
         let c = configured(&s).unwrap();
         assert_eq!(c.model, "whisper-large-v3");
         assert!(c.provider.base_url.contains("groq.com"));
-        s.cloud_asr.models.insert("groq".into(), " ".into());
+        s.features.transcription_api.model.clear();
         assert!(configured(&s).is_none(), "no model");
         assert!(CloudAsrSettings {
             provider_id: "nope".into(),

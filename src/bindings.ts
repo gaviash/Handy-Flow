@@ -249,6 +249,14 @@ async changeLearningEnabledSetting(enabled: boolean) : Promise<Result<null, stri
     else return { status: "error", error: e  as any };
 }
 },
+async changeLearnedSoundEnabledSetting(enabled: boolean) : Promise<Result<null, string>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("change_learned_sound_enabled_setting", { enabled }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
 async changeLearningJudgeEnabledSetting(enabled: boolean) : Promise<Result<null, string>> {
     try {
     return { status: "ok", data: await TAURI_INVOKE("change_learning_judge_enabled_setting", { enabled }) };
@@ -257,12 +265,60 @@ async changeLearningJudgeEnabledSetting(enabled: boolean) : Promise<Result<null,
     else return { status: "error", error: e  as any };
 }
 },
-async getJudgeProvider() : Promise<string | null> {
-    return await TAURI_INVOKE("get_judge_provider");
+async getFeatureStatuses() : Promise<FeatureStatus[]> {
+    return await TAURI_INVOKE("get_feature_statuses");
 },
-async changeLearnedSoundEnabledSetting(enabled: boolean) : Promise<Result<null, string>> {
+async setFeatureModel(feature: Feature, choice: FeatureModel) : Promise<Result<null, string>> {
     try {
-    return { status: "ok", data: await TAURI_INVOKE("change_learned_sound_enabled_setting", { enabled }) };
+    return { status: "ok", data: await TAURI_INVOKE("set_feature_model", { feature, choice }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+async setProviderModels(providerId: string, models: ModelEntry[]) : Promise<Result<null, string>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("set_provider_models", { providerId, models }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+async removeProviderModel(providerId: string, modelId: string) : Promise<Result<Feature[], string>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("remove_provider_model", { providerId, modelId }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+async upsertProvider(providerId: string | null, label: string, baseUrl: string) : Promise<Result<string, string>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("upsert_provider", { providerId, label, baseUrl }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+async removeCustomProvider(providerId: string) : Promise<Result<null, Feature[]>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("remove_custom_provider", { providerId }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+async refreshProviderModels(providerId: string) : Promise<Result<ModelEntry[], string>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("refresh_provider_models", { providerId }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+async testProvider(providerId: string) : Promise<Result<string, string>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("test_provider", { providerId }) };
 } catch (e) {
     if(e instanceof Error) throw e;
     else return { status: "error", error: e  as any };
@@ -292,14 +348,6 @@ async changeUserNameSetting(name: string) : Promise<Result<null, string>> {
     else return { status: "error", error: e  as any };
 }
 },
-async changePostProcessFallbackProviderSetting(providerId: string) : Promise<Result<null, string>> {
-    try {
-    return { status: "ok", data: await TAURI_INVOKE("change_post_process_fallback_provider_setting", { providerId }) };
-} catch (e) {
-    if(e instanceof Error) throw e;
-    else return { status: "error", error: e  as any };
-}
-},
 async changeTransformsSetting(transforms: Transform[]) : Promise<Result<null, string>> {
     try {
     return { status: "ok", data: await TAURI_INVOKE("change_transforms_setting", { transforms }) };
@@ -315,6 +363,12 @@ async getDictationStats() : Promise<Result<DictationStats, string>> {
     if(e instanceof Error) throw e;
     else return { status: "error", error: e  as any };
 }
+},
+/**
+ * EX-7.2: what learning decided over the last 30 days.
+ */
+async getLearningStats() : Promise<LearningStats> {
+    return await TAURI_INVOKE("get_learning_stats");
 },
 async getLearnedWords() : Promise<Learned[]> {
     return await TAURI_INVOKE("get_learned_words");
@@ -496,14 +550,6 @@ async changeExperimentalEnabledSetting(enabled: boolean) : Promise<Result<null, 
     else return { status: "error", error: e  as any };
 }
 },
-async changePostProcessBaseUrlSetting(providerId: string, baseUrl: string) : Promise<Result<null, string>> {
-    try {
-    return { status: "ok", data: await TAURI_INVOKE("change_post_process_base_url_setting", { providerId, baseUrl }) };
-} catch (e) {
-    if(e instanceof Error) throw e;
-    else return { status: "error", error: e  as any };
-}
-},
 async changePostProcessApiFormatSetting(providerId: string, apiFormat: PostProcessApiFormat) : Promise<Result<null, string>> {
     try {
     return { status: "ok", data: await TAURI_INVOKE("change_post_process_api_format_setting", { providerId, apiFormat }) };
@@ -515,30 +561,6 @@ async changePostProcessApiFormatSetting(providerId: string, apiFormat: PostProce
 async changePostProcessApiKeySetting(providerId: string, apiKey: string) : Promise<Result<null, string>> {
     try {
     return { status: "ok", data: await TAURI_INVOKE("change_post_process_api_key_setting", { providerId, apiKey }) };
-} catch (e) {
-    if(e instanceof Error) throw e;
-    else return { status: "error", error: e  as any };
-}
-},
-async changePostProcessModelSetting(providerId: string, model: string) : Promise<Result<null, string>> {
-    try {
-    return { status: "ok", data: await TAURI_INVOKE("change_post_process_model_setting", { providerId, model }) };
-} catch (e) {
-    if(e instanceof Error) throw e;
-    else return { status: "error", error: e  as any };
-}
-},
-async setPostProcessProvider(providerId: string) : Promise<Result<null, string>> {
-    try {
-    return { status: "ok", data: await TAURI_INVOKE("set_post_process_provider", { providerId }) };
-} catch (e) {
-    if(e instanceof Error) throw e;
-    else return { status: "error", error: e  as any };
-}
-},
-async fetchPostProcessModels(providerId: string) : Promise<Result<string[], string>> {
-    try {
-    return { status: "ok", data: await TAURI_INVOKE("fetch_post_process_models", { providerId }) };
 } catch (e) {
     if(e instanceof Error) throw e;
     else return { status: "error", error: e  as any };
@@ -1429,6 +1451,11 @@ learned_sound_enabled?: boolean;
  */
 learning_judge_enabled?: boolean; 
 /**
+ * The provider the judge uses; empty is Automatic (Groq if keyed, else
+ * the rewrite provider while rewriting is on).
+ */
+learning_judge_provider_id?: string; 
+/**
  * Handy Adaptive (spec §7): what the ASR model is told before it listens.
  */
 asr_context?: AsrContextSettings; 
@@ -1481,7 +1508,7 @@ selected_channel?: number | null; clamshell_microphone?: string | null; selected
  * Every language the person dictates in (codes, e.g. ["en", "zh"]),
  * picked during onboarding. Empty until then.
  */
-spoken_languages?: string[]; overlay_position?: OverlayPosition; debug_mode?: boolean; log_level?: LogLevel; custom_words?: string[]; model_unload_timeout?: ModelUnloadTimeout; word_correction_threshold?: number; history_limit?: number; recording_retention_period?: RecordingRetentionPeriod; paste_method?: PasteMethod; clipboard_handling?: ClipboardHandling; auto_submit?: boolean; auto_submit_key?: AutoSubmitKey; post_process_enabled?: boolean; post_process_provider_id?: string; post_process_providers?: PostProcessProvider[]; post_process_api_keys?: SecretMap; post_process_models?: Partial<{ [key in string]: string }>; post_process_prompts?: LLMPrompt[]; post_process_selected_prompt_id?: string | null; mute_while_recording?: boolean; append_trailing_space?: boolean; app_language?: string; theme?: Theme; palette?: Palette; heading_style?: HeadingStyle; ui_density?: UiDensity; pill_tone?: PillTone;
+spoken_languages?: string[]; overlay_position?: OverlayPosition; debug_mode?: boolean; log_level?: LogLevel; custom_words?: string[]; model_unload_timeout?: ModelUnloadTimeout; word_correction_threshold?: number; history_limit?: number; recording_retention_period?: RecordingRetentionPeriod; paste_method?: PasteMethod; clipboard_handling?: ClipboardHandling; auto_submit?: boolean; auto_submit_key?: AutoSubmitKey; post_process_enabled?: boolean; post_process_provider_id?: string; post_process_providers?: PostProcessProvider[]; post_process_api_keys?: SecretMap; post_process_models?: Partial<{ [key in string]: string }>; features?: FeatureModels; provider_models?: Partial<{ [key in string]: ModelEntry[] }>; features_migrated?: boolean; post_process_prompts?: LLMPrompt[]; post_process_selected_prompt_id?: string | null; mute_while_recording?: boolean; append_trailing_space?: boolean; app_language?: string; theme?: Theme; palette?: Palette; heading_style?: HeadingStyle; ui_density?: UiDensity; pill_tone?: PillTone;
 /**
  * The dictation pill shows its text label ("Pastille") or only the wave.
  */
@@ -1688,6 +1715,11 @@ top_apps: ([string, number])[]; learned_words: number;
  * Words dictated today (local calendar day).
  */
 words_today: number }
+export type Feature = "Rewrite" | "RewriteFallback" | "LearningValidator" | "TranscriptionApi"
+export type FeatureModel = { provider_id: string; model: string; reasoning?: Reasoning }
+export type FeatureModels = { rewrite: FeatureModel; rewrite_fallback: FeatureModel; learning_validator: FeatureModel; transcription_api: FeatureModel }
+export type FeatureProblem = "NotChosen" | "NoProvider" | "NoKey" | "NoModel" | "RewriteOff" | "LearningOff" | "ValidatorOff" | "ContextOff" | "NotSpeechModel" | "NotChatModel" | "UnsupportedProvider"
+export type FeatureStatus = { feature: Feature; provider_label: string | null; model: string | null; automatic: boolean; problem: FeatureProblem | null; reasoning: Reasoning; model_reasons: boolean }
 /**
  * What was read from the focused field (F23).
  */
@@ -1803,12 +1835,6 @@ export type LanguageStatus =
  * A learned spelling: `term` is what the user wrote, `heard` every form that
  * was inserted for it ("Quen", "Quinn" → "Qwen"), most recent last.
  */
-/**
- * What just became usable, as announced to the user and undone exactly by
- * the notification's Undo: a new word, a new heard form of a known word, or
- * a style rule.
- */
-export type LearnedNews = { kind: "word"; term: string } | { kind: "form"; term: string; heard: string } | { kind: "rule"; rule: string }
 export type Learned = { term: string; heard: string[]; count: number; 
 /**
  * Unix seconds.
@@ -1817,7 +1843,25 @@ last_seen: number; kind?: WordKind;
 /**
  * A pending word (seen once, needs a second sighting) is not used yet.
  */
-active?: boolean }
+active?: boolean;
+/**
+ * Pasted texts that held the term (Wispr `frequencyUsed`, E78).
+ */
+used?: number; source?: Source }
+/**
+ * What just became usable, as announced to the user and undone exactly by
+ * the notification's Undo: a new word, a new heard form of a known word, or
+ * a style rule.
+ */
+export type LearnedNews = { kind: "word"; term: string } | { kind: "form"; term: string; heard: string } | { kind: "rule"; rule: string }
+/**
+ * The counters shown in Settings → Learning.
+ */
+export type LearningStats = { observed: number; learned: number; pending: number; rejected: number; 
+/**
+ * Rejections per reason, most frequent first.
+ */
+rejected_by: ([string, number])[] }
 /**
  * Which parts of the context the LLM gets, for the rewrite or for Polish
  * and transformations (Settings → Context).
@@ -1832,6 +1876,7 @@ export type LogLevel = "trace" | "debug" | "info" | "warn" | "error"
  * A macOS privacy permission Handy asks for during onboarding.
  */
 export type MacPermission = "accessibility" | "microphone"
+export type ModelEntry = { id: string; speech: boolean; reasoning?: boolean }
 export type ModelInfo = { id: string; name: string; description: string; filename: string; source: ModelSource; size_mb: number; is_downloaded: boolean; is_downloading: boolean; partial_size: number; accuracy_score: number; speed_score: number; supports_translation: boolean; is_recommended: boolean; supported_languages: string[]; supports_language_selection: boolean; is_custom: boolean; supports_streaming: boolean; supports_language_detection: boolean }
 export type ModelLoadStatus = { is_loaded: boolean; current_model: string | null }
 /**
@@ -1942,6 +1987,7 @@ export type PostProcessApiFormat =
  */
 "anthropic"
 export type PostProcessProvider = { id: string; label: string; base_url: string; allow_base_url_edit?: boolean; models_endpoint?: string | null; supports_structured_output?: boolean; api_format?: PostProcessApiFormat }
+export type Reasoning = "Off" | "Low" | "Medium" | "High"
 /**
  * Recording phase events for windows that follow along (onboarding's Try it).
  */
@@ -2034,6 +2080,15 @@ export type ShortcutBinding = { id: string; name: string; description: string; d
  * A user snippet (F120): said on its own, `trigger` inserts `text`.
  */
 export type Snippet = { trigger: string; text: string }
+/**
+ * Where a learned entry comes from (EX-6.1). The user's own words are
+ * `settings.custom_words`, not entries here.
+ */
+export type Source = "user_edits" | 
+/**
+ * Reserved: words read on screen (Wispr `app_context`, off there too).
+ */
+"app_context"
 export type SoundTheme = "marimba" | "pop" | "custom"
 /**
  * Phase of the streaming overlay card, emitted to drive its UI state.
