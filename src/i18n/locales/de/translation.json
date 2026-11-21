@@ -544,7 +544,8 @@
       "rescan": {
         "label": "Hinzugefügte Modelle suchen",
         "tooltip": "Erneut nach Modellen scannen, die außerhalb von Handy Flow zum Modellordner oder Hugging-Face-Cache hinzugefügt wurden"
-      }
+      },
+      "actionError": "Model action failed"
     },
     "languages": {
       "title": "Sprachen"
@@ -805,7 +806,8 @@
         "createPrompt": "Prompt erstellen",
         "cancel": "Abbrechen",
         "selectToEdit": "Wähle oben einen Prompt aus, um dessen Details anzuzeigen und zu bearbeiten.",
-        "createFirst": "Klicke oben auf 'Neuen Prompt erstellen', um deinen ersten Nachbearbeitungs-Prompt zu erstellen."
+        "createFirst": "Klicke oben auf 'Neuen Prompt erstellen', um deinen ersten Nachbearbeitungs-Prompt zu erstellen.",
+        "saveError": "Couldn't save the prompt."
       },
       "timeout": {
         "title": "Fallback Delay",
@@ -1030,7 +1032,11 @@
       },
       "viewChanges": "See the edits",
       "hideChanges": "Hide the edits",
-      "changesTooDifferent": "Rewritten too much to compare word by word."
+      "changesTooDifferent": "Rewritten too much to compare word by word.",
+      "loadError": "Couldn't load the history.",
+      "saveError": "Couldn't change this entry's star.",
+      "audioError": "Couldn't find this recording's audio.",
+      "openFolderError": "Couldn't open the recordings folder."
     },
     "debug": {
       "title": "Debug",
@@ -1368,7 +1374,8 @@
     "open": "Öffnen",
     "copy": "Kopieren",
     "clear": "Leeren",
-    "noOptionsFound": "Keine Optionen gefunden"
+    "noOptionsFound": "Keine Optionen gefunden",
+    "retry": "Retry"
   },
   "errors": {
     "loadDirectory": "Fehler beim Laden des Verzeichnisses: {{error}}",

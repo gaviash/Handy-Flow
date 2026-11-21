@@ -544,7 +544,8 @@
       "rescan": {
         "label": "Znajdź dodane modele",
         "tooltip": "Skanuj ponownie w poszukiwaniu modeli dodanych do folderu modeli lub pamięci podręcznej Hugging Face poza Handy Flow"
-      }
+      },
+      "actionError": "Model action failed"
     },
     "languages": {
       "title": "Języki"
@@ -805,7 +806,8 @@
         "createPrompt": "Utwórz prompt",
         "cancel": "Anuluj",
         "selectToEdit": "Wybierz prompt powyżej, aby zobaczyć i edytować jego szczegóły.",
-        "createFirst": "Kliknij 'Utwórz nowy prompt' powyżej, aby utworzyć pierwszy prompt postprocessingu."
+        "createFirst": "Kliknij 'Utwórz nowy prompt' powyżej, aby utworzyć pierwszy prompt postprocessingu.",
+        "saveError": "Couldn't save the prompt."
       },
       "timeout": {
         "title": "Fallback Delay",
@@ -1030,7 +1032,11 @@
       },
       "viewChanges": "See the edits",
       "hideChanges": "Hide the edits",
-      "changesTooDifferent": "Rewritten too much to compare word by word."
+      "changesTooDifferent": "Rewritten too much to compare word by word.",
+      "loadError": "Couldn't load the history.",
+      "saveError": "Couldn't change this entry's star.",
+      "audioError": "Couldn't find this recording's audio.",
+      "openFolderError": "Couldn't open the recordings folder."
     },
     "debug": {
       "title": "Debugowanie",
@@ -1368,7 +1374,8 @@
     "open": "Otwórz",
     "copy": "Kopiuj",
     "clear": "Wyczyść",
-    "noOptionsFound": "Nie znaleziono opcji"
+    "noOptionsFound": "Nie znaleziono opcji",
+    "retry": "Retry"
   },
   "errors": {
     "loadDirectory": "Błąd wczytywania katalogu: {{error}}",

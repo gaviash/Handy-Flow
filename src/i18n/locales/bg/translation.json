@@ -544,7 +544,8 @@
       "rescan": {
         "label": "Търсене на добавени модели",
         "tooltip": "Сканиране отново за модели, добавени в папката с модели или кеша на Hugging Face извън Handy Flow"
-      }
+      },
+      "actionError": "Model action failed"
     },
     "languages": {
       "title": "Езици"
@@ -805,7 +806,8 @@
         "createPrompt": "Създаване на подкана",
         "cancel": "Отказ",
         "selectToEdit": "Изберете подкана по-горе, за да видите и редактирате подробностите ѝ.",
-        "createFirst": "Натиснете „Нова подкана“ по-горе, за да създадете първата си подкана за постобработка."
+        "createFirst": "Натиснете „Нова подкана“ по-горе, за да създадете първата си подкана за постобработка.",
+        "saveError": "Couldn't save the prompt."
       },
       "timeout": {
         "title": "Fallback Delay",
@@ -1030,7 +1032,11 @@
       },
       "viewChanges": "See the edits",
       "hideChanges": "Hide the edits",
-      "changesTooDifferent": "Rewritten too much to compare word by word."
+      "changesTooDifferent": "Rewritten too much to compare word by word.",
+      "loadError": "Couldn't load the history.",
+      "saveError": "Couldn't change this entry's star.",
+      "audioError": "Couldn't find this recording's audio.",
+      "openFolderError": "Couldn't open the recordings folder."
     },
     "debug": {
       "title": "Отстраняване",
@@ -1368,7 +1374,8 @@
     "open": "Отваряне",
     "copy": "Копиране",
     "clear": "Изчистване",
-    "noOptionsFound": "Няма намерени опции"
+    "noOptionsFound": "Няма намерени опции",
+    "retry": "Retry"
   },
   "errors": {
     "loadDirectory": "Грешка при зареждане на папката: {{error}}",

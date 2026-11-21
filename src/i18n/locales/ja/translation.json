@@ -544,7 +544,8 @@
       "rescan": {
         "label": "追加されたモデルを探す",
         "tooltip": "Handy Flow を使わずに models フォルダーまたは Hugging Face キャッシュに追加されたモデルを再スキャンします"
-      }
+      },
+      "actionError": "Model action failed"
     },
     "languages": {
       "title": "言語"
@@ -805,7 +806,8 @@
         "createPrompt": "プロンプトを作成",
         "cancel": "キャンセル",
         "selectToEdit": "上からプロンプトを選択して、詳細を表示・編集します。",
-        "createFirst": "上の「新しいプロンプトを作成」をクリックして、最初の後処理プロンプトを作成してください。"
+        "createFirst": "上の「新しいプロンプトを作成」をクリックして、最初の後処理プロンプトを作成してください。",
+        "saveError": "Couldn't save the prompt."
       },
       "timeout": {
         "title": "Fallback Delay",
@@ -1030,7 +1032,11 @@
       },
       "viewChanges": "See the edits",
       "hideChanges": "Hide the edits",
-      "changesTooDifferent": "Rewritten too much to compare word by word."
+      "changesTooDifferent": "Rewritten too much to compare word by word.",
+      "loadError": "Couldn't load the history.",
+      "saveError": "Couldn't change this entry's star.",
+      "audioError": "Couldn't find this recording's audio.",
+      "openFolderError": "Couldn't open the recordings folder."
     },
     "debug": {
       "title": "デバッグ",
@@ -1368,7 +1374,8 @@
     "open": "開く",
     "copy": "コピー",
     "clear": "クリア",
-    "noOptionsFound": "オプションが見つかりません"
+    "noOptionsFound": "オプションが見つかりません",
+    "retry": "Retry"
   },
   "errors": {
     "loadDirectory": "ディレクトリの読み込みエラー: {{error}}",

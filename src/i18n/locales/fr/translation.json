@@ -544,7 +544,8 @@
       "rescan": {
         "label": "Rechercher les modèles ajoutés",
         "tooltip": "Réanalyser pour détecter les modèles ajoutés au dossier des modèles ou au cache Hugging Face en dehors de Handy Flow"
-      }
+      },
+      "actionError": "L'action sur le modèle a échoué"
     },
     "languages": {
       "title": "Langues"
@@ -805,7 +806,8 @@
         "createPrompt": "Créer le prompt",
         "cancel": "Annuler",
         "selectToEdit": "Sélectionnez un prompt ci-dessus pour voir et modifier ses détails.",
-        "createFirst": "Cliquez sur 'Créer un nouveau prompt' ci-dessus pour créer votre premier prompt de post-traitement."
+        "createFirst": "Cliquez sur 'Créer un nouveau prompt' ci-dessus pour créer votre premier prompt de post-traitement.",
+        "saveError": "Impossible d'enregistrer la consigne."
       },
       "timeout": {
         "title": "Délai avant secours",
@@ -1030,7 +1032,11 @@
       },
       "viewChanges": "Voir les retouches",
       "hideChanges": "Masquer les retouches",
-      "changesTooDifferent": "Trop réécrit pour comparer mot à mot."
+      "changesTooDifferent": "Trop réécrit pour comparer mot à mot.",
+      "loadError": "Impossible de charger l'historique.",
+      "saveError": "Impossible de changer l'étoile de cette entrée.",
+      "audioError": "Impossible de trouver l'audio de cet enregistrement.",
+      "openFolderError": "Impossible d'ouvrir le dossier des enregistrements."
     },
     "debug": {
       "title": "Débogage",
@@ -1368,7 +1374,8 @@
     "open": "Ouvrir",
     "copy": "Copier",
     "clear": "Effacer",
-    "noOptionsFound": "Aucune option trouvée"
+    "noOptionsFound": "Aucune option trouvée",
+    "retry": "Réessayer"
   },
   "errors": {
     "loadDirectory": "Erreur lors du chargement du répertoire : {{error}}",

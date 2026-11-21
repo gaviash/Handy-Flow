@@ -1,8 +1,9 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { RefreshCw } from "lucide-react";
 import { Tooltip } from "@/components/ui/Tooltip";
 import { useModelStore } from "@/stores/modelStore";
+import { notify } from "@/stores/noticeStore";
 import {
   ModelTable,
   Note,
@@ -63,6 +64,11 @@ export const ModelsSettings: React.FC<ModelsSettingsProps> = ({
   const [more, setMore] = useState(false);
   const { settings, isLoading } = useSettings();
   const { models, currentModel } = useModelStore();
+  const modelError = useModelStore((s) => s.error);
+  useEffect(() => {
+    if (modelError)
+      notify({ title: t("settings.models.actionError"), detail: modelError });
+  }, [modelError, t]);
   const config = getTranscriptionConfig(settings, models, currentModel);
   const k = (key: string) => `settings.transcription.${key}`;
 

@@ -544,7 +544,8 @@
       "rescan": {
         "label": "查找已添加的模型",
         "tooltip": "重新扫描在 Handy Flow 之外添加到模型文件夹或 Hugging Face 缓存中的模型"
-      }
+      },
+      "actionError": "Model action failed"
     },
     "languages": {
       "title": "语言"
@@ -805,7 +806,8 @@
         "createPrompt": "创建提示词",
         "cancel": "取消",
         "selectToEdit": "选择上方的提示词以查看和编辑其详细信息。",
-        "createFirst": "点击上方的「创建新提示词」来创建您的第一个后处理提示词。"
+        "createFirst": "点击上方的「创建新提示词」来创建您的第一个后处理提示词。",
+        "saveError": "Couldn't save the prompt."
       },
       "timeout": {
         "title": "Fallback Delay",
@@ -1030,7 +1032,11 @@
       },
       "viewChanges": "See the edits",
       "hideChanges": "Hide the edits",
-      "changesTooDifferent": "Rewritten too much to compare word by word."
+      "changesTooDifferent": "Rewritten too much to compare word by word.",
+      "loadError": "Couldn't load the history.",
+      "saveError": "Couldn't change this entry's star.",
+      "audioError": "Couldn't find this recording's audio.",
+      "openFolderError": "Couldn't open the recordings folder."
     },
     "debug": {
       "title": "调试",
@@ -1368,7 +1374,8 @@
     "open": "打开",
     "copy": "复制",
     "clear": "清除",
-    "noOptionsFound": "未找到选项"
+    "noOptionsFound": "未找到选项",
+    "retry": "Retry"
   },
   "errors": {
     "loadDirectory": "加载目录时出错: {{error}}",

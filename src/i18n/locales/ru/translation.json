@@ -544,7 +544,8 @@
       "rescan": {
         "label": "Найти добавленные модели",
         "tooltip": "Пересканировать модели, добавленные в папку моделей или кэш Hugging Face вне Handy Flow"
-      }
+      },
+      "actionError": "Model action failed"
     },
     "languages": {
       "title": "Языки"
@@ -805,7 +806,8 @@
         "createPrompt": "Создать запрос",
         "cancel": "Отмена",
         "selectToEdit": "Выберите запрос выше, чтобы просмотреть и изменить его сведения.",
-        "createFirst": "Нажмите «Создать новый запрос» выше, чтобы создать первый запрос для постобработки."
+        "createFirst": "Нажмите «Создать новый запрос» выше, чтобы создать первый запрос для постобработки.",
+        "saveError": "Couldn't save the prompt."
       },
       "timeout": {
         "title": "Fallback Delay",
@@ -1030,7 +1032,11 @@
       },
       "viewChanges": "See the edits",
       "hideChanges": "Hide the edits",
-      "changesTooDifferent": "Rewritten too much to compare word by word."
+      "changesTooDifferent": "Rewritten too much to compare word by word.",
+      "loadError": "Couldn't load the history.",
+      "saveError": "Couldn't change this entry's star.",
+      "audioError": "Couldn't find this recording's audio.",
+      "openFolderError": "Couldn't open the recordings folder."
     },
     "debug": {
       "title": "Отлаживать",
@@ -1368,7 +1374,8 @@
     "open": "Открыть",
     "copy": "Копировать",
     "clear": "Очистить",
-    "noOptionsFound": "Вариантов не найдено"
+    "noOptionsFound": "Вариантов не найдено",
+    "retry": "Retry"
   },
   "errors": {
     "loadDirectory": "Ошибка загрузки каталога: {{error}}.",

@@ -544,7 +544,8 @@
       "rescan": {
         "label": "Знайти додані моделі",
         "tooltip": "Пересканувати моделі, додані до папки моделей або кешу Hugging Face поза межами Handy Flow"
-      }
+      },
+      "actionError": "Model action failed"
     },
     "languages": {
       "title": "Мови"
@@ -805,7 +806,8 @@
         "createPrompt": "Створити промпт",
         "cancel": "Скасувати",
         "selectToEdit": "Оберіть промпт вище для перегляду та редагування його деталей.",
-        "createFirst": "Натисніть «Створити новий промпт» вище, щоб створити ваш перший промпт постобробки."
+        "createFirst": "Натисніть «Створити новий промпт» вище, щоб створити ваш перший промпт постобробки.",
+        "saveError": "Couldn't save the prompt."
       },
       "timeout": {
         "title": "Fallback Delay",
@@ -1030,7 +1032,11 @@
       },
       "viewChanges": "See the edits",
       "hideChanges": "Hide the edits",
-      "changesTooDifferent": "Rewritten too much to compare word by word."
+      "changesTooDifferent": "Rewritten too much to compare word by word.",
+      "loadError": "Couldn't load the history.",
+      "saveError": "Couldn't change this entry's star.",
+      "audioError": "Couldn't find this recording's audio.",
+      "openFolderError": "Couldn't open the recordings folder."
     },
     "debug": {
       "title": "Дебаг",
@@ -1368,7 +1374,8 @@
     "open": "Відкрити",
     "copy": "Копіювати",
     "clear": "Очистити",
-    "noOptionsFound": "Опцій не знайдено"
+    "noOptionsFound": "Опцій не знайдено",
+    "retry": "Retry"
   },
   "errors": {
     "loadDirectory": "Помилка завантаження папки: {{error}}",

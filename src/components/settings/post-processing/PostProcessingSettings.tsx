@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { Trans, useTranslation } from "react-i18next";
 import { commands } from "@/bindings";
+import { notify } from "@/stores/noticeStore";
 
 import {
   Dropdown,
@@ -68,6 +69,12 @@ const PostProcessingSettingsPromptsComponent: React.FC = () => {
     setIsCreating(false);
   };
 
+  const promptFailed = (error: unknown) =>
+    notify({
+      title: t("settings.postProcessing.prompts.saveError"),
+      detail: String(error),
+    });
+
   const handleCreatePrompt = async () => {
     if (!draftName.trim() || !draftText.trim()) return;
 
@@ -76,13 +83,13 @@ const PostProcessingSettingsPromptsComponent: React.FC = () => {
         draftName.trim(),
         draftText.trim(),
       );
-      if (result.status === "ok") {
-        await refreshSettings();
-        updateSetting("post_process_selected_prompt_id", result.data.id);
-        setIsCreating(false);
-      }
+      if (result.status === "error") throw result.error;
+      await refreshSettings();
+      updateSetting("post_process_selected_prompt_id", result.data.id);
+      setIsCreating(false);
     } catch (error) {
       console.error("Failed to create prompt:", error);
+      promptFailed(error);
     }
   };
 
@@ -90,14 +97,16 @@ const PostProcessingSettingsPromptsComponent: React.FC = () => {
     if (!selectedPromptId || !draftName.trim() || !draftText.trim()) return;
 
     try {
-      await commands.updatePostProcessPrompt(
+      const result = await commands.updatePostProcessPrompt(
         selectedPromptId,
         draftName.trim(),
         draftText.trim(),
       );
+      if (result.status === "error") throw result.error;
       await refreshSettings();
     } catch (error) {
       console.error("Failed to update prompt:", error);
+      promptFailed(error);
     }
   };
 
@@ -105,11 +114,13 @@ const PostProcessingSettingsPromptsComponent: React.FC = () => {
     if (!promptId) return;
 
     try {
-      await commands.deletePostProcessPrompt(promptId);
+      const result = await commands.deletePostProcessPrompt(promptId);
+      if (result.status === "error") throw result.error;
       await refreshSettings();
       setIsCreating(false);
     } catch (error) {
       console.error("Failed to delete prompt:", error);
+      promptFailed(error);
     }
   };
 
