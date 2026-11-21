@@ -917,6 +917,7 @@
           "description": "Plays the Windows notification sound when the pill shows a learned word."
         },
         "pending": "tertunda",
+        "stats": "Last 30 days: {{observed}} corrections observed · {{learned}} words learned · {{pending}} pending · {{rejected}} rejected",
         "rules": {
           "label": "Aturan gaya",
           "description": "Preferensi kalimat yang dipelajari Handy Flow dari koreksi Anda dan diterapkan pada dikte berikutnya.",

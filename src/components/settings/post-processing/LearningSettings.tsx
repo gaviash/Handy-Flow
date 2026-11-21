@@ -3,7 +3,12 @@ import React, { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { ask, save } from "@tauri-apps/plugin-dialog";
 import { listen } from "@tauri-apps/api/event";
-import { commands, type Learned, type StyleRule } from "@/bindings";
+import {
+  commands,
+  type Learned,
+  type LearningStats,
+  type StyleRule,
+} from "@/bindings";
 import { ToggleSwitch } from "../../ui/ToggleSwitch";
 import { SettingContainer } from "../../ui/SettingContainer";
 import { Button } from "../../ui/Button";
@@ -31,10 +36,12 @@ export const LearningSettings: React.FC<{ onShowModels?: () => void }> = ({
   const { getSetting, updateSetting, isUpdating } = useSettings();
   const [words, setWords] = useState<Learned[]>([]);
   const [rules, setRules] = useState<StyleRule[]>([]);
+  const [stats, setStats] = useState<LearningStats | null>(null);
   const refresh = () =>
     Promise.all([
       commands.getLearnedWords().then(setWords),
       commands.getStyleRules().then(setRules),
+      commands.getLearningStats().then(setStats),
     ]);
   const pending = (
     <span className="text-xs text-mid-gray">
@@ -101,6 +108,11 @@ export const LearningSettings: React.FC<{ onShowModels?: () => void }> = ({
         grouped={true}
       >
         <div className="w-full space-y-2">
+          {stats && (
+            <p className="text-xs text-mid-gray">
+              {t("settings.postProcessing.learning.stats", { ...stats })}
+            </p>
+          )}
           {words.length === 0 ? (
             <div className="py-2 text-center">
               <EmptyMascot page="learned-words" size={36} />

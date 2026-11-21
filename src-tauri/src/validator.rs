@@ -109,22 +109,38 @@ pub fn message(inserted: &str, kept: &str, cands: &[Candidate]) -> String {
 
 /// Each sent candidate's decision from the validator's raw reply (`None`:
 /// no provider, timeout, network error).
+/// Logs lengths and verdicts only, never the words (EX-7.1).
 pub fn decide(sent: Vec<Candidate>, reply: Option<&str>) -> Vec<(Candidate, Decision)> {
+    let len = |c: &Candidate| c.term.chars().count();
     let Some(accepted) = reply.and_then(|r| parse_reply(r, &sent)) else {
+        let why = if reply.is_some() {
+            "void reply"
+        } else {
+            "no reply"
+        };
         return sent
             .into_iter()
             .map(|c| {
                 let d = fallback(&c);
+                log::debug!(
+                    "Learning: candidate {} chars → fallback ({why}): {d:?}",
+                    len(&c)
+                );
                 (c, d)
             })
             .collect();
     };
     sent.into_iter()
         .map(|c| {
-            let d = if accepted.iter().any(|(a, _)| a == &c) {
-                Decision::Active
-            } else {
-                Decision::Rejected("refused")
+            let d = match accepted.iter().find(|(a, _)| a == &c) {
+                Some((_, kind)) => {
+                    log::debug!("Learning: candidate {} chars → validator {kind:?}", len(&c));
+                    Decision::Active
+                }
+                None => {
+                    log::debug!("Learning: candidate {} chars → validator refused", len(&c));
+                    Decision::Rejected("refused")
+                }
             };
             (c, d)
         })

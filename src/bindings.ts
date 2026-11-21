@@ -364,6 +364,12 @@ async getDictationStats() : Promise<Result<DictationStats, string>> {
     else return { status: "error", error: e  as any };
 }
 },
+/**
+ * EX-7.2: what learning decided over the last 30 days.
+ */
+async getLearningStats() : Promise<LearningStats> {
+    return await TAURI_INVOKE("get_learning_stats");
+},
 async getLearnedWords() : Promise<Learned[]> {
     return await TAURI_INVOKE("get_learned_words");
 },
@@ -1848,6 +1854,14 @@ used?: number; source?: Source }
  * a style rule.
  */
 export type LearnedNews = { kind: "word"; term: string } | { kind: "form"; term: string; heard: string } | { kind: "rule"; rule: string }
+/**
+ * The counters shown in Settings → Learning.
+ */
+export type LearningStats = { observed: number; learned: number; pending: number; rejected: number; 
+/**
+ * Rejections per reason, most frequent first.
+ */
+rejected_by: ([string, number])[] }
 /**
  * Which parts of the context the LLM gets, for the rewrite or for Polish
  * and transformations (Settings → Context).

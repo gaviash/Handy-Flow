@@ -917,6 +917,7 @@
           "description": "Plays the Windows notification sound when the pill shows a learned word."
         },
         "pending": "đang chờ",
+        "stats": "Last 30 days: {{observed}} corrections observed · {{learned}} words learned · {{pending}} pending · {{rejected}} rejected",
         "rules": {
           "label": "Quy tắc văn phong",
           "description": "Cách diễn đạt Handy Flow học từ các chỉnh sửa của bạn và áp dụng cho lần đọc chính tả tiếp theo.",

@@ -917,6 +917,7 @@
           "description": "Plays the Windows notification sound when the pill shows a learned word."
         },
         "pending": "ожидает",
+        "stats": "Last 30 days: {{observed}} corrections observed · {{learned}} words learned · {{pending}} pending · {{rejected}} rejected",
         "rules": {
           "label": "Правила стиля",
           "description": "Предпочтения формулировок, которые Handy Flow извлекает из ваших исправлений и применяет к следующим диктовкам.",

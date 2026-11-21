@@ -917,6 +917,7 @@
           "description": "Joue le son de notification de Windows quand la pastille annonce un mot appris."
         },
         "pending": "en attente",
+        "stats": "30 derniers jours : {{observed}} corrections observées · {{learned}} mots appris · {{pending}} en attente · {{rejected}} refusés",
         "rules": {
           "label": "Règles de style",
           "description": "Préférences de formulation tirées de vos corrections, appliquées à vos prochaines dictées.",

@@ -774,6 +774,7 @@ pub fn run(cli_args: CliArgs) {
             shortcut::change_transforms_setting,
             commands::history::get_dictation_stats,
             learning::get_learned_words,
+            learning::get_learning_stats,
             learning::delete_learned_word,
             learning::clear_learned_words,
             learning::clear_style_rules,

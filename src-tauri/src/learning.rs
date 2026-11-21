@@ -188,6 +188,76 @@ pub struct Memory {
     /// Pairs the user undid, `(heard, term)` lowercased: never learned again (EX-6.2).
     #[serde(default)]
     pub refused: Vec<(String, String)>,
+    /// What learning decided over the last 30 days (EX-7.2).
+    #[serde(default)]
+    pub events: Vec<Event>,
+}
+
+/// One learning decision, kept 30 days for the counters.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct Event {
+    pub at: i64,
+    /// "observed", "learned", "pending" or "rejected:<reason>".
+    pub what: String,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Outcome {
+    Observed,
+    Learned,
+    Pending,
+    Rejected(&'static str),
+}
+
+/// The counters shown in Settings → Learning.
+#[derive(Debug, Clone, Default, PartialEq, Serialize, Type)]
+pub struct LearningStats {
+    pub observed: u32,
+    pub learned: u32,
+    pub pending: u32,
+    pub rejected: u32,
+    /// Rejections per reason, most frequent first.
+    pub rejected_by: Vec<(String, u32)>,
+}
+
+const STATS_DAYS: i64 = 30;
+const EVENTS_MAX: usize = 5000;
+
+/// Counts one decision and forgets those older than 30 days.
+pub(crate) fn note(m: &mut Memory, o: Outcome, now: i64) {
+    let what = match o {
+        Outcome::Observed => "observed".to_string(),
+        Outcome::Learned => "learned".to_string(),
+        Outcome::Pending => "pending".to_string(),
+        Outcome::Rejected(r) => format!("rejected:{r}"),
+    };
+    m.events.retain(|e| e.at > now - STATS_DAYS * 86_400);
+    m.events.push(Event { at: now, what });
+    if m.events.len() > EVENTS_MAX {
+        m.events.remove(0);
+    }
+}
+
+pub(crate) fn stats(m: &Memory, now: i64) -> LearningStats {
+    let mut s = LearningStats::default();
+    for e in m.events.iter().filter(|e| e.at > now - STATS_DAYS * 86_400) {
+        match e.what.as_str() {
+            "observed" => s.observed += 1,
+            "learned" => s.learned += 1,
+            "pending" => s.pending += 1,
+            other => {
+                s.rejected += 1;
+                let reason = other.strip_prefix("rejected:").unwrap_or(other);
+                match s.rejected_by.iter_mut().find(|(r, _)| r == reason) {
+                    Some((_, n)) => *n += 1,
+                    None => s.rejected_by.push((reason.to_string(), 1)),
+                }
+            }
+        }
+    }
+    s.rejected_by
+        .sort_by(|a, b| b.1.cmp(&a.1).then(a.0.cmp(&b.0)));
+    s
 }
 
 pub const WORDS_MAX: usize = 2000;
@@ -203,6 +273,7 @@ fn parse_memory(json: &[u8]) -> Memory {
                 rules: Vec::new(),
                 revalidated_at: 0,
                 refused: Vec::new(),
+                events: Vec::new(),
             })
         })
         .unwrap_or_default()
@@ -1000,6 +1071,7 @@ pub(crate) fn apply_revalidation(
         return Vec::new();
     };
     let mut news = Vec::new();
+    let mut note_later = Vec::new();
     for c in sent {
         let ok = accepted.iter().any(|(a, _)| a == c);
         if let Some(w) = m
@@ -1010,13 +1082,18 @@ pub(crate) fn apply_revalidation(
             if ok {
                 w.active = true;
                 w.kind = WordKind::Term;
+                note_later.push(Outcome::Learned);
                 news.push(LearnedNews::Word {
                     term: w.term.clone(),
                 });
             } else {
                 w.heard.clear();
+                note_later.push(Outcome::Rejected("refused"));
             }
         }
+    }
+    for o in note_later {
+        note(m, o, now);
     }
     m.words.retain(|w| !w.heard.is_empty());
     m.revalidated_at = now;
@@ -1063,7 +1140,16 @@ fn record_decisions(app: &AppHandle, decided: Vec<(Candidate, crate::validator::
     let news: Vec<LearnedNews> = with_memory(app, |m| {
         let news = decided
             .into_iter()
-            .filter_map(|(c, d)| record_decision(m, c, &d, now))
+            .filter_map(|(c, d)| {
+                use crate::validator::Decision;
+                let o = match &d {
+                    Decision::Active => Outcome::Learned,
+                    Decision::Pending => Outcome::Pending,
+                    Decision::Rejected(r) => Outcome::Rejected(r),
+                };
+                note(m, o, now);
+                record_decision(m, c, &d, now)
+            })
             .collect();
         save(app, m);
         news
@@ -1140,6 +1226,13 @@ pub fn count(app: &AppHandle) -> usize {
 #[specta::specta]
 pub fn get_learned_words(app: AppHandle) -> Vec<Learned> {
     with_memory(&app, |m| m.words.clone())
+}
+
+/// EX-7.2: what learning decided over the last 30 days.
+#[tauri::command]
+#[specta::specta]
+pub fn get_learning_stats(app: AppHandle) -> LearningStats {
+    with_memory(&app, |m| stats(m, chrono::Utc::now().timestamp()))
 }
 
 #[tauri::command]
@@ -1566,18 +1659,37 @@ pub fn observe(
             let last = finish(last, final_read, bounded, end, &|t| cut(t, &anchors));
             let ended = format!("{end:?}");
             let edited = last.as_ref().filter(|fin| *fin != &inserted);
-            let found: Vec<Candidate> = edited
-                .map(|fin| candidates(&inserted, fin))
-                .unwrap_or_default()
-                .into_iter()
-                .filter(|c| match with_memory(&app, |m| memory_guard(m, c)) {
-                    Some(reason) => {
-                        log::debug!("Learning: guarded ({reason})");
-                        false
+            let locals = edited
+                .map(|fin| local_candidates(&inserted, fin))
+                .unwrap_or_default();
+            let now = chrono::Utc::now().timestamp();
+            // Guards decide first: local rules, then what memory already says.
+            let found: Vec<Candidate> = with_memory(&app, |m| {
+                if edited.is_some() {
+                    note(m, Outcome::Observed, now);
+                }
+                let mut found = Vec::new();
+                for l in locals {
+                    let reason = match l {
+                        Local::Guarded(reason) => Err(reason),
+                        Local::Candidate(c) => match memory_guard(m, &c) {
+                            Some(reason) => Err(reason),
+                            None => Ok(c),
+                        },
+                    };
+                    match reason {
+                        Ok(c) => found.push(c),
+                        Err(reason) => {
+                            log::debug!("Learning: candidate → guarded ({reason})");
+                            note(m, Outcome::Rejected(reason), now);
+                        }
                     }
-                    None => true,
-                })
-                .collect();
+                }
+                if edited.is_some() {
+                    save(&app, m);
+                }
+                found
+            });
             log::debug!(
                 "Learning: observation ended ({ended}); edited: {}, candidates: {}",
                 edited.is_some(),
@@ -1621,6 +1733,27 @@ mod tests {
     /// The region between two anchors, as `observe` reads it.
     fn between<'a>(b: &'a str, a: &'a str) -> impl Fn(&str) -> Option<String> + 'a {
         move |t: &str| region(t, b, a).map(|r| r.trim().to_string())
+    }
+
+    #[test]
+    fn learning_stats_count_the_last_30_days() {
+        let day = 86_400;
+        let mut m = Memory::default();
+        note(&mut m, Outcome::Observed, 0);
+        note(&mut m, Outcome::Observed, 40 * day);
+        note(&mut m, Outcome::Learned, 40 * day);
+        note(&mut m, Outcome::Pending, 41 * day);
+        note(&mut m, Outcome::Rejected("grammar"), 41 * day);
+        note(&mut m, Outcome::Rejected("refused"), 42 * day);
+        note(&mut m, Outcome::Rejected("grammar"), 42 * day);
+        let s = stats(&m, 45 * day);
+        assert_eq!((s.observed, s.learned, s.pending, s.rejected), (1, 1, 1, 3));
+        assert_eq!(
+            s.rejected_by,
+            vec![("grammar".to_string(), 2), ("refused".to_string(), 1)]
+        );
+        // Older than 30 days: dropped from storage too.
+        assert_eq!(m.events.len(), 6);
     }
 
     #[test]

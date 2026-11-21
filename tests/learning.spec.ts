@@ -170,3 +170,26 @@ test("the validator status is re-read after a setting is saved", async ({
   await sound.click({ force: true });
   await expect.poll(reads).toBeGreaterThan(before);
 });
+
+test("the last 30 days of learning are counted", async ({ page }) => {
+  await mockTauri(page, {
+    results: {
+      get_learning_stats: {
+        observed: 12,
+        learned: 5,
+        pending: 2,
+        rejected: 4,
+        rejected_by: [
+          ["grammar", 3],
+          ["refused", 1],
+        ],
+      },
+    },
+  });
+  await openLearning(page);
+  await expect(
+    page.getByText(
+      "Last 30 days: 12 corrections observed · 5 words learned · 2 pending · 4 rejected",
+    ),
+  ).toBeVisible();
+});

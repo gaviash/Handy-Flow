@@ -917,6 +917,7 @@
           "description": "Plays the Windows notification sound when the pill shows a learned word."
         },
         "pending": "बाँकी",
+        "stats": "Last 30 days: {{observed}} corrections observed · {{learned}} words learned · {{pending}} pending · {{rejected}} rejected",
         "rules": {
           "label": "शैली नियमहरू",
           "description": "Handy Flow ले तपाईंका सुधारबाट सिकेका र अर्को डिक्टेसनमा लागू गर्ने लेखन रुचिहरू।",

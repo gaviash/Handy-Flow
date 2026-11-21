@@ -917,6 +917,7 @@
           "description": "Plays the Windows notification sound when the pill shows a learned word."
         },
         "pending": "대기 중",
+        "stats": "Last 30 days: {{observed}} corrections observed · {{learned}} words learned · {{pending}} pending · {{rejected}} rejected",
         "rules": {
           "label": "스타일 규칙",
           "description": "Handy Flow가 수정 내용에서 배운 표현 선호로, 다음 받아쓰기에 적용됩니다.",
