@@ -1456,7 +1456,9 @@
     "clear": "Vymazat",
     "noOptionsFound": "Nenalezeny žádné možnosti",
     "retry": "Retry",
-    "undo": "Undo"
+    "undo": "Undo",
+    "cancel": "Cancel",
+    "moreInfo": "More information"
   },
   "errors": {
     "loadDirectory": "Chyba při načítání adresáře: {{error}}",

@@ -1456,7 +1456,9 @@
     "clear": "Neteja",
     "noOptionsFound": "No s'ha trobat cap opció",
     "retry": "Retry",
-    "undo": "Undo"
+    "undo": "Undo",
+    "cancel": "Cancel",
+    "moreInfo": "More information"
   },
   "errors": {
     "loadDirectory": "Error en carregar el directori: {{error}}",

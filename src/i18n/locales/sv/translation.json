@@ -1456,7 +1456,9 @@
     "clear": "Rensa",
     "noOptionsFound": "Inga alternativ hittades",
     "retry": "Retry",
-    "undo": "Undo"
+    "undo": "Undo",
+    "cancel": "Cancel",
+    "moreInfo": "More information"
   },
   "errors": {
     "loadDirectory": "Fel vid laddning av mapp: {{error}}",

@@ -1456,7 +1456,9 @@
     "clear": "مسح",
     "noOptionsFound": "لم يتم العثور على خيارات",
     "retry": "Retry",
-    "undo": "Undo"
+    "undo": "Undo",
+    "cancel": "Cancel",
+    "moreInfo": "More information"
   },
   "errors": {
     "loadDirectory": "خطأ في تحميل المجلد: {{error}}",

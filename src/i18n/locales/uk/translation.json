@@ -1456,7 +1456,9 @@
     "clear": "Очистити",
     "noOptionsFound": "Опцій не знайдено",
     "retry": "Retry",
-    "undo": "Undo"
+    "undo": "Undo",
+    "cancel": "Cancel",
+    "moreInfo": "More information"
   },
   "errors": {
     "loadDirectory": "Помилка завантаження папки: {{error}}",

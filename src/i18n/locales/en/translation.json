@@ -1305,7 +1305,7 @@
       },
       "overlay": {
         "title": "Dictation pill",
-        "description": "The overlay shown during dictation. Hidden remains available in Advanced.",
+        "description": "The style shown while you dictate. Choose Hidden to show nothing.",
         "pill": "Pill",
         "wave": "Wave",
         "live": "Live"
@@ -1456,7 +1456,9 @@
     "clear": "Clear",
     "noOptionsFound": "No options found",
     "retry": "Retry",
-    "undo": "Undo"
+    "undo": "Undo",
+    "cancel": "Cancel",
+    "moreInfo": "More information"
   },
   "errors": {
     "loadDirectory": "Error loading directory: {{error}}",

@@ -1456,7 +1456,9 @@
     "clear": "נקה",
     "noOptionsFound": "לא נמצאו אפשרויות",
     "retry": "Retry",
-    "undo": "Undo"
+    "undo": "Undo",
+    "cancel": "Cancel",
+    "moreInfo": "More information"
   },
   "errors": {
     "loadDirectory": "שגיאה בטעינת תיקייה: {{error}}",

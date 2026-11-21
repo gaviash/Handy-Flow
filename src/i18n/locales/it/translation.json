@@ -1456,7 +1456,9 @@
     "clear": "Svuota",
     "noOptionsFound": "Nessuna opzione trovata",
     "retry": "Retry",
-    "undo": "Undo"
+    "undo": "Undo",
+    "cancel": "Cancel",
+    "moreInfo": "More information"
   },
   "errors": {
     "loadDirectory": "Errore di caricamento cartella: {{error}}",

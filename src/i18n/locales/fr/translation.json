@@ -364,13 +364,13 @@
     "features": {
       "title": "Utilisation par fonction",
       "name": {
-        "Rewrite": "Reformulation",
-        "RewriteFallback": "Secours de la reformulation",
+        "Rewrite": "Amélioration",
+        "RewriteFallback": "Secours de l'amélioration",
         "LearningValidator": "Validateur d’apprentissage",
         "TranscriptionApi": "Transcription par API"
       },
       "empty": {
-        "Rewrite": "Configurer la reformulation",
+        "Rewrite": "Configurer l'amélioration",
         "RewriteFallback": "Aucun",
         "LearningValidator": "Automatique",
         "TranscriptionApi": "Modèle local seulement"
@@ -380,7 +380,7 @@
         "NoProvider": "Inactif · fournisseur indisponible",
         "NoKey": "Inactif · clé API manquante",
         "NoModel": "Inactif · aucun modèle utilisable",
-        "RewriteOff": "Inactif · reformulation désactivée",
+        "RewriteOff": "Inactif · amélioration désactivée",
         "LearningOff": "Inactif · apprentissage désactivé",
         "ValidatorOff": "Validateur désactivé",
         "ContextOff": "Inactif · envoi du contexte désactivé",
@@ -395,7 +395,7 @@
         "High": "Élevé"
       },
       "help": {
-        "Rewrite": "La reformulation doit être rapide. Laisse le raisonnement désactivé, sauf si la qualité compte plus que l'attente.",
+        "Rewrite": "L'amélioration doit être rapide. Laissez le raisonnement désactivé, sauf si la qualité compte plus que l'attente.",
         "LearningValidator": "Le validateur décide si une correction doit être apprise. Un modèle qui raisonne se trompe moins : choisis-en un, avec un raisonnement moyen. Il tourne en arrière-plan, la lenteur ne se voit pas."
       },
       "provider": "Fournisseur",
@@ -441,8 +441,8 @@
             "description": "Le raccourci clavier pour annuler l'enregistrement en cours."
           },
           "transcribe_with_post_process": {
-            "name": "Raccourci de post-traitement",
-            "description": "Facultatif : Un raccourci dédié qui applique toujours le post-traitement IA à votre transcription."
+            "name": "Raccourci d'amélioration",
+            "description": "Facultatif : un raccourci dédié qui applique toujours l'amélioration par IA à votre transcription."
           },
           "polish": {
             "name": "Polish",
@@ -818,7 +818,7 @@
       "prompts": {
         "title": "Prompt",
         "selectedPrompt": {
-          "title": "Prompt sélectionné",
+          "title": "Consigne utilisée",
           "description": "Sélectionnez un modèle pour affiner les transcriptions ou créez-en un nouveau. Utilisez ${output} dans le texte du prompt pour référencer la transcription capturée."
         },
         "noPrompts": "Aucun prompt disponible",
@@ -834,18 +834,18 @@
         "createPrompt": "Créer le prompt",
         "cancel": "Annuler",
         "selectToEdit": "Sélectionnez un prompt ci-dessus pour voir et modifier ses détails.",
-        "createFirst": "Cliquez sur 'Créer un nouveau prompt' ci-dessus pour créer votre premier prompt de post-traitement.",
+        "createFirst": "Cliquez sur « Créer un nouveau prompt » ci-dessus pour créer votre première consigne d'amélioration.",
         "saveError": "Impossible d'enregistrer la consigne."
       },
       "timeout": {
         "title": "Délai avant secours",
-        "description": "Temps d'attente maximal de la reformulation avant de coller la transcription nettoyée."
+        "description": "Temps d'attente maximal de l'amélioration avant de coller la transcription nettoyée."
       },
       "context": {
         "title": "Contexte et confidentialité",
         "read": {
           "label": "Lire la destination",
-          "description": "Lit l'application, le site et le texte autour du curseur pour adapter la reformulation. Les champs mot de passe ne sont jamais lus."
+          "description": "Lit l'application, le site et le texte autour du curseur pour adapter l'amélioration. Les champs mot de passe ne sont jamais lus."
         },
         "send": {
           "label": "Envoyer le contexte au LLM",
@@ -896,15 +896,15 @@
             "cloudError": "L'API de transcription a échoué, le modèle local a transcrit : {{error}}"
           },
           "llm": {
-            "title": "LLM (reformulation ou transformation)"
+            "title": "LLM (amélioration ou transformation)"
           }
         },
         "parts": {
           "rewrite": {
-            "screen": "Reformulation : app, fenêtre et texte autour",
-            "learnedWords": "Reformulation : mots appris",
-            "styleRules": "Reformulation : règles de style",
-            "pastDictations": "Reformulation : dictées passées"
+            "screen": "Amélioration : app, fenêtre et texte autour",
+            "learnedWords": "Amélioration : mots appris",
+            "styleRules": "Amélioration : règles de style",
+            "pastDictations": "Amélioration : dictées passées"
           },
           "transform": {
             "screen": "Polish et transformations : app, fenêtre et texte autour",
@@ -981,7 +981,7 @@
       },
       "styles": {
         "title": "Styles",
-        "description": "Le ton de la reformulation dans chaque type d'application. Décontracté retire le point final, très décontracté écrit tout en minuscules, enthousiaste termine par un point d'exclamation.",
+        "description": "Le ton de l'amélioration dans chaque type d'application. Décontracté retire le point final, très décontracté écrit tout en minuscules, enthousiaste termine par un point d'exclamation.",
         "categories": {
           "email": "Email",
           "work": "Messagerie pro",
@@ -1157,8 +1157,8 @@
         "description": "Microphone à utiliser lorsque le couvercle du portable est fermé"
       },
       "postProcessingToggle": {
-        "label": "Post-traitement",
-        "description": "Activer l'affinage du texte par IA après la transcription"
+        "label": "Amélioration",
+        "description": "Améliorer le texte par IA après la transcription"
       },
       "muteWhileRecording": {
         "label": "Muet pendant l'enregistrement",
@@ -1305,7 +1305,7 @@
       },
       "overlay": {
         "title": "Pastille de dictée",
-        "description": "Le style affiché pendant la dictée. Masquée reste disponible dans Avancé.",
+        "description": "Le style affiché pendant la dictée. Choisissez Masquée pour ne rien afficher.",
         "pill": "Pastille",
         "wave": "Onde",
         "live": "Live"
@@ -1319,7 +1319,7 @@
     },
     "transcription": {
       "title": "Modèles de transcription",
-      "intro": "Choisissez comment Handy Flow transforme votre voix en texte. La mise au propre se règle séparément.",
+      "intro": "Choisissez comment Handy Flow transforme votre voix en texte. L'amélioration se règle séparément.",
       "reformulationLink": "Ouvrir les réglages d’Amélioration",
       "modeTitle": "Où effectuer la transcription ?",
       "localMode": "Sur cet ordinateur",
@@ -1329,7 +1329,7 @@
       "apiSummary": "Transcription : {{provider}} · {{model}}",
       "localSummary": "Transcription sur cet ordinateur : {{model}}",
       "configured": "API configurée. Sa disponibilité sera vérifiée lors de votre prochaine dictée.",
-      "localSummaryHelp": "Le modèle local ci-dessous est utilisé. La reformulation se configure séparément.",
+      "localSummaryHelp": "Le modèle local ci-dessous est utilisé. L'amélioration se configure séparément.",
       "loading": "Chargement de la configuration…",
       "modelMissing": "Aucun modèle de fournisseur sélectionné",
       "localMissing": "Aucun modèle local disponible",
@@ -1338,12 +1338,12 @@
       "missingKey": "Ajoutez une clé API pour utiliser ce fournisseur.",
       "usingLocal": "En attendant, le modèle local est utilisé.",
       "noFallback": "Aucun secours local disponible. Téléchargez et sélectionnez un modèle ci-dessous pour couvrir les erreurs API et les dictées qui doivent rester locales.",
-      "sharedKey": "Cette clé sert aussi à la reformulation chez ce fournisseur. La modifier affecte les deux usages.",
-      "customKeyHelp": "Un serveur local peut fonctionner sans clé. Si vous en renseignez une, elle sera partagée avec la reformulation.",
+      "sharedKey": "Cette clé sert aussi à l'amélioration chez ce fournisseur. La modifier affecte les deux usages.",
+      "customKeyHelp": "Un serveur local peut fonctionner sans clé. Si vous en renseignez une, elle sera partagée avec l'amélioration.",
       "advanced": "Réglages avancés du fournisseur",
       "timeoutTitle": "Attente avant le secours local (secondes)",
       "serverUrl": "URL de base du serveur (compatible OpenAI)",
-      "sharedUrl": "Cette URL est partagée avec la reformulation pour le fournisseur personnalisé. Handy Flow ajoute /audio/transcriptions ou /audio/translations.",
+      "sharedUrl": "Cette URL est partagée avec l'amélioration pour le fournisseur personnalisé. Handy Flow ajoute /audio/transcriptions ou /audio/translations.",
       "apiLanguage": "Langue de transcription",
       "automaticLanguage": "Détecter automatiquement",
       "sharedLanguage": "La langue et la traduction s’appliquent aussi au secours local, selon ses capacités.",
@@ -1380,7 +1380,7 @@
       },
       "apiKey": {
         "label": "Clé API",
-        "description": "La même clé que pour la reformulation chez ce fournisseur."
+        "description": "La même clé que pour l'amélioration chez ce fournisseur."
       },
       "timeout": {
         "label": "Attente max (s)",
@@ -1456,7 +1456,9 @@
     "clear": "Effacer",
     "noOptionsFound": "Aucune option trouvée",
     "retry": "Réessayer",
-    "undo": "Annuler"
+    "undo": "Annuler",
+    "cancel": "Annuler",
+    "moreInfo": "Plus d'informations"
   },
   "errors": {
     "loadDirectory": "Erreur lors du chargement du répertoire : {{error}}",
@@ -1483,10 +1485,10 @@
     "pasteBlockedElevated": "L'application active s'exécute en tant qu'administrateur, Handy Flow ne peut donc pas y coller de texte. Vous pouvez copier la transcription depuis Historique.",
     "pasteSkippedExcludedTitle": "Non collé : app exclue",
     "pasteSkippedExcluded": "Cette application ou ce site est exclu, Handy Flow n'y a donc rien collé. Vous pouvez copier la transcription depuis Historique.",
-    "postProcessFailedTitle": "Collé sans post-traitement",
-    "postProcessFailed": "Le post-traitement n'a pas abouti, la transcription a donc été collée telle quelle.",
-    "filePostProcessFailedTitle": "Transcrit sans post-traitement",
-    "filePostProcessFailed": "Le post-traitement n'a pas abouti, la transcription a donc été enregistrée telle quelle.",
+    "postProcessFailedTitle": "Collé sans amélioration",
+    "postProcessFailed": "L'amélioration n'a pas abouti, la transcription a donc été collée telle quelle.",
+    "filePostProcessFailedTitle": "Transcrit sans amélioration",
+    "filePostProcessFailed": "L'amélioration n'a pas abouti, la transcription a donc été enregistrée telle quelle.",
     "fileTranscriptionFailedTitle": "Échec de la transcription du fichier",
     "transcriptionFailedTitle": "Échec de la transcription",
     "selectionUnavailableTitle": "Sélectionnez d'abord un texte",

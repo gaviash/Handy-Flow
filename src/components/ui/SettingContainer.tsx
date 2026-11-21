@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useId } from "react";
 import { InfoTooltip } from "./InfoTooltip";
 
 interface SettingContainerProps {
@@ -25,6 +25,9 @@ export const SettingContainer: React.FC<SettingContainerProps> = ({
   tooltipPosition = "top",
   grow = false,
 }) => {
+  // The title names the control area, so screen readers announce what a
+  // field is for.
+  const titleId = useId();
   const info = (
     <InfoTooltip
       text={description}
@@ -42,13 +45,16 @@ export const SettingContainer: React.FC<SettingContainerProps> = ({
         <div className={containerClasses}>
           <div className="flex items-center gap-2 mb-2">
             <h2
+              id={titleId}
               className={`text-sm font-medium ${disabled ? "opacity-50" : ""}`}
             >
               {title}
             </h2>
             {info}
           </div>
-          <div className="w-full">{children}</div>
+          <div className="w-full" role="group" aria-labelledby={titleId}>
+            {children}
+          </div>
         </div>
       );
     }
@@ -56,14 +62,19 @@ export const SettingContainer: React.FC<SettingContainerProps> = ({
     return (
       <div className={containerClasses}>
         <div className="mb-2">
-          <h2 className={`text-sm font-medium ${disabled ? "opacity-50" : ""}`}>
+          <h2
+            id={titleId}
+            className={`text-sm font-medium ${disabled ? "opacity-50" : ""}`}
+          >
             {title}
           </h2>
           <p className={`text-sm ${disabled ? "opacity-50" : ""}`}>
             {description}
           </p>
         </div>
-        <div className="w-full">{children}</div>
+        <div className="w-full" role="group" aria-labelledby={titleId}>
+          {children}
+        </div>
       </div>
     );
   }
@@ -85,6 +96,7 @@ export const SettingContainer: React.FC<SettingContainerProps> = ({
         <div className={titleClasses}>
           <div className="flex items-center gap-2">
             <h2
+              id={titleId}
               className={`text-sm font-medium ${disabled ? "opacity-50" : ""}`}
             >
               {title}
@@ -92,7 +104,9 @@ export const SettingContainer: React.FC<SettingContainerProps> = ({
             {info}
           </div>
         </div>
-        <div className={controlClasses}>{children}</div>
+        <div className={controlClasses} role="group" aria-labelledby={titleId}>
+          {children}
+        </div>
       </div>
     );
   }
@@ -100,14 +114,19 @@ export const SettingContainer: React.FC<SettingContainerProps> = ({
   return (
     <div className={horizontalContainerClasses}>
       <div className={titleClasses}>
-        <h2 className={`text-sm font-medium ${disabled ? "opacity-50" : ""}`}>
+        <h2
+          id={titleId}
+          className={`text-sm font-medium ${disabled ? "opacity-50" : ""}`}
+        >
           {title}
         </h2>
         <p className={`text-sm ${disabled ? "opacity-50" : ""}`}>
           {description}
         </p>
       </div>
-      <div className={controlClasses}>{children}</div>
+      <div className={controlClasses} role="group" aria-labelledby={titleId}>
+        {children}
+      </div>
     </div>
   );
 };

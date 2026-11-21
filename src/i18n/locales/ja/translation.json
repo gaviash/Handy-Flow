@@ -1456,7 +1456,9 @@
     "clear": "クリア",
     "noOptionsFound": "オプションが見つかりません",
     "retry": "Retry",
-    "undo": "Undo"
+    "undo": "Undo",
+    "cancel": "Cancel",
+    "moreInfo": "More information"
   },
   "errors": {
     "loadDirectory": "ディレクトリの読み込みエラー: {{error}}",

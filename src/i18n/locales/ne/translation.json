@@ -1456,7 +1456,9 @@
     "clear": "खाली गर्नुहोस्",
     "noOptionsFound": "कुनै विकल्प भेटिएन",
     "retry": "Retry",
-    "undo": "Undo"
+    "undo": "Undo",
+    "cancel": "Cancel",
+    "moreInfo": "More information"
   },
   "errors": {
     "loadDirectory": "डाइरेक्टरी लोड गर्दा त्रुटि: {{error}}",

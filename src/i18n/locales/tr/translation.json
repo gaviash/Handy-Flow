@@ -1456,7 +1456,9 @@
     "clear": "Temizle",
     "noOptionsFound": "Seçenek bulunamadı",
     "retry": "Retry",
-    "undo": "Undo"
+    "undo": "Undo",
+    "cancel": "Cancel",
+    "moreInfo": "More information"
   },
   "errors": {
     "loadDirectory": "Dizin yüklenirken hata oluştu: {{error}}",

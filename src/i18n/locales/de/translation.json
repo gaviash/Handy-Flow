@@ -1456,7 +1456,9 @@
     "clear": "Leeren",
     "noOptionsFound": "Keine Optionen gefunden",
     "retry": "Retry",
-    "undo": "Undo"
+    "undo": "Undo",
+    "cancel": "Cancel",
+    "moreInfo": "More information"
   },
   "errors": {
     "loadDirectory": "Fehler beim Laden des Verzeichnisses: {{error}}",

@@ -1456,7 +1456,9 @@
     "clear": "Wyczyść",
     "noOptionsFound": "Nie znaleziono opcji",
     "retry": "Retry",
-    "undo": "Undo"
+    "undo": "Undo",
+    "cancel": "Cancel",
+    "moreInfo": "More information"
   },
   "errors": {
     "loadDirectory": "Błąd wczytywania katalogu: {{error}}",

@@ -381,3 +381,18 @@ test("About groups updates and diagnostics in cards", async ({ page }) => {
   await page.getByRole("button", { name: "About" }).last().click();
   await expect(page.getByRole("button", { name: /^Updates/ })).toBeFocused();
 });
+
+test("a setting's title names its field, and French says Amélioration", async ({
+  page,
+}) => {
+  await mockTauri(page, { settings: { app_language: "fr" } });
+  await page.goto("/");
+  await expect(
+    page.getByRole("button", { name: "Amélioration", exact: true }),
+  ).toBeVisible();
+  await page.getByRole("button", { name: "Vocabulaire", exact: true }).click();
+  await expect(page.getByRole("group", { name: "Votre nom" })).toBeVisible();
+  await expect(
+    page.getByRole("button", { name: "Plus d'informations" }).first(),
+  ).toBeVisible();
+});

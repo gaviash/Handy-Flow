@@ -1456,7 +1456,9 @@
     "clear": "Xóa",
     "noOptionsFound": "Không tìm thấy tùy chọn",
     "retry": "Retry",
-    "undo": "Undo"
+    "undo": "Undo",
+    "cancel": "Cancel",
+    "moreInfo": "More information"
   },
   "errors": {
     "loadDirectory": "Lỗi khi tải thư mục: {{error}}",

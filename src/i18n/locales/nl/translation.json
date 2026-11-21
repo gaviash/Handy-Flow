@@ -1456,7 +1456,9 @@
     "clear": "Wissen",
     "noOptionsFound": "Geen opties gevonden",
     "retry": "Retry",
-    "undo": "Undo"
+    "undo": "Undo",
+    "cancel": "Cancel",
+    "moreInfo": "More information"
   },
   "errors": {
     "loadDirectory": "Fout bij laden van map: {{error}}",

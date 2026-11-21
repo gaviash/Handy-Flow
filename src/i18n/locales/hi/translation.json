@@ -1456,7 +1456,9 @@
     "clear": "मिटाएं",
     "noOptionsFound": "कोई विकल्प नहीं मिला",
     "retry": "Retry",
-    "undo": "Undo"
+    "undo": "Undo",
+    "cancel": "Cancel",
+    "moreInfo": "More information"
   },
   "errors": {
     "loadDirectory": "फ़ोल्डर लोड करने में गड़बड़ी: {{error}}",
