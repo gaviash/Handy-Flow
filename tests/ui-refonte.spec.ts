@@ -253,3 +253,66 @@ test("General names the enhanced shortcut only when the rewrite is on", async ({
   await expect(page.getByText(/: dictation as is/)).toBeVisible();
   await expect(page.getByText(/enhanced dictation/)).toHaveCount(0);
 });
+
+test("an undo that comes after the deletion is no longer offered", async ({
+  page,
+}) => {
+  await page.clock.install();
+  const mock = await mockTauri(page, { results: historyWith("bonjour") });
+  await page.goto("/");
+  await page.getByRole("button", { name: "History", exact: true }).click();
+  await page.getByRole("button", { name: "Delete entry" }).click();
+  // Hovering keeps the toast up past the 8 s.
+  await page.getByRole("button", { name: "Undo" }).hover();
+  await page.clock.runFor(10_000);
+  await expect
+    .poll(
+      async () =>
+        (await mock.calls()).filter((c) => c.cmd === "delete_history_entry")
+          .length,
+    )
+    .toBe(1);
+  await expect(page.getByRole("button", { name: "Undo" })).toHaveCount(0);
+});
+
+test("two deleted entries with the same text each keep their undo", async ({
+  page,
+}) => {
+  const two = historyWith("bonjour");
+  const [a] = two.get_history_entries.entries;
+  two.get_history_entries.entries = [a, { ...a, id: 8, file_name: "h-8.wav" }];
+  await page.clock.install();
+  await mockTauri(page, { results: two });
+  await page.goto("/");
+  await page.getByRole("button", { name: "History", exact: true }).click();
+  await page.getByRole("button", { name: "Delete entry" }).first().click();
+  await page.getByRole("button", { name: "Delete entry" }).first().click();
+  await expect(page.getByRole("button", { name: "Undo" })).toHaveCount(2);
+});
+
+test("a failed save only rolls back its own setting", async ({ page }) => {
+  await mockTauri(page, {
+    settings: { audio_feedback: false, mute_while_recording: false },
+    errors: { change_audio_feedback_setting: "disk full" },
+    delays: { change_audio_feedback_setting: 600 },
+  });
+  await page.goto("/");
+  await page.getByRole("button", { name: /^Sounds/ }).click();
+  await page
+    .getByRole("checkbox", { name: "Audio Feedback" })
+    .click({ force: true });
+  const mute = page.getByRole("checkbox", { name: "Mute While Recording" });
+  await mute.click({ force: true });
+  await expect(page.getByText("Setting not saved").first()).toBeVisible();
+  await expect(mute).toBeChecked();
+});
+
+test("exclusion lists are named for screen readers", async ({ page }) => {
+  await mockTauri(page);
+  await page.goto("/");
+  await page.getByRole("button", { name: "Context", exact: true }).click();
+  await page.getByRole("button", { name: /^Exclusions/ }).click();
+  await expect(
+    page.getByRole("textbox", { name: "Excluded Apps" }),
+  ).toBeVisible();
+});

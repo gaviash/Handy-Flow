@@ -203,3 +203,15 @@ test("the last 30 days of learning are counted", async ({ page }) => {
     ),
   ).toBeVisible();
 });
+
+test("an automatic validator with nothing to resolve decides locally", async ({
+  page,
+}) => {
+  await mockTauri(page, {
+    results: { get_feature_statuses: [status("NotChosen", true)] },
+  });
+  await openLearning(page);
+  await expect(
+    page.getByText("No model · decided on your PC (lexicon)"),
+  ).toBeVisible();
+});

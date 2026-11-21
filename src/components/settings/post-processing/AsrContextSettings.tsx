@@ -68,6 +68,7 @@ export const AsrContextSettings: React.FC<{
       grouped={true}
     >
       <Input
+        aria-label={t(key(label))}
         type="number"
         min={min}
         max={max}

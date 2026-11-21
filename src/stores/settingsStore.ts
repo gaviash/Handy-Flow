@@ -418,7 +418,12 @@ export const useSettingsStore = create<SettingsStore>()(
           level: "error",
         });
         if (settings) {
-          set({ settings: { ...settings, [key]: originalValue } });
+          // Only this setting goes back: others saved meanwhile stay.
+          set((state) => ({
+            settings: state.settings
+              ? { ...state.settings, [key]: originalValue }
+              : null,
+          }));
           if (
             [
               "theme",

@@ -56,6 +56,7 @@ export function useFeatureStatuses() {
 
 /** Without a usable model the validator still decides on the PC (lexicon). */
 const LOCAL_FALLBACK = new Set([
+  "NotChosen",
   "NoProvider",
   "NoKey",
   "NoModel",

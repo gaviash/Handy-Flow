@@ -28,6 +28,8 @@ export interface NotifyOptions {
    * key. Without one it's a click's result, and ends with its toast.
    */
   key?: string;
+  /** Tells apart two toasts with the same text (one per deleted entry). */
+  id?: string;
 }
 
 // The one place the frontend handles notices. A new one pops up as a toast.
@@ -101,10 +103,10 @@ export const useNoticeStore = create<NoticeStore>()((set, get) => ({
     if (!changed) set({ notices });
   },
 
-  notify: ({ title, detail, level = "error", action, key }) =>
+  notify: ({ title, detail, level = "error", action, key, id: own }) =>
     set(({ local, toasts, panelOpen }) => {
       // The same failure twice is one row.
-      const id = key ?? `${title}|${detail ?? ""}`;
+      const id = key ?? own ?? `${title}|${detail ?? ""}`;
       return {
         local: [
           { id, level, title, detail, action, kept: key !== undefined },

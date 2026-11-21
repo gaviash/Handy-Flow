@@ -25,6 +25,7 @@ export const ExclusionList: React.FC<{
       grouped={true}
     >
       <Textarea
+        aria-label={label}
         className="w-full"
         variant="compact"
         value={text}

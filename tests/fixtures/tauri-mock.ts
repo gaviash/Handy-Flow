@@ -46,6 +46,8 @@ export interface MockOptions {
   label?: string;
   /** Commands that fail, by name: the value is the error Rust would return. */
   errors?: Record<string, unknown>;
+  /** Commands that answer late, by name, in milliseconds. */
+  delays?: Record<string, number>;
 }
 
 /** Results that keep the app past onboarding with one ready model. */
@@ -103,7 +105,7 @@ export async function mockTauri(page: Page, opts: MockOptions = {}) {
     get_app_settings: settings,
   };
   await page.addInitScript(
-    ({ results, label, errors }) => {
+    ({ results, label, errors, delays }) => {
       const w = window as any;
       const persisted = sessionStorage.getItem("mock.settings");
       if (persisted)
@@ -156,6 +158,8 @@ export async function mockTauri(page: Page, opts: MockOptions = {}) {
             return null;
           }
           calls.push({ cmd, args });
+          if (cmd in delays)
+            await new Promise((r) => setTimeout(r, delays[cmd]));
           if (cmd in errors) throw errors[cmd];
           const settings = results.get_app_settings as typeof DEFAULT_SETTINGS;
           const featureKeys: Record<string, string> = {
@@ -217,7 +221,12 @@ export async function mockTauri(page: Page, opts: MockOptions = {}) {
       };
       w.__hasListener = (event: string) => listeners.has(event);
     },
-    { results, label: opts.label ?? "main", errors: opts.errors ?? {} },
+    {
+      results,
+      label: opts.label ?? "main",
+      errors: opts.errors ?? {},
+      delays: opts.delays ?? {},
+    },
   );
   return {
     calls: () => page.evaluate(() => (window as any).__calls as Call[]),

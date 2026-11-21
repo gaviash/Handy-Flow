@@ -318,8 +318,11 @@ export const HistorySettings: React.FC = () => {
     const entry = entriesRef.current[index];
     if (!entry) return;
     setEntries((prev) => prev.filter((e) => e.id !== id));
+    const noticeId = `history-delete-${id}`;
     const run = async () => {
       pendingDeletes.current.delete(id);
+      // Once it runs, undoing is no longer possible: stop offering it.
+      useNoticeStore.getState().clearLocal(noticeId);
       try {
         const result = await commands.deleteHistoryEntry(id);
         if (result.status !== "ok") throw result.error;
@@ -334,18 +337,18 @@ export const HistorySettings: React.FC = () => {
       clearTimeout(timer);
       void run();
     });
-    const title = t("settings.history.deleted");
-    const detail = entry.post_processed_text ?? entry.transcription_text;
     notify({
+      id: noticeId,
       level: "info",
-      title,
-      detail,
+      title: t("settings.history.deleted"),
+      detail: entry.post_processed_text ?? entry.transcription_text,
       action: {
         label: t("common.undo"),
         onClick: () => {
+          if (!pendingDeletes.current.has(id)) return;
           clearTimeout(timer);
           pendingDeletes.current.delete(id);
-          useNoticeStore.getState().clearLocal(`${title}|${detail}`);
+          useNoticeStore.getState().clearLocal(noticeId);
           setEntries((prev) => [
             ...prev.slice(0, index),
             entry,
