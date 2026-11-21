@@ -86,8 +86,13 @@ pub fn parse_reply(reply: &str, sent: &[Candidate]) -> Option<Vec<(Candidate, Ac
 }
 
 /// No usable validator: active when the term looks like a name or is rare,
-/// and stays close to what was heard; otherwise pending a second sighting.
+/// and stays close to what was heard; a common word's affix is refused;
+/// otherwise pending a second sighting.
 pub fn fallback(c: &Candidate) -> Decision {
+    // Jargon or agreement? Only the validator can tell (slope → slop, prêt → prête).
+    if c.kind != WordKind::Term && crate::learning::is_affix(&c.heard, &c.term) {
+        return Decision::Rejected("affix");
+    }
     let rare = c.term.split(' ').any(|w| !crate::lexicon::is_common(w));
     let close = crate::learning::distance(&c.heard.to_lowercase(), &c.term.to_lowercase()) <= 0.6;
     if (c.kind == WordKind::Term || rare) && close {
@@ -295,6 +300,16 @@ mod tests {
         assert_eq!(
             fallback(&cand("quelle", "Kelmorine", WordKind::Term)),
             Decision::Pending
+        );
+        // One common form extending the other (slope → slop, prêt → prête):
+        // only the validator can tell jargon from agreement.
+        assert_eq!(
+            fallback(&cand("slope", "slop", WordKind::Misheard)),
+            Decision::Rejected("affix")
+        );
+        assert_eq!(
+            fallback(&cand("prêt", "prête", WordKind::Misheard)),
+            Decision::Rejected("affix")
         );
         let out = decide(vec![cand("Kalmorine", "Kelmorine", WordKind::Term)], None);
         assert_eq!(out[0].1, Decision::Active);

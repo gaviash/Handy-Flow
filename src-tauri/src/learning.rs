@@ -441,12 +441,14 @@ pub fn local_candidates(inserted: &str, fin: &str) -> Vec<Local> {
             || capital(&heard, heard_opens)
             || term.chars().any(|c| c.is_ascii_digit() || c == '_')
             || term.starts_with('.');
-        // Truncation, plural, conjugation: one form extends the other. A name
-        // may lengthen what was heard (Jordan → Jordane, E218), never shorten
-        // it (E227).
-        let truncated = hk.starts_with(&tk) || hk.ends_with(&tk);
-        let extended = tk.starts_with(&hk) || tk.ends_with(&hk);
-        let affix = truncated || (extended && !looks_like_term);
+        // A name may lengthen what was heard (Jordan → Jordane, E218), never
+        // shorten it (E227). A common word's plural is grammar; another affix
+        // (slope → slop, prêt → prête) is the validator's call.
+        let affix = if looks_like_term {
+            hk.starts_with(&tk) || hk.ends_with(&tk)
+        } else {
+            is_plural(&hk, &tk) || is_plural(&tk, &hk)
+        };
         let guard = if term.is_empty() || heard.is_empty() {
             Some("no_substitution")
         } else if is_possessive_or_contraction(&hk, &tk) {
@@ -512,6 +514,18 @@ pub fn candidates(inserted: &str, fin: &str) -> Vec<Candidate> {
 pub enum Local {
     Candidate(Candidate),
     Guarded(&'static str),
+}
+
+/// `long` is `short` with a plural ending.
+fn is_plural(short: &str, long: &str) -> bool {
+    long.strip_prefix(short)
+        .is_some_and(|d| matches!(d, "s" | "x" | "es"))
+}
+
+/// One form extends the other: a prefix or suffix of it.
+pub(crate) fn is_affix(heard: &str, term: &str) -> bool {
+    let (h, t) = (heard.to_lowercase(), term.to_lowercase());
+    h.starts_with(&t) || h.ends_with(&t) || t.starts_with(&h) || t.ends_with(&h)
 }
 
 /// "John" → "John's", "do not" → "don't": not a word to learn (Wispr §9.2).
@@ -2408,6 +2422,19 @@ footer",
         let news = apply_verdicts(&mut m, &[v(Some(0))], 1);
         assert!(m.rules[0].active);
         assert_eq!(news, vec![LearnedNews::Rule { rule: rule.into() }]);
+    }
+
+    #[test]
+    fn only_a_plural_or_a_shortened_name_is_guarded_as_an_affix() {
+        // A plural stays local (L05); a name is never shortened (E227).
+        assert!(super::candidates("Le projet avance bien.", "Le projets avance bien.").is_empty());
+        assert!(
+            super::candidates("Merci Jordane, à demain.", "Merci Jordan, à demain.").is_empty()
+        );
+        // Another shortened common word goes to the validator.
+        let c = super::candidates("C'est du slope pur.", "C'est du slop pur.");
+        assert_eq!(c.len(), 1);
+        assert_eq!((c[0].heard.as_str(), c[0].term.as_str()), ("slope", "slop"));
     }
 
     #[test]
