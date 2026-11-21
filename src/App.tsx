@@ -54,6 +54,14 @@ type OnboardingStep =
   | "replaceModel"
   | "done";
 
+/** Pages that draw their own title (and sub-page titles). */
+const PAGES_WITH_OWN_TITLE: SidebarSection[] = [
+  "general",
+  "appearance",
+  "about",
+  "models",
+];
+
 const renderSettingsContent = (
   section: SidebarSection,
   onPreviewOnboarding: (step: OnboardingPreviewStep) => void,
@@ -114,6 +122,10 @@ function App() {
   const [focusPill, setFocusPill] = useState(false);
   const showHistory = useCallback(() => setCurrentSection("history"), []);
   const { settings, updateSetting } = useSettings();
+  // A section that is not enabled (Debug outside debug mode) is not shown.
+  const section = SECTIONS_CONFIG[currentSection].enabled(settings)
+    ? currentSection
+    : "general";
   const direction = getLanguageDirection(i18n.language);
   const refreshAudioDevices = useSettingsStore(
     (state) => state.refreshAudioDevices,
@@ -404,7 +416,7 @@ function App() {
         {/* Main content area that takes remaining space */}
         <div className="flex-1 flex overflow-hidden">
           <Sidebar
-            activeSection={currentSection}
+            activeSection={section}
             onSectionChange={(section) => {
               setFocusPill(false);
               setCurrentSection(section);
@@ -414,20 +426,18 @@ function App() {
           <div className="flex-1 flex flex-col overflow-hidden">
             <div ref={settingsScrollRef} className="flex-1 overflow-y-auto">
               <div
-                key={currentSection}
+                key={section}
                 ref={pageRef}
                 className="flex flex-col items-center p-4 gap-4 animate-rise"
               >
-                {!["general", "appearance", "about", "models"].includes(
-                  currentSection,
-                ) && (
+                {!PAGES_WITH_OWN_TITLE.includes(section) && (
                   <h1 className="page-title max-w-3xl w-full mx-auto">
-                    {t(SECTIONS_CONFIG[currentSection].labelKey)}
+                    {t(SECTIONS_CONFIG[section].labelKey)}
                   </h1>
                 )}
                 <SecureInputWarning />
                 {renderSettingsContent(
-                  currentSection,
+                  section,
                   setOnboardingPreview,
                   runOnboarding,
                   runModelMigration,

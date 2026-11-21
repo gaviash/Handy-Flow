@@ -3,7 +3,7 @@ import { mockTauri } from "./fixtures/tauri-mock";
 
 const openLearning = async (page: import("@playwright/test").Page) => {
   await page.goto("/");
-  await page.getByRole("button", { name: "Post Process", exact: true }).click();
+  await page.getByRole("button", { name: "Enhancement", exact: true }).click();
 };
 
 test("undo removes only what was announced", async ({ page }) => {

@@ -49,12 +49,6 @@ export const SECTIONS_CONFIG = {
     component: GeneralSettings,
     enabled: () => true,
   },
-  history: {
-    labelKey: "sidebar.history",
-    icon: History,
-    component: HistorySettings,
-    enabled: () => true,
-  },
   models: {
     labelKey: "sidebar.models",
     icon: Cpu,
@@ -65,7 +59,14 @@ export const SECTIONS_CONFIG = {
     labelKey: "sidebar.postProcessing",
     icon: Sparkles,
     component: PostProcessingSettings,
-    enabled: (settings) => settings?.post_process_enabled ?? false,
+    // Always shown: the page itself offers to turn the rewrite back on.
+    enabled: () => true,
+  },
+  history: {
+    labelKey: "sidebar.history",
+    icon: History,
+    component: HistorySettings,
+    enabled: () => true,
   },
   appearance: {
     labelKey: "sidebar.appearance",

@@ -81,3 +81,16 @@ test("a deleted history entry is deleted once the undo time is over", async ({
   await page.clock.runFor(10_000);
   await expect.poll(deletes).toBe(1);
 });
+
+test("the Enhancement tab stays visible with the rewrite off", async ({
+  page,
+}) => {
+  await mockTauri(page, { settings: { post_process_enabled: false } });
+  await page.goto("/");
+  await expect(
+    page.getByRole("button", { name: "Enhancement", exact: true }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("button", { name: "Debug", exact: true }),
+  ).toHaveCount(0);
+});

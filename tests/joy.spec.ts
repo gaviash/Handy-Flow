@@ -33,7 +33,7 @@ test("a fresh learned word glows, an old one fades", async ({ page }) => {
     },
   });
   await page.goto("/");
-  await page.getByRole("button", { name: "Post Process", exact: true }).click();
+  await page.getByRole("button", { name: "Enhancement", exact: true }).click();
   await expect(page.getByText("Kubernetes", { exact: true })).toHaveClass(
     /animate-learned/,
   );
@@ -61,7 +61,7 @@ test("a snippet previews what saying it types", async ({ page }) => {
     settings: { snippets: [{ trigger: "signature", text: "Marie Dupont" }] },
   });
   await page.goto("/");
-  await page.getByRole("button", { name: "Post Process", exact: true }).click();
+  await page.getByRole("button", { name: "Enhancement", exact: true }).click();
   await page.getByRole("button", { name: "Preview", exact: true }).click();
   await expect(page.getByText("Say “signature” on its own")).toBeVisible();
   await expect(page.locator(".snippet-reveal")).toHaveText("Marie Dupont");
@@ -70,7 +70,7 @@ test("a snippet previews what saying it types", async ({ page }) => {
 test("the style list shows an example of the tone", async ({ page }) => {
   await mockTauri(page);
   await page.goto("/");
-  await page.getByRole("button", { name: "Post Process", exact: true }).click();
+  await page.getByRole("button", { name: "Enhancement", exact: true }).click();
   await expect(page.getByText("Example for Email · Formal")).toBeVisible();
   await expect(
     page.getByText(/I confirm our meeting tomorrow at 10 a\.m\./),
