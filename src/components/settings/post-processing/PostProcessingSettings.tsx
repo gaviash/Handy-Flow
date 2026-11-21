@@ -6,7 +6,6 @@ import {
   Keyboard,
   MessageCircle,
   Server,
-  Wand2,
 } from "lucide-react";
 import type { FeatureStatus } from "@/bindings";
 import {
@@ -32,15 +31,8 @@ import { ShortcutInput } from "../ShortcutInput";
 import { PostProcessTimeout } from "./PostProcessTimeout";
 import { PromptEditor } from "./PromptEditor";
 import { StyleSettings, CATEGORIES } from "./StyleSettings";
-import {
-  TRANSFORM_IDS,
-  TransformCards,
-  TransformEditor,
-  useTransformTitle,
-  type TransformId,
-} from "./TransformCards";
 
-type Topic = "tone" | "prompt" | TransformId;
+type Topic = "tone" | "prompt";
 
 const e = (key: string) => `settings.enhancement.${key}`;
 const pp = (key: string) => `settings.postProcessing.${key}`;
@@ -81,11 +73,6 @@ export const PostProcessingSettings: React.FC<{
         {body}
       </SubPage>
     );
-  const transformTitle = useTransformTitle(
-    (TRANSFORM_IDS as readonly string[]).includes(sub.open ?? "")
-      ? (sub.open as TransformId)
-      : "polish",
-  );
   const open =
     page(
       "tone",
@@ -100,12 +87,7 @@ export const PostProcessingSettings: React.FC<{
       <SettingsGroup>
         <PromptEditor />
       </SettingsGroup>,
-    ) ||
-    (sub.open && (TRANSFORM_IDS as readonly string[]).includes(sub.open) && (
-      <SubPage parent={title} title={transformTitle} onBack={sub.back}>
-        <TransformEditor id={sub.open as TransformId} />
-      </SubPage>
-    ));
+    );
   if (open) return open;
 
   const ready = enabled && !!provider;
@@ -174,21 +156,6 @@ export const PostProcessingSettings: React.FC<{
           onOpen={() => sub.show("tone")}
         />
       </CardGrid>
-      <section className="space-y-2" aria-labelledby="transforms-title">
-        <div className="px-4">
-          <h2
-            id="transforms-title"
-            className="flex items-center gap-1.5 text-xs font-medium uppercase tracking-[.06em] text-ink-3"
-          >
-            <Wand2 aria-hidden="true" size={14} />
-            {t(pp("transforms.title"))}
-          </h2>
-          <p className="mt-1 text-xs text-ink-3">
-            {t(pp("transforms.savedDescription"))}
-          </p>
-        </div>
-        <TransformCards open={sub.show} cardRef={sub.cardRef} />
-      </section>
       <ExpertSection summary={t(e("expert"))}>
         <SettingsGroup>
           <PostProcessTimeout />

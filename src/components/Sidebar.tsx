@@ -11,6 +11,7 @@ import {
   Sparkles,
   BookOpen,
   Eye,
+  Wand2,
 } from "lucide-react";
 import HandyFlowWordmark from "./icons/HandyFlowWordmark";
 import { useSettings } from "../hooks/useSettings";
@@ -24,6 +25,7 @@ import {
   AppearanceSettings,
   VocabularySettings,
   ContextPage,
+  TransformsPage,
 } from "./settings";
 
 export type SidebarSection = keyof typeof SECTIONS_CONFIG;
@@ -64,6 +66,12 @@ export const SECTIONS_CONFIG = {
     icon: Sparkles,
     component: PostProcessingSettings,
     // Always shown: the page itself offers to turn the rewrite back on.
+    enabled: () => true,
+  },
+  transforms: {
+    labelKey: "sidebar.transforms",
+    icon: Wand2,
+    component: TransformsPage,
     enabled: () => true,
   },
   vocabulary: {

@@ -420,7 +420,7 @@ test("the name and history-limit fields carry their own names", async ({
   ).toBeVisible();
 });
 
-test("transformations are cards with their keys, and open their editor", async ({
+test("Transformations is its own tab of cards that open their editor", async ({
   page,
 }) => {
   await mockTauri(page, {
@@ -432,7 +432,10 @@ test("transformations are cards with their keys, and open their editor", async (
       ],
     },
   });
-  await openEnhancement(page);
+  await page.goto("/");
+  await page
+    .getByRole("button", { name: "Transformations", exact: true })
+    .click();
   await expect(page.getByRole("button", { name: /Polish/ })).toBeVisible();
   await expect(page.getByRole("button", { name: /Plus court/ })).toBeVisible();
   await page.getByRole("button", { name: /Create your own/ }).click();

@@ -23,7 +23,8 @@
     "appearance": "Apparence",
     "label": "Sections",
     "vocabulary": "Vocabulaire",
-    "context": "Contexte"
+    "context": "Contexte",
+    "transforms": "Transformations"
   },
   "onboarding": {
     "customModelDescription": "Non officiellement pris en charge",
@@ -1416,6 +1417,11 @@
       "createOwnHelp": "Votre propre consigne sur le texte sélectionné",
       "noShortcut": "Pas de raccourci",
       "cleanup": "Nettoyage"
+    },
+    "transformsPage": {
+      "subtitle": "Sélectionnez un texte, puis appuyez sur un raccourci : il est réécrit sur place.",
+      "ready": "Utilise {{provider}} · {{model}}, le modèle de l'amélioration",
+      "setup": "Choisissez un modèle d'amélioration dans Modèles."
     }
   },
   "footer": {

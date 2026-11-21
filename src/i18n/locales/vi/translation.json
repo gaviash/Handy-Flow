@@ -23,7 +23,8 @@
     "appearance": "Appearance",
     "label": "Sections",
     "vocabulary": "Vocabulary",
-    "context": "Context"
+    "context": "Context",
+    "transforms": "Transformations"
   },
   "onboarding": {
     "customModelDescription": "Không được hỗ trợ chính thức",
@@ -1416,6 +1417,11 @@
       "createOwnHelp": "Your own instruction on selected text",
       "noShortcut": "No shortcut",
       "cleanup": "Cleanup"
+    },
+    "transformsPage": {
+      "subtitle": "Select some text, then press a shortcut: the text is rewritten in place.",
+      "ready": "Uses {{provider}} · {{model}}, the Enhancement model",
+      "setup": "Choose an Enhancement model in Models."
     }
   },
   "footer": {

@@ -7,16 +7,19 @@ Plan: `docs/superpowers/plans/2026-11-17-ui-refonte.md`.
 
 Each tab opens on a **status header** (one sentence: what will happen), then **cards** that summarise a topic and open a **sub-page** (back button, focus returned to the card). Rarely used settings are **folded** under "Réglages experts".
 
+Rule since the 2026-11-21 pass (user feedback): **a card opens a sub-page only if it holds 3+ settings or a list/editor**. Otherwise the settings sit as rows directly on the page, under a group title with an icon.
+
 | Tab | Content |
 |---|---|
-| Général | status (shortcuts, mic) · Shortcuts · Languages (+ interface language) · Microphone · Sounds · Startup |
-| Modèles | status (transcription + AI features) · Providers · Usage by feature · Local model · Expert engine |
-| Amélioration | on/off switch in the header · status · Provider (summary → Models) · Tone (pills) · Transformations · Cleanup · Shortcut · Expert (delay, prompt) |
-| Vocabulaire (new) | status · learning + name · Personal words · Learned words (+ counters) · Style rules · Learning validator · Snippets · Recognition aid · Expert |
-| Contexte (new) | status (is anything leaving the PC) · read / send / screen · Exclusions · Last dictations · Expert (sources, limits, VS Code on Windows only) |
-| Historique | Retention card at the top (count shown only for "keep the last N") |
+| Général | status · Shortcuts, Languages, Microphone (direct rows) · Sounds card · Startup (rows) · Expert |
+| Modèles | status · Usage by feature (direct) · local model (row + "Change") · Providers card · Expert engine |
+| Amélioration | header switch · status · Provider (2 lines + "Change in Models") · Shortcut · Cleanup · Styles card · Expert (delay, prompt) |
+| Transformations (new) | status (the Amélioration model) · one card per transformation (keys, name, description) + "Create your own" → editing sub-page |
+| Vocabulaire | status · learning + name · Learning validator (toggle + status) · Personal words, Learned words, Style rules, Snippets, Recognition aid cards · Expert |
+| Contexte | status · read / send / screen · Exclusions, Last dictations cards · Expert |
+| Historique | Retention (direct row, count only for "keep the last N") |
 | Avancé | Text insertion card · Expert audio capture |
-| À propos | Updates · Diagnostics cards |
+| À propos | Updates and Diagnostics (direct rows) |
 | Débogage | debug tools + Experimental + keyboard backend |
 
 P1 fixes from the audit:

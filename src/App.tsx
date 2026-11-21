@@ -31,6 +31,7 @@ import {
   DebugSettings,
   ModelsSettings,
   VocabularySettings,
+  TransformsPage,
 } from "./components/settings";
 import { ErrorBoundary } from "./components/ErrorBoundary";
 import { FileDropOverlay } from "./components/FileDropOverlay";
@@ -60,6 +61,7 @@ const PAGES_WITH_OWN_TITLE: SidebarSection[] = [
   "about",
   "models",
   "postprocessing",
+  "transforms",
   "vocabulary",
   "context",
   "advanced",
@@ -86,6 +88,8 @@ const renderSettingsContent = (
       <PostProcessingSettings onShowModels={() => onSectionChange("models")} />
     );
   }
+  if (section === "transforms")
+    return <TransformsPage onShowModels={() => onSectionChange("models")} />;
   if (section === "vocabulary") {
     return (
       <VocabularySettings onShowModels={() => onSectionChange("models")} />
