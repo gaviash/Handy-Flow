@@ -1222,7 +1222,8 @@
       "title": "O programie",
       "version": {
         "title": "Wersja",
-        "description": "Aktualna wersja Handy Flow"
+        "description": "Aktualna wersja Handy Flow",
+        "unavailable": "Version unavailable"
       },
       "whatsNewUpdates": {
         "label": "Pokaż nowości",
@@ -1244,7 +1245,13 @@
           "description": "Wydajne wykonywanie modelu rozpoznawania mowy Whisper od OpenAI",
           "details": "Handy Flow używa ggml do szybkiego, lokalnego przetwarzania mowy na tekst. Dzięki niesamowitej pracy Georgi Gerganova i współtwórców."
         }
-      }
+      },
+      "updates": "Updates",
+      "updatesOn": "Checked automatically",
+      "updatesOff": "Not checked",
+      "diagnostic": "Diagnostics",
+      "diagnosticSummary": "App folder, logs",
+      "logsExpert": "logs"
     },
     "appearance": {
       "title": "Appearance",

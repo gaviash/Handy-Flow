@@ -1222,7 +1222,8 @@
       "title": "Om",
       "version": {
         "title": "Version",
-        "description": "Nuvarande version av Handy Flow"
+        "description": "Nuvarande version av Handy Flow",
+        "unavailable": "Version unavailable"
       },
       "whatsNewUpdates": {
         "label": "Visa nyheter",
@@ -1244,7 +1245,13 @@
           "description": "Högpresterande inferens av OpenAI:s Whisper-modell för automatisk taligenkänning",
           "details": "Handy Flow använder ggml för snabb, lokal tal-till-text-behandling. Tack till det fantastiska arbete som utförts av Georgi Gerganov med medarbetare."
         }
-      }
+      },
+      "updates": "Updates",
+      "updatesOn": "Checked automatically",
+      "updatesOff": "Not checked",
+      "diagnostic": "Diagnostics",
+      "diagnosticSummary": "App folder, logs",
+      "logsExpert": "logs"
     },
     "appearance": {
       "title": "Appearance",

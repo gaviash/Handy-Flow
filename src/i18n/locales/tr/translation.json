@@ -1222,7 +1222,8 @@
       "title": "Hakkında",
       "version": {
         "title": "Sürüm",
-        "description": "Handy Flow'nin mevcut sürümü"
+        "description": "Handy Flow'nin mevcut sürümü",
+        "unavailable": "Version unavailable"
       },
       "whatsNewUpdates": {
         "label": "Yenilikleri Göster",
@@ -1244,7 +1245,13 @@
           "description": "Cihaz üzerinde makine öğrenmesi çıkarımı için yüksek performanslı tensör kütüphanesi",
           "details": "Handy Flow'nin yerel konuşmadan metne dönüştürme özelliği transcribe.cpp ve ggml üzerine kuruludur. Georgi Gerganov'a ve katkıda bulunanlara harika çalışmaları için teşekkür ederiz."
         }
-      }
+      },
+      "updates": "Updates",
+      "updatesOn": "Checked automatically",
+      "updatesOff": "Not checked",
+      "diagnostic": "Diagnostics",
+      "diagnosticSummary": "App folder, logs",
+      "logsExpert": "logs"
     },
     "appearance": {
       "title": "Appearance",

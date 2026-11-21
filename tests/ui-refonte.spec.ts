@@ -369,3 +369,15 @@ test("History opens on its retention, and the count only shows for 'keep the las
     "get_history_entries",
   );
 });
+
+test("About groups updates and diagnostics in cards", async ({ page }) => {
+  await mockTauri(page);
+  await page.goto("/");
+  await page.getByRole("button", { name: "About", exact: true }).click();
+  await page.getByRole("button", { name: /^Updates/ }).click();
+  await expect(
+    page.getByRole("heading", { level: 1, name: "Updates" }),
+  ).toBeVisible();
+  await page.getByRole("button", { name: "About" }).last().click();
+  await expect(page.getByRole("button", { name: /^Updates/ })).toBeFocused();
+});

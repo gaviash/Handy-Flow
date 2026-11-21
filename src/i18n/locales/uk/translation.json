@@ -1222,7 +1222,8 @@
       "title": "Інфо",
       "version": {
         "title": "Версія",
-        "description": "Поточна версія Handy Flow"
+        "description": "Поточна версія Handy Flow",
+        "unavailable": "Version unavailable"
       },
       "whatsNewUpdates": {
         "label": "Показувати новини",
@@ -1244,7 +1245,13 @@
           "description": "Високопродуктивний інференс моделі автоматичного розпізнавання мовлення Whisper від OpenAI",
           "details": "Handy Flow використовує ggml для швидкої локальної обробки мовлення в текст. Дякуємо за чудову роботу Георгію Герганову та контриб'юторам."
         }
-      }
+      },
+      "updates": "Updates",
+      "updatesOn": "Checked automatically",
+      "updatesOff": "Not checked",
+      "diagnostic": "Diagnostics",
+      "diagnosticSummary": "App folder, logs",
+      "logsExpert": "logs"
     },
     "appearance": {
       "title": "Appearance",

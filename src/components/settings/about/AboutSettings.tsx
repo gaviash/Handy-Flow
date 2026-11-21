@@ -2,7 +2,17 @@ import React, { useState, useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import { getVersion } from "@tauri-apps/api/app";
 import { openUrl } from "@tauri-apps/plugin-opener";
-import { SettingsGroup } from "../../ui/SettingsGroup";
+import { RefreshCw, Stethoscope } from "lucide-react";
+import {
+  CardGrid,
+  ExpertSection,
+  SettingCard,
+  SettingsGroup,
+  SubPage,
+  useSubPage,
+} from "@/components/ui";
+import { useSettings } from "@/hooks/useSettings";
+import { UpdateChecksToggle } from "../UpdateChecksToggle";
 import { SettingContainer } from "../../ui/SettingContainer";
 import { Button } from "../../ui/Button";
 import { AppDataDirectory } from "../AppDataDirectory";
@@ -14,6 +24,8 @@ import roseIcon from "../../../../src-tauri/resources/icons/palette-rose.png";
 export const AboutSettings: React.FC = () => {
   const { t } = useTranslation();
   const [version, setVersion] = useState("");
+  const { getSetting } = useSettings();
+  const sub = useSubPage<"updates" | "diagnostic">();
 
   useEffect(() => {
     const fetchVersion = async () => {
@@ -22,12 +34,44 @@ export const AboutSettings: React.FC = () => {
         setVersion(appVersion);
       } catch (error) {
         console.error("Failed to get app version:", error);
-        setVersion("0.1.2");
+        setVersion("");
       }
     };
 
     fetchVersion();
   }, []);
+
+  const title = t("sidebar.about");
+  if (sub.open === "updates")
+    return (
+      <SubPage
+        parent={title}
+        title={t("settings.about.updates")}
+        onBack={sub.back}
+      >
+        <SettingsGroup>
+          <ShowWhatsNewOnUpdate descriptionMode="inline" grouped />
+          <UpdateChecksToggle descriptionMode="inline" grouped />
+        </SettingsGroup>
+      </SubPage>
+    );
+  if (sub.open === "diagnostic")
+    return (
+      <SubPage
+        parent={title}
+        title={t("settings.about.diagnostic")}
+        onBack={sub.back}
+      >
+        <SettingsGroup>
+          <AppDataDirectory descriptionMode="inline" grouped />
+        </SettingsGroup>
+        <ExpertSection summary={t("settings.about.logsExpert")}>
+          <SettingsGroup>
+            <LogDirectory grouped />
+          </SettingsGroup>
+        </ExpertSection>
+      </SubPage>
+    );
 
   return (
     <div className="max-w-3xl w-full mx-auto space-y-6">
@@ -44,11 +88,10 @@ export const AboutSettings: React.FC = () => {
           description={t("settings.about.version.description")}
           grouped={true}
         >
-          {/* eslint-disable-next-line i18next/no-literal-string */}
-          <span className="text-sm font-mono">v{version}</span>
+          <span className="text-sm font-mono">
+            {version ? `v${version}` : t("settings.about.version.unavailable")}
+          </span>
         </SettingContainer>
-
-        <ShowWhatsNewOnUpdate descriptionMode="tooltip" grouped={true} />
 
         <SettingContainer
           title={t("settings.about.sourceCode.title")}
@@ -63,10 +106,27 @@ export const AboutSettings: React.FC = () => {
             {t("settings.about.sourceCode.button")}
           </Button>
         </SettingContainer>
-
-        <AppDataDirectory descriptionMode="tooltip" grouped={true} />
-        <LogDirectory grouped={true} />
       </SettingsGroup>
+      <CardGrid>
+        <SettingCard
+          ref={sub.cardRef("updates")}
+          icon={RefreshCw}
+          title={t("settings.about.updates")}
+          summary={t(
+            (getSetting("update_checks_enabled") ?? true)
+              ? "settings.about.updatesOn"
+              : "settings.about.updatesOff",
+          )}
+          onOpen={() => sub.show("updates")}
+        />
+        <SettingCard
+          ref={sub.cardRef("diagnostic")}
+          icon={Stethoscope}
+          title={t("settings.about.diagnostic")}
+          summary={t("settings.about.diagnosticSummary")}
+          onOpen={() => sub.show("diagnostic")}
+        />
+      </CardGrid>
 
       <SettingsGroup title={t("settings.about.acknowledgments.title")}>
         <SettingContainer

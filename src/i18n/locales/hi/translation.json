@@ -1222,7 +1222,8 @@
       "title": "के बारे में",
       "version": {
         "title": "वर्शन",
-        "description": "Handy Flow का मौजूदा वर्शन"
+        "description": "Handy Flow का मौजूदा वर्शन",
+        "unavailable": "Version unavailable"
       },
       "whatsNewUpdates": {
         "label": "'नया क्या है' दिखाएं",
@@ -1244,7 +1245,13 @@
           "description": "डिवाइस पर ही मशीन लर्निंग इन्फ़रेंस के लिए हाई-परफ़ॉर्मेंस टेंसर लाइब्रेरी",
           "details": "Handy Flow का लोकल स्पीच-टू-टेक्स्ट transcribe.cpp और ggml पर आधारित है. Georgi Gerganov और योगदान देने वालों के शानदार काम के लिए धन्यवाद."
         }
-      }
+      },
+      "updates": "Updates",
+      "updatesOn": "Checked automatically",
+      "updatesOff": "Not checked",
+      "diagnostic": "Diagnostics",
+      "diagnosticSummary": "App folder, logs",
+      "logsExpert": "logs"
     },
     "appearance": {
       "title": "Appearance",

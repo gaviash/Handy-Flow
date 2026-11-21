@@ -1222,7 +1222,8 @@
       "title": "Om",
       "version": {
         "title": "Version",
-        "description": "Nuværende version af Handy Flow"
+        "description": "Nuværende version af Handy Flow",
+        "unavailable": "Version unavailable"
       },
       "whatsNewUpdates": {
         "label": "Vis nyheder",
@@ -1244,7 +1245,13 @@
           "description": "Højtydende tensor-bibliotek til maskinlæringsinferens på enheden",
           "details": "Handys lokale tale-til-tekst funktionalitet er bygget på transcribe.cpp og ggml. Tak for det fantastiske arbejde af Georgi Gerganov og bidragyderne."
         }
-      }
+      },
+      "updates": "Updates",
+      "updatesOn": "Checked automatically",
+      "updatesOff": "Not checked",
+      "diagnostic": "Diagnostics",
+      "diagnosticSummary": "App folder, logs",
+      "logsExpert": "logs"
     },
     "appearance": {
       "title": "Appearance",

@@ -1222,7 +1222,8 @@
       "title": "O aplikaci",
       "version": {
         "title": "Verze",
-        "description": "Aktuální verze Handy Flow"
+        "description": "Aktuální verze Handy Flow",
+        "unavailable": "Version unavailable"
       },
       "whatsNewUpdates": {
         "label": "Zobrazovat novinky",
@@ -1244,7 +1245,13 @@
           "description": "Vysoce výkonné inferenční zpracování modelu automatického rozpoznávání řeči Whisper od OpenAI",
           "details": "Handy Flow používá ggml pro rychlé lokální zpracování řeči na text. Díky skvělé práci Georgiho Gerganova a přispěvatelů."
         }
-      }
+      },
+      "updates": "Updates",
+      "updatesOn": "Checked automatically",
+      "updatesOff": "Not checked",
+      "diagnostic": "Diagnostics",
+      "diagnosticSummary": "App folder, logs",
+      "logsExpert": "logs"
     },
     "appearance": {
       "title": "Appearance",

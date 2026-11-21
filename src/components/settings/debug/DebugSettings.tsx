@@ -3,7 +3,6 @@ import { useTranslation } from "react-i18next";
 import { LogLevelSelector } from "./LogLevelSelector";
 import { LiveLogViewer } from "./LiveLogViewer";
 import { SettingsGroup } from "../../ui/SettingsGroup";
-import { UpdateChecksToggle } from "../UpdateChecksToggle";
 import { WhatsNewPreview } from "./WhatsNewPreview";
 import { KeyboardDiagnostic } from "./KeyboardDiagnostic";
 import { KeyboardImplementationSelector } from "./KeyboardImplementationSelector";
@@ -46,7 +45,6 @@ export const DebugSettings: React.FC<DebugSettingsProps> = ({
           descriptionMode="tooltip"
           grouped={true}
         />
-        <UpdateChecksToggle descriptionMode="tooltip" grouped={true} />
         <ExperimentalToggle descriptionMode="tooltip" grouped={true} />
         <KeyboardImplementationSelector
           descriptionMode="tooltip"

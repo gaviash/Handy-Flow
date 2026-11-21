@@ -1222,7 +1222,8 @@
       "title": "حول",
       "version": {
         "title": "الإصدار",
-        "description": "الإصدار الحالي من Handy Flow"
+        "description": "الإصدار الحالي من Handy Flow",
+        "unavailable": "Version unavailable"
       },
       "whatsNewUpdates": {
         "label": "إظهار الجديد",
@@ -1244,7 +1245,13 @@
           "description": "استنتاج عالي الأداء لنموذج التعرف التلقائي على الكلام Whisper من OpenAI",
           "details": ".يستخدم Handy Flow برنامج ggml لمعالجة سريعة ومحلية لتحويل الكلام إلى نص. شكراً للعمل الرائع الذي قام به Georgi Gerganov والمساهمون"
         }
-      }
+      },
+      "updates": "Updates",
+      "updatesOn": "Checked automatically",
+      "updatesOff": "Not checked",
+      "diagnostic": "Diagnostics",
+      "diagnosticSummary": "App folder, logs",
+      "logsExpert": "logs"
     },
     "appearance": {
       "title": "Appearance",

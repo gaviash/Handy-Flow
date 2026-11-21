@@ -1222,7 +1222,8 @@
       "title": "关于",
       "version": {
         "title": "版本",
-        "description": "Handy Flow 的当前版本"
+        "description": "Handy Flow 的当前版本",
+        "unavailable": "Version unavailable"
       },
       "whatsNewUpdates": {
         "label": "显示新功能",
@@ -1244,7 +1245,13 @@
           "description": "OpenAI Whisper 自动语音识别模型的高性能推理",
           "details": "Handy Flow 使用 ggml 进行快速的本地语音转文字处理。感谢 Georgi Gerganov 和贡献者们的出色工作。"
         }
-      }
+      },
+      "updates": "Updates",
+      "updatesOn": "Checked automatically",
+      "updatesOff": "Not checked",
+      "diagnostic": "Diagnostics",
+      "diagnosticSummary": "App folder, logs",
+      "logsExpert": "logs"
     },
     "appearance": {
       "title": "Appearance",

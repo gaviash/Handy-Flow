@@ -1222,7 +1222,8 @@
       "title": "О программе",
       "version": {
         "title": "Версия",
-        "description": "Текущая версия Handy Flow"
+        "description": "Текущая версия Handy Flow",
+        "unavailable": "Version unavailable"
       },
       "whatsNewUpdates": {
         "label": "Показывать новинки",
@@ -1244,7 +1245,13 @@
           "description": "Высокопроизводительная модель автоматического распознавания речи OpenAI Whisper",
           "details": "Handy Flow использует ggml для быстрого локального преобразования речи в текст. Спасибо великолепной работе Георгия Герганова и участников."
         }
-      }
+      },
+      "updates": "Updates",
+      "updatesOn": "Checked automatically",
+      "updatesOff": "Not checked",
+      "diagnostic": "Diagnostics",
+      "diagnosticSummary": "App folder, logs",
+      "logsExpert": "logs"
     },
     "appearance": {
       "title": "Appearance",

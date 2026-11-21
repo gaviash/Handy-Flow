@@ -1222,7 +1222,8 @@
       "title": "About",
       "version": {
         "title": "Version",
-        "description": "Current version of Handy Flow"
+        "description": "Current version of Handy Flow",
+        "unavailable": "Version unavailable"
       },
       "whatsNewUpdates": {
         "label": "Show What's New",
@@ -1244,7 +1245,13 @@
           "description": "High-performance tensor library for on-device machine learning inference",
           "details": "Handy Flow's local speech-to-text is built on transcribe.cpp and ggml. Thanks to the amazing work by Georgi Gerganov and contributors."
         }
-      }
+      },
+      "updates": "Updates",
+      "updatesOn": "Checked automatically",
+      "updatesOff": "Not checked",
+      "diagnostic": "Diagnostics",
+      "diagnosticSummary": "App folder, logs",
+      "logsExpert": "logs"
     },
     "appearance": {
       "title": "Appearance",

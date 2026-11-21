@@ -1222,7 +1222,8 @@
       "title": "Acerca de",
       "version": {
         "title": "Versión",
-        "description": "Versión actual de Handy Flow"
+        "description": "Versión actual de Handy Flow",
+        "unavailable": "Version unavailable"
       },
       "whatsNewUpdates": {
         "label": "Mostrar novedades",
@@ -1244,7 +1245,13 @@
           "description": "Biblioteca de tensores de alto rendimiento para inferencia de aprendizaje automático en el dispositivo",
           "details": "El habla a texto local de Handy Flow está construido sobre transcribe.cpp y ggml. Gracias al increíble trabajo de Georgi Gerganov y colaboradores."
         }
-      }
+      },
+      "updates": "Updates",
+      "updatesOn": "Checked automatically",
+      "updatesOff": "Not checked",
+      "diagnostic": "Diagnostics",
+      "diagnosticSummary": "App folder, logs",
+      "logsExpert": "logs"
     },
     "appearance": {
       "title": "Appearance",

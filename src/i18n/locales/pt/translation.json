@@ -1222,7 +1222,8 @@
       "title": "Sobre",
       "version": {
         "title": "Versão",
-        "description": "Versão atual do Handy Flow"
+        "description": "Versão atual do Handy Flow",
+        "unavailable": "Version unavailable"
       },
       "whatsNewUpdates": {
         "label": "Mostrar novidades",
@@ -1244,7 +1245,13 @@
           "description": "Inferência de alto desempenho do modelo de reconhecimento automático de fala Whisper da OpenAI",
           "details": "O Handy Flow usa ggml para processamento rápido e local de fala para texto. Agradecemos ao incrível trabalho de Georgi Gerganov e colaboradores."
         }
-      }
+      },
+      "updates": "Updates",
+      "updatesOn": "Checked automatically",
+      "updatesOff": "Not checked",
+      "diagnostic": "Diagnostics",
+      "diagnosticSummary": "App folder, logs",
+      "logsExpert": "logs"
     },
     "appearance": {
       "title": "Appearance",

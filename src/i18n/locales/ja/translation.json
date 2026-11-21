@@ -1222,7 +1222,8 @@
       "title": "概要",
       "version": {
         "title": "バージョン",
-        "description": "Handy Flow の現在のバージョン"
+        "description": "Handy Flow の現在のバージョン",
+        "unavailable": "Version unavailable"
       },
       "whatsNewUpdates": {
         "label": "新機能を表示",
@@ -1244,7 +1245,13 @@
           "description": "オンデバイス機械学習推論のための高性能テンソルライブラリ",
           "details": "Handy Flow のローカルの音声からテキストへの文字起こしは transcribe.cpp と ggml を基盤としています。Georgi Gerganov 氏と貢献者の皆様の素晴らしい仕事に感謝します。"
         }
-      }
+      },
+      "updates": "Updates",
+      "updatesOn": "Checked automatically",
+      "updatesOff": "Not checked",
+      "diagnostic": "Diagnostics",
+      "diagnosticSummary": "App folder, logs",
+      "logsExpert": "logs"
     },
     "appearance": {
       "title": "Appearance",

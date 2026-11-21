@@ -1222,7 +1222,8 @@
       "title": "Info",
       "version": {
         "title": "Version",
-        "description": "Aktuelle Version von Handy Flow"
+        "description": "Aktuelle Version von Handy Flow",
+        "unavailable": "Version unavailable"
       },
       "whatsNewUpdates": {
         "label": "Neuerungen anzeigen",
@@ -1244,7 +1245,13 @@
           "description": "Hochleistungs-Inferenz des Whisper-Spracherkennungsmodells von OpenAI",
           "details": "Handy Flow verwendet ggml für schnelle, lokale Sprach-zu-Text-Verarbeitung. Dank an Georgi Gerganov und die Mitwirkenden für ihre großartige Arbeit."
         }
-      }
+      },
+      "updates": "Updates",
+      "updatesOn": "Checked automatically",
+      "updatesOff": "Not checked",
+      "diagnostic": "Diagnostics",
+      "diagnosticSummary": "App folder, logs",
+      "logsExpert": "logs"
     },
     "appearance": {
       "title": "Appearance",

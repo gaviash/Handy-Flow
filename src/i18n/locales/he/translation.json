@@ -1222,7 +1222,8 @@
       "title": "אודות",
       "version": {
         "title": "גרסה",
-        "description": "הגרסה הנוכחית של Handy Flow"
+        "description": "הגרסה הנוכחית של Handy Flow",
+        "unavailable": "Version unavailable"
       },
       "whatsNewUpdates": {
         "label": "הצג מה חדש",
@@ -1244,7 +1245,13 @@
           "description": "הסקה מהירה לביצועים גבוהים עבור מודל זיהוי הדיבור Whisper של OpenAI",
           "details": "Handy Flow משתמש ב-ggml לתמלול מהיר ומקומי. תודה לעבודה המדהימה של Georgi Gerganov וכל התורמים."
         }
-      }
+      },
+      "updates": "Updates",
+      "updatesOn": "Checked automatically",
+      "updatesOff": "Not checked",
+      "diagnostic": "Diagnostics",
+      "diagnosticSummary": "App folder, logs",
+      "logsExpert": "logs"
     },
     "appearance": {
       "title": "Appearance",

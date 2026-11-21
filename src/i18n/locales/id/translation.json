@@ -1222,7 +1222,8 @@
       "title": "Tentang",
       "version": {
         "title": "Versi",
-        "description": "Versi Handy Flow saat ini"
+        "description": "Versi Handy Flow saat ini",
+        "unavailable": "Version unavailable"
       },
       "whatsNewUpdates": {
         "label": "Tampilkan Yang Baru",
@@ -1244,7 +1245,13 @@
           "description": "Pustaka tensor berkinerja tinggi untuk inferensi pembelajaran mesin di perangkat",
           "details": "Fitur ucapan-ke-teks lokal Handy Flow dibangun menggunakan transcribe.cpp dan ggml. Terima kasih kepada Georgi Gerganov dan para kontributor atas karya luar biasa mereka."
         }
-      }
+      },
+      "updates": "Updates",
+      "updatesOn": "Checked automatically",
+      "updatesOff": "Not checked",
+      "diagnostic": "Diagnostics",
+      "diagnosticSummary": "App folder, logs",
+      "logsExpert": "logs"
     },
     "appearance": {
       "title": "Appearance",
