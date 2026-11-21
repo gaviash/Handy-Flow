@@ -531,12 +531,6 @@ fn is_plural(short: &str, long: &str) -> bool {
         .is_some_and(|d| matches!(d, "s" | "x" | "es"))
 }
 
-/// One form extends the other: a prefix or suffix of it.
-pub(crate) fn is_affix(heard: &str, term: &str) -> bool {
-    let (h, t) = (heard.to_lowercase(), term.to_lowercase());
-    h.starts_with(&t) || h.ends_with(&t) || t.starts_with(&h) || t.ends_with(&h)
-}
-
 /// "John" → "John's", "do not" → "don't": not a word to learn (Wispr §9.2).
 fn is_possessive_or_contraction(heard: &str, term: &str) -> bool {
     let (h, t) = (heard.replace('’', "'"), term.replace('’', "'"));
