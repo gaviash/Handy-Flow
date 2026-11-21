@@ -321,3 +321,189 @@ fn the_learned_word_survives_a_year_and_its_uses_are_counted() {
     assert_eq!(m.words.len(), 1);
     assert_eq!(m.words[0].used, 1);
 }
+
+/// Spec §2: the 28 short corrections measured on the user's PC (16–19/11),
+/// people's names replaced by fictional ones. Each is replayed through the
+/// junction, the local guards and the validator (fixed replies).
+#[test]
+fn replay_of_the_measured_corrections() {
+    use crate::context::Field;
+    use crate::junction::{join, JoinContext};
+    // 14 corrections that only lowercased the first letter: the junction
+    // writes them that way, so nothing is left to correct.
+    let lowercase = [
+        ("Je pense que ", "Tu as raison.", "tu as raison."),
+        (
+            "et ",
+            "Donc on garde la version actuelle.",
+            "donc on garde la version actuelle.",
+        ),
+        ("Bon ", "Je regarde ça demain.", "je regarde ça demain."),
+        (
+            "ok ",
+            "Tu peux relancer le build ?",
+            "tu peux relancer le build ?",
+        ),
+        (
+            "Sinon ",
+            "On peut décaler la réunion.",
+            "on peut décaler la réunion.",
+        ),
+        (
+            "Du coup ",
+            "Il faut refaire les tests.",
+            "il faut refaire les tests.",
+        ),
+        (
+            "ah ",
+            "Donc c'est bon pour moi.",
+            "donc c'est bon pour moi.",
+        ),
+        (
+            "Alors ",
+            "Tu me diras ce que tu en penses.",
+            "tu me diras ce que tu en penses.",
+        ),
+        (
+            "je crois ",
+            "Que la page ne charge pas.",
+            "que la page ne charge pas.",
+        ),
+        ("Le test 3 ", "Passe maintenant.", "passe maintenant."),
+        (
+            "En fait ",
+            "Le serveur était éteint.",
+            "le serveur était éteint.",
+        ),
+        ("puis ", "Donc on relance tout.", "donc on relance tout."),
+        (
+            "vérifie aussi ",
+            "Les logs du worker.",
+            "les logs du worker.",
+        ),
+        ("Oui ", "Je m'en occupe.", "je m'en occupe."),
+    ];
+    let mut produced = 0;
+    for (before, pasted, kept) in lowercase.iter().filter(|c| !c.1.is_empty()) {
+        let field = Field {
+            before: before.to_string(),
+            caret_known: true,
+            ..Default::default()
+        };
+        let joined = join(
+            pasted,
+            &JoinContext {
+                field: Some(&field),
+                style: Tone::Default,
+                content: Some(Content::Document),
+                known_names: &[],
+            },
+        );
+        assert_eq!(joined.text.trim(), *kept, "{before}|{pasted}");
+        assert!(candidates(joined.text.trim(), kept).is_empty());
+        produced += 1;
+    }
+    assert_eq!(produced, 14);
+
+    let accept = |pairs: &[(&str, &str, &str)]| {
+        let items: Vec<String> = pairs
+            .iter()
+            .map(|(h, t, k)| format!(r#"{{"heard":"{h}","term":"{t}","kind":"{k}"}}"#))
+            .collect();
+        format!(r#"{{"accepted":[{}]}}"#, items.join(","))
+    };
+    // 5 names, 3 technical words, `.env` twice; the validator accepts them.
+    let words: [(&str, &str, (&str, &str, &str)); 10] = [
+        (
+            "Envoie le doc au sum ce soir.",
+            "Envoie le doc au SOM ce soir.",
+            ("sum", "SOM", "technical"),
+        ),
+        (
+            "Merci Orvik, à demain.",
+            "Merci Orwik, à demain.",
+            ("Orvik", "Orwik", "name"),
+        ),
+        (
+            "Dis à Telvane que c'est prêt.",
+            "Dis à Telvanne que c'est prêt.",
+            ("Telvane", "Telvanne", "name"),
+        ),
+        (
+            "Le client BrokerName valide.",
+            "Le client Broker Name valide.",
+            ("BrokerName", "Broker Name", "name"),
+        ),
+        (
+            "Rappelle Quillian ce soir.",
+            "Rappelle Quilliane ce soir.",
+            ("Quillian", "Quilliane", "name"),
+        ),
+        (
+            "Relis les spikes du projet.",
+            "Relis les specs du projet.",
+            ("spikes", "specs", "technical"),
+        ),
+        (
+            "C'est du slope pur.",
+            "C'est du slop pur.",
+            ("slope", "slop", "technical"),
+        ),
+        (
+            "Passe en mode l'ultra-face ce soir.",
+            "Passe en mode ultrafast ce soir.",
+            ("l'ultra-face", "ultrafast", "technical"),
+        ),
+        (
+            "Ouvre le point oeuvre du projet.",
+            "Ouvre le .env du projet.",
+            ("point oeuvre", ".env", "technical"),
+        ),
+        (
+            "Copie le point oeuvre ici.",
+            "Copie le .env ici.",
+            ("point oeuvre", ".env", "technical"),
+        ),
+    ];
+    let mut m = Memory::default();
+    for (pasted, kept, pair) in words {
+        correct_with(&mut m, pasted, kept, Some(&accept(&[pair])));
+    }
+    let active: Vec<&str> = m
+        .words
+        .iter()
+        .filter(|w| w.active)
+        .map(|w| w.term.as_str())
+        .collect();
+    for t in [
+        "SOM",
+        "Orwik",
+        "Telvanne",
+        "Broker Name",
+        "Quilliane",
+        "specs",
+        "slop",
+        "ultrafast",
+        ".env",
+    ] {
+        assert!(active.contains(&t), "{t} not active: {active:?}");
+    }
+    assert_eq!(active.len(), 9);
+
+    // 4 meaning changes or rewrites: nothing learned, nothing even asked.
+    let changes = [
+        ("On se voit mardi soir.", "On se voit jeudi soir."),
+        ("Je dis oui pour demain.", "Je dis non pour demain."),
+        (
+            "Envoie le rapport demain.",
+            "Envoie le rapport demain matin avant dix heures.",
+        ),
+        (
+            "Nous allons organiser une réunion la semaine prochaine pour parler du budget.",
+            "Finalement on annule tout et on reprend le dossier en janvier avec une autre equipe.",
+        ),
+    ];
+    for (pasted, kept) in changes {
+        assert!(candidates(pasted, kept).is_empty(), "{kept}");
+    }
+}
