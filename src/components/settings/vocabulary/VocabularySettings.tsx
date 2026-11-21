@@ -23,7 +23,6 @@ import { CustomWords } from "../CustomWords";
 import { WordCorrectionThreshold } from "../debug/WordCorrectionThreshold";
 import {
   FeatureSummary,
-  featureStatusText,
   useFeatureStatuses,
 } from "../models/FeatureModelsCard";
 import { AsrContextSettings } from "../post-processing/AsrContextSettings";
@@ -36,7 +35,7 @@ import {
 } from "../post-processing/LearningSettings";
 import { SnippetSettings } from "../post-processing/SnippetSettings";
 
-type Topic = "custom" | "learned" | "rules" | "validator" | "snippets" | "asr";
+type Topic = "custom" | "learned" | "rules" | "snippets" | "asr";
 
 const v = (key: string) => `settings.vocabulary.${key}`;
 const l = (key: string) => `settings.postProcessing.learning.${key}`;
@@ -90,22 +89,6 @@ export const VocabularySettings: React.FC<{ onShowModels?: () => void }> = ({
       </SettingsGroup>,
     ) ||
     page(
-      "validator",
-      t(l("judge.label")),
-      <SettingsGroup>
-        <ValidatorToggle />
-        <FeatureSummary
-          feature="LearningValidator"
-          onShowModels={onShowModels}
-        />
-        {noReasoning && (
-          <p className="px-4 py-3 text-sm text-warning">
-            {t(v("reasoningHint"))}
-          </p>
-        )}
-      </SettingsGroup>,
-    ) ||
-    page(
       "snippets",
       t("settings.postProcessing.snippets.label"),
       <SettingsGroup>
@@ -151,6 +134,18 @@ export const VocabularySettings: React.FC<{ onShowModels?: () => void }> = ({
         />
         <UserName />
       </SettingsGroup>
+      <SettingsGroup title={t(l("judge.label"))} icon={Gavel}>
+        <ValidatorToggle />
+        <FeatureSummary
+          feature="LearningValidator"
+          onShowModels={onShowModels}
+        />
+        {noReasoning && (
+          <p className="px-4 py-3 text-sm text-warning">
+            {t(v("reasoningHint"))}
+          </p>
+        )}
+      </SettingsGroup>
       <CardGrid>
         <SettingCard
           ref={sub.cardRef("custom")}
@@ -175,14 +170,6 @@ export const VocabularySettings: React.FC<{ onShowModels?: () => void }> = ({
           title={t(l("rules.label"))}
           summary={t(v("count"), { count: learning.rules.length })}
           onOpen={() => sub.show("rules")}
-        />
-        <SettingCard
-          ref={sub.cardRef("validator")}
-          icon={Gavel}
-          title={t(l("judge.label"))}
-          summary={validator ? featureStatusText(t, validator) : ""}
-          tone={noReasoning ? "warn" : undefined}
-          onOpen={() => sub.show("validator")}
         />
         <SettingCard
           ref={sub.cardRef("snippets")}

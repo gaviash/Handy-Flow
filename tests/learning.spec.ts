@@ -1,14 +1,18 @@
 import { test, expect } from "@playwright/test";
 import { mockTauri } from "./fixtures/tauri-mock";
 
-/** Opens Vocabulary, then the card whose title starts with `card`. */
+/** Opens Vocabulary, then the card whose title starts with `card`, if any
+ * (the validator sits on the page itself). */
 const openLearning = async (
   page: import("@playwright/test").Page,
-  card = "Learning validator",
+  card?: string,
 ) => {
   await page.goto("/");
   await page.getByRole("button", { name: "Vocabulary", exact: true }).click();
-  await page.getByRole("button", { name: new RegExp(`^${card}`, "i") }).click();
+  if (card)
+    await page
+      .getByRole("button", { name: new RegExp(`^${card}`, "i") })
+      .click();
 };
 
 test("undo removes only what was announced", async ({ page }) => {

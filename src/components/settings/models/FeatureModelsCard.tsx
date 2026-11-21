@@ -92,12 +92,25 @@ export function featureStatusText(
     : description;
 }
 
-function FeatureStatusLine({ status }: { status?: FeatureStatus }) {
+function FeatureStatusLine({
+  status,
+  named = false,
+}: {
+  status?: FeatureStatus;
+  /** Prefix the feature's name, where the line stands alone. */
+  named?: boolean;
+}) {
   const { t } = useTranslation();
   if (!status) return null;
+  const text = featureStatusText(t, status);
   return (
     <p role="status" className="text-sm text-ink-2">
-      {featureStatusText(t, status)}
+      {named
+        ? t("settings.models.featureProblem", {
+            name: t(`settings.features.name.${status.feature}`),
+            status: text,
+          })
+        : text}
     </p>
   );
 }
@@ -105,15 +118,17 @@ function FeatureStatusLine({ status }: { status?: FeatureStatus }) {
 export function FeatureSummary({
   feature,
   onShowModels,
+  named,
 }: {
   feature: Feature;
   onShowModels?: () => void;
+  named?: boolean;
 }) {
   const { t } = useTranslation();
   const status = useFeatureStatuses().find((item) => item.feature === feature);
   return (
     <div className="row-setting flex flex-wrap items-center justify-between gap-2 px-4 py-3">
-      <FeatureStatusLine status={status} />
+      <FeatureStatusLine status={status} named={named} />
       {onShowModels && (
         <Button
           type="button"

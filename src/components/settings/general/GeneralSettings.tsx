@@ -34,32 +34,21 @@ import { HoldThreshold } from "../debug/HoldThreshold";
 import { isChinese } from "@/lib/utils/languageSuggestions";
 import { TodayCounter } from "./TodayCounter";
 
-type Topic = "shortcuts" | "languages" | "microphone" | "sounds" | "startup";
+type Topic = "sounds";
 
 const g = (key: string) => `settings.general.${key}`;
 
 /** How you dictate: shortcuts, languages, microphone, sounds, startup. */
 export const GeneralSettings: React.FC = () => {
-  const { t, i18n } = useTranslation();
+  const { t } = useTranslation();
   const { audioFeedbackEnabled, getSetting } = useSettings();
   const osType = useOsType();
   const sub = useSubPage<Topic>();
   const isLinux = type() === "linux";
-  const spoken = getSetting("spoken_languages") ?? [];
   // Only for Chinese speakers, or anyone who already picked a script.
   const speaksChinese =
-    spoken.some(isChinese) ||
+    (getSetting("spoken_languages") ?? []).some(isChinese) ||
     (getSetting("chinese_script") ?? "as_transcribed") !== "as_transcribed";
-  const languageName = (code: string) => {
-    try {
-      return (
-        new Intl.DisplayNames([i18n.language], { type: "language" }).of(code) ??
-        code
-      );
-    } catch {
-      return code;
-    }
-  };
   const keys = (id: string) =>
     formatKeyCombination(
       getSetting("bindings")?.[id]?.current_binding ?? "",
@@ -77,87 +66,32 @@ export const GeneralSettings: React.FC = () => {
         {body}
       </SubPage>
     );
-  const open =
-    page(
-      "shortcuts",
-      t(g("shortcuts")),
-      <>
-        <SettingsGroup>
-          <ShortcutInput shortcutId="transcribe" grouped />
-          <ShortcutInput shortcutId="transcribe_with_post_process" grouped />
-          <ShortcutActivationSetting descriptionMode="inline" grouped />
-          {/* Cancel shortcut remains hidden on Linux because of dynamic shortcut instability. */}
-          {!isLinux && <ShortcutInput shortcutId="cancel" grouped />}
-        </SettingsGroup>
-        <ExpertSection summary={t(g("shortcutsExpert"))}>
-          <SettingsGroup>
-            <HoldThreshold descriptionMode="inline" grouped />
-          </SettingsGroup>
-        </ExpertSection>
-      </>,
-    ) ||
-    page(
-      "languages",
-      t("settings.languages.title"),
+  const open = page(
+    "sounds",
+    t(g("sounds")),
+    <>
       <SettingsGroup>
-        <PreferredLanguages descriptionMode="inline" grouped />
-        {speaksChinese && (
-          <ChineseScriptSetting descriptionMode="inline" grouped />
-        )}
-        <AppLanguageSelector descriptionMode="inline" grouped />
-      </SettingsGroup>,
-    ) ||
-    page(
-      "microphone",
-      t("settings.sound.microphone.title"),
-      <>
+        <AudioFeedback descriptionMode="inline" grouped />
+        <VolumeSlider disabled={!audioFeedbackEnabled} />
+        <SoundPicker
+          label={t("settings.debug.soundTheme.label")}
+          description={t("settings.debug.soundTheme.description")}
+        />
+        <MuteWhileRecording descriptionMode="inline" grouped />
+      </SettingsGroup>
+      <ExpertSection summary={t("settings.sound.outputDevice.title")}>
         <SettingsGroup>
-          <MicrophoneSelector descriptionMode="inline" grouped />
-        </SettingsGroup>
-        <ExpertSection summary={t(g("micExpert"))}>
-          <SettingsGroup>
-            <ChannelSelector descriptionMode="inline" grouped />
-            <ClamshellMicrophoneSelector descriptionMode="inline" grouped />
-          </SettingsGroup>
-        </ExpertSection>
-      </>,
-    ) ||
-    page(
-      "sounds",
-      t(g("sounds")),
-      <>
-        <SettingsGroup>
-          <AudioFeedback descriptionMode="inline" grouped />
-          <VolumeSlider disabled={!audioFeedbackEnabled} />
-          <SoundPicker
-            label={t("settings.debug.soundTheme.label")}
-            description={t("settings.debug.soundTheme.description")}
+          <OutputDeviceSelector
+            descriptionMode="inline"
+            grouped
+            disabled={!audioFeedbackEnabled}
           />
-          <MuteWhileRecording descriptionMode="inline" grouped />
         </SettingsGroup>
-        <ExpertSection summary={t("settings.sound.outputDevice.title")}>
-          <SettingsGroup>
-            <OutputDeviceSelector
-              descriptionMode="inline"
-              grouped
-              disabled={!audioFeedbackEnabled}
-            />
-          </SettingsGroup>
-        </ExpertSection>
-      </>,
-    ) ||
-    page(
-      "startup",
-      t(g("startup")),
-      <SettingsGroup>
-        <AutostartToggle descriptionMode="inline" grouped />
-        <StartHidden descriptionMode="inline" grouped />
-        <ShowTrayIcon descriptionMode="inline" grouped />
-      </SettingsGroup>,
-    );
+      </ExpertSection>
+    </>,
+  );
   if (open) return open;
 
-  const autostart = getSetting("autostart_enabled") ?? false;
   return (
     <div className="max-w-3xl w-full mx-auto space-y-5 pb-4">
       <h1 className="page-title">{title}</h1>
@@ -172,31 +106,24 @@ export const GeneralSettings: React.FC = () => {
           .join(" · ")}
         detail={t(g("statusMic"), { mic })}
       />
+      <SettingsGroup title={t(g("shortcuts"))} icon={Keyboard}>
+        <ShortcutInput shortcutId="transcribe" grouped />
+        <ShortcutInput shortcutId="transcribe_with_post_process" grouped />
+        <ShortcutActivationSetting descriptionMode="tooltip" grouped />
+        {/* Cancel shortcut remains hidden on Linux because of dynamic shortcut instability. */}
+        {!isLinux && <ShortcutInput shortcutId="cancel" grouped />}
+      </SettingsGroup>
+      <SettingsGroup title={t("settings.languages.title")} icon={Languages}>
+        <PreferredLanguages descriptionMode="tooltip" grouped />
+        {speaksChinese && (
+          <ChineseScriptSetting descriptionMode="tooltip" grouped />
+        )}
+        <AppLanguageSelector descriptionMode="tooltip" grouped />
+      </SettingsGroup>
+      <SettingsGroup title={t("settings.sound.microphone.title")} icon={Mic}>
+        <MicrophoneSelector descriptionMode="tooltip" grouped />
+      </SettingsGroup>
       <CardGrid>
-        <SettingCard
-          ref={sub.cardRef("shortcuts")}
-          icon={Keyboard}
-          title={t(g("shortcuts"))}
-          summary={rewriteOn ? `${raw} · ${enhanced}` : raw}
-          onOpen={() => sub.show("shortcuts")}
-        />
-        <SettingCard
-          ref={sub.cardRef("languages")}
-          icon={Languages}
-          title={t("settings.languages.title")}
-          summary={t(g("languagesSummary"), {
-            spoken: spoken.map(languageName).join(", ") || "—",
-            app: languageName(getSetting("app_language") || i18n.language),
-          })}
-          onOpen={() => sub.show("languages")}
-        />
-        <SettingCard
-          ref={sub.cardRef("microphone")}
-          icon={Mic}
-          title={t("settings.sound.microphone.title")}
-          summary={mic}
-          onOpen={() => sub.show("microphone")}
-        />
         <SettingCard
           ref={sub.cardRef("sounds")}
           icon={Volume2}
@@ -212,19 +139,19 @@ export const GeneralSettings: React.FC = () => {
           }
           onOpen={() => sub.show("sounds")}
         />
-        <SettingCard
-          ref={sub.cardRef("startup")}
-          icon={Power}
-          title={t(g("startup"))}
-          summary={[
-            t(g(autostart ? "startsWithWindows" : "startsByHand")),
-            (getSetting("start_hidden") ?? false) && t(g("hidden")),
-          ]
-            .filter(Boolean)
-            .join(" · ")}
-          onOpen={() => sub.show("startup")}
-        />
       </CardGrid>
+      <SettingsGroup title={t(g("startup"))} icon={Power}>
+        <AutostartToggle descriptionMode="tooltip" grouped />
+        <StartHidden descriptionMode="tooltip" grouped />
+        <ShowTrayIcon descriptionMode="tooltip" grouped />
+      </SettingsGroup>
+      <ExpertSection summary={t(g("generalExpert"))}>
+        <SettingsGroup>
+          <HoldThreshold descriptionMode="inline" grouped />
+          <ChannelSelector descriptionMode="inline" grouped />
+          <ClamshellMicrophoneSelector descriptionMode="inline" grouped />
+        </SettingsGroup>
+      </ExpertSection>
     </div>
   );
 };

@@ -8,9 +8,7 @@ test("finding added models has an accessible name and description", async ({
   await mockTauri(page);
   await page.goto("/");
   await page.getByRole("button", { name: "Models", exact: true }).click();
-  await page
-    .getByRole("button", { name: /^Local transcription model/ })
-    .click();
+  await page.getByRole("button", { name: "Change", exact: true }).click();
   await page.getByText("Choose or download a local model").click();
   const button = page.getByRole("button", { name: "Find added models" });
   await button.hover();
@@ -58,7 +56,6 @@ test("French shortcut choices explain how recording starts and stops", async ({
 }) => {
   await mockTauri(page, { settings: { app_language: "fr" } });
   await page.goto("/");
-  await page.getByRole("button", { name: /^Raccourcis/ }).click();
   await page
     .getByRole("button", {
       name: "Maintenez pour enregistrer ; appuyez pour démarrer ou arrêter",
@@ -358,7 +355,7 @@ for (const palette of PALETTE_IDS)
       await page.emulateMedia({ reducedMotion: "reduce" });
       await page.goto("/");
       await expect(
-        page.getByRole("button", { name: /^Shortcuts/ }),
+        page.getByRole("heading", { name: "Shortcuts" }),
       ).toBeVisible();
       await expect(page).toHaveScreenshot(`general-${palette}-${theme}.png`);
       await page

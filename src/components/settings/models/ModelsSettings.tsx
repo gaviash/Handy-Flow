@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Cpu, RefreshCw, Server, Workflow } from "lucide-react";
+import { RefreshCw, Server } from "lucide-react";
 import { Tooltip } from "@/components/ui/Tooltip";
 import { useModelStore } from "@/stores/modelStore";
 import { notify } from "@/stores/noticeStore";
@@ -24,6 +24,7 @@ import {
   CardGrid,
   ExpertSection,
   SettingCard,
+  SettingContainer,
   SettingsGroup,
   StatusHeader,
   SubPage,
@@ -36,6 +37,7 @@ import { LanguageDetection } from "../LanguageDetection";
 import { LanguageDetectionWindow } from "../debug/LanguageDetectionWindow";
 import { ProvidersCard } from "./ProvidersCard";
 import { ModelSettingsCard } from "./ModelSettingsCard";
+import { Button } from "@/components/ui/Button";
 import { useSettings } from "@/hooks/useSettings";
 import { getTranscriptionConfig } from "@/lib/utils/transcriptionConfig";
 
@@ -68,20 +70,17 @@ interface ModelsSettingsProps {
   /** Where the languages are changed (General). */
   onChangeLanguages?: () => void;
   onShowReformulation?: () => void;
-  /** Open straight on a topic, e.g. "features" from Enhancement. */
-  initialTopic?: ModelsTopic;
 }
 
-export type ModelsTopic = "providers" | "features" | "local";
+type ModelsTopic = "providers" | "local";
 
 /** The Models page: onboarding's model table, filling the window. */
 export const ModelsSettings: React.FC<ModelsSettingsProps> = ({
   onChangeLanguages,
   onShowReformulation,
-  initialTopic,
 }) => {
   const { t } = useTranslation();
-  const sub = useSubPage<ModelsTopic>(initialTopic ?? null);
+  const sub = useSubPage<ModelsTopic>();
   const statuses = useFeatureStatuses();
   const loading = useModelStore((s) => s.loading);
   const { facts, lists } = useModelEntries();
@@ -180,10 +179,6 @@ export const ModelsSettings: React.FC<ModelsSettingsProps> = ({
     "NotChosen",
   ];
   const broken = statuses.find((s) => s.problem && !OFF.includes(s.problem));
-  const status = (f: string) => statuses.find((s) => s.feature === f);
-  const rewrite = status("Rewrite");
-  const validator = status("LearningValidator");
-  const speech = status("TranscriptionApi");
   const providers = settings?.post_process_providers ?? [];
   const keys = Object.values(settings?.post_process_api_keys ?? {}).filter(
     Boolean,
@@ -197,17 +192,6 @@ export const ModelsSettings: React.FC<ModelsSettingsProps> = ({
         onBack={sub.back}
       >
         <ProvidersCard />
-      </SubPage>
-    );
-  if (sub.open === "features")
-    return (
-      <SubPage
-        parent={title}
-        title={t("settings.features.title")}
-        onBack={sub.back}
-      >
-        <FeatureModelsCard />
-        <CloudAsrSettings />
       </SubPage>
     );
   if (sub.open === "local")
@@ -341,6 +325,31 @@ export const ModelsSettings: React.FC<ModelsSettingsProps> = ({
                   : t("settings.models.featuresReady")
         }
       />
+      <FeatureModelsCard />
+      <CloudAsrSettings />
+      <SettingsGroup>
+        <SettingContainer
+          title={t(k(config.api ? "fallbackTitle" : "localTitle"))}
+          description={t(k(config.api ? "fallbackHelp" : "localHelp"))}
+          grouped
+        >
+          <div className="flex items-center gap-3">
+            <span className="text-sm font-medium">
+              {loading
+                ? t(k("loading"))
+                : config.localModel?.name || t(k("localMissing"))}
+            </span>
+            <Button
+              ref={sub.cardRef("local")}
+              size="sm"
+              variant="outline"
+              onClick={() => sub.show("local")}
+            >
+              {t("settings.models.change")}
+            </Button>
+          </div>
+        </SettingContainer>
+      </SettingsGroup>
       <CardGrid>
         <SettingCard
           ref={sub.cardRef("providers")}
@@ -351,43 +360,6 @@ export const ModelsSettings: React.FC<ModelsSettingsProps> = ({
             keys,
           })}
           onOpen={() => sub.show("providers")}
-        />
-        <SettingCard
-          ref={sub.cardRef("features")}
-          icon={Workflow}
-          title={t("settings.features.title")}
-          summary={[
-            rewrite &&
-              `${t("settings.features.name.Rewrite")} ${rewrite.problem ? "—" : rewrite.provider_label}`,
-            validator &&
-              `${t("settings.features.name.LearningValidator")} ${
-                validator.problem
-                  ? "—"
-                  : validator.automatic
-                    ? t("settings.features.empty.LearningValidator")
-                    : validator.provider_label
-              }`,
-            `${t("settings.features.name.TranscriptionApi")} ${
-              speech && !speech.problem
-                ? speech.provider_label
-                : t("settings.models.local")
-            }`,
-          ]
-            .filter(Boolean)
-            .join(" · ")}
-          tone={broken ? "warn" : undefined}
-          onOpen={() => sub.show("features")}
-        />
-        <SettingCard
-          ref={sub.cardRef("local")}
-          icon={Cpu}
-          title={t(k(config.api ? "fallbackTitle" : "localTitle"))}
-          summary={
-            loading
-              ? t(k("loading"))
-              : config.localModel?.name || t(k("localMissing"))
-          }
-          onOpen={() => sub.show("local")}
         />
       </CardGrid>
       <ExpertSection summary={t("settings.models.engineExpert")}>

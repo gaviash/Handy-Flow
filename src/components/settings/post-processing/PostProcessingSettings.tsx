@@ -24,20 +24,23 @@ import { useSettings } from "../../../hooks/useSettings";
 import { useOsType } from "../../../hooks/useOsType";
 import { formatKeyCombination } from "../../../lib/utils/keyboard";
 import { FillerWordRemoval } from "../FillerWordRemoval";
-import { useFeatureStatuses } from "../models/FeatureModelsCard";
+import {
+  FeatureSummary,
+  useFeatureStatuses,
+} from "../models/FeatureModelsCard";
 import { ShortcutInput } from "../ShortcutInput";
 import { PostProcessTimeout } from "./PostProcessTimeout";
 import { PromptEditor } from "./PromptEditor";
 import { StyleSettings, CATEGORIES } from "./StyleSettings";
-import { TransformSettings } from "./TransformSettings";
+import {
+  TRANSFORM_IDS,
+  TransformCards,
+  TransformEditor,
+  useTransformTitle,
+  type TransformId,
+} from "./TransformCards";
 
-type Topic =
-  | "provider"
-  | "tone"
-  | "transforms"
-  | "cleanup"
-  | "shortcut"
-  | "prompt";
+type Topic = "tone" | "prompt" | TransformId;
 
 const e = (key: string) => `settings.enhancement.${key}`;
 const pp = (key: string) => `settings.postProcessing.${key}`;
@@ -51,8 +54,7 @@ const uses = (status?: FeatureStatus) =>
 /** The rewrite: whether it runs, with what, in which tone. */
 export const PostProcessingSettings: React.FC<{
   onShowModels?: () => void;
-  onShowGeneral?: () => void;
-}> = ({ onShowModels, onShowGeneral }) => {
+}> = ({ onShowModels }) => {
   const { t } = useTranslation();
   const { getSetting, updateSetting, isUpdating } = useSettings();
   const osType = useOsType();
@@ -71,9 +73,6 @@ export const PostProcessingSettings: React.FC<{
   const provider = uses(rewrite);
   const backup = uses(fallback) ?? t(e("none"));
   const styles = getSetting("styles");
-  const transforms = (getSetting("transforms") ?? []).filter((x) =>
-    x.name.trim(),
-  ).length;
   const title = t("sidebar.postProcessing");
 
   const page = (topic: Topic, heading: string, body: React.ReactNode) =>
@@ -82,27 +81,12 @@ export const PostProcessingSettings: React.FC<{
         {body}
       </SubPage>
     );
+  const transformTitle = useTransformTitle(
+    (TRANSFORM_IDS as readonly string[]).includes(sub.open ?? "")
+      ? (sub.open as TransformId)
+      : "polish",
+  );
   const open =
-    page(
-      "provider",
-      t(e("provider")),
-      <SettingsGroup>
-        <div className="px-4 py-3 text-sm space-y-1">
-          <p>
-            {t(e("rewriteUses"), {
-              value: provider ?? t(e("notConfigured")),
-            })}
-          </p>
-          <p>{t(e("fallbackUses"), { value: backup })}</p>
-          <p className="pt-2 text-ink-2">{t(e("providerHelp"))}</p>
-        </div>
-        <div className="px-4 pb-3">
-          <Button size="sm" variant="outline" onClick={onShowModels}>
-            {t("settings.features.changeInModels")}
-          </Button>
-        </div>
-      </SettingsGroup>,
-    ) ||
     page(
       "tone",
       t(pp("styles.title")),
@@ -111,42 +95,17 @@ export const PostProcessingSettings: React.FC<{
       </SettingsGroup>,
     ) ||
     page(
-      "transforms",
-      t(pp("transforms.title")),
-      <SettingsGroup>
-        <TransformSettings />
-      </SettingsGroup>,
-    ) ||
-    page(
-      "cleanup",
-      t(e("cleanup")),
-      <SettingsGroup>
-        <FillerWordRemoval descriptionMode="inline" grouped />
-      </SettingsGroup>,
-    ) ||
-    page(
-      "shortcut",
-      t(pp("hotkey.title")),
-      <>
-        <SettingsGroup>
-          <ShortcutInput
-            shortcutId="transcribe_with_post_process"
-            descriptionMode="inline"
-            grouped
-          />
-        </SettingsGroup>
-        <Button size="sm" variant="outline" onClick={onShowGeneral}>
-          {t(e("allShortcuts"))}
-        </Button>
-      </>,
-    ) ||
-    page(
       "prompt",
       t(pp("prompts.title")),
       <SettingsGroup>
         <PromptEditor />
       </SettingsGroup>,
-    );
+    ) ||
+    (sub.open && (TRANSFORM_IDS as readonly string[]).includes(sub.open) && (
+      <SubPage parent={title} title={transformTitle} onBack={sub.back}>
+        <TransformEditor id={sub.open as TransformId} />
+      </SubPage>
+    ));
   if (open) return open;
 
   const ready = enabled && !!provider;
@@ -187,21 +146,21 @@ export const PostProcessingSettings: React.FC<{
           </Button>
         )}
       </StatusHeader>
-      <CardGrid>
-        <SettingCard
-          ref={sub.cardRef("provider")}
-          icon={Server}
-          title={t(e("provider"))}
-          summary={
-            provider
-              ? uses(fallback)
-                ? `${provider} · ${t(e("fallbackShort"), { value: backup })}`
-                : provider
-              : t(e("notConfigured"))
-          }
-          tone={provider ? undefined : "warn"}
-          onOpen={() => sub.show("provider")}
+      <SettingsGroup title={t(e("provider"))} icon={Server}>
+        <FeatureSummary feature="Rewrite" onShowModels={onShowModels} />
+        <FeatureSummary feature="RewriteFallback" named />
+      </SettingsGroup>
+      <SettingsGroup title={t(pp("hotkey.title"))} icon={Keyboard}>
+        <ShortcutInput
+          shortcutId="transcribe_with_post_process"
+          descriptionMode="tooltip"
+          grouped
         />
+      </SettingsGroup>
+      <SettingsGroup title={t(e("cleanup"))} icon={Eraser}>
+        <FillerWordRemoval descriptionMode="tooltip" grouped />
+      </SettingsGroup>
+      <CardGrid>
         <SettingCard
           ref={sub.cardRef("tone")}
           icon={MessageCircle}
@@ -214,34 +173,22 @@ export const PostProcessingSettings: React.FC<{
           ).join(" · ")}
           onOpen={() => sub.show("tone")}
         />
-        <SettingCard
-          ref={sub.cardRef("transforms")}
-          icon={Wand2}
-          title={t(pp("transforms.title"))}
-          summary={t(e("transformsSummary"), { count: transforms })}
-          onOpen={() => sub.show("transforms")}
-        />
-        <SettingCard
-          ref={sub.cardRef("cleanup")}
-          icon={Eraser}
-          title={t(e("cleanup"))}
-          summary={t(
-            e(
-              (getSetting("filler_word_removal_enabled") ?? true)
-                ? "fillersRemoved"
-                : "fillersKept",
-            ),
-          )}
-          onOpen={() => sub.show("cleanup")}
-        />
-        <SettingCard
-          ref={sub.cardRef("shortcut")}
-          icon={Keyboard}
-          title={t(pp("hotkey.title"))}
-          summary={shortcut}
-          onOpen={() => sub.show("shortcut")}
-        />
       </CardGrid>
+      <section className="space-y-2" aria-labelledby="transforms-title">
+        <div className="px-4">
+          <h2
+            id="transforms-title"
+            className="flex items-center gap-1.5 text-xs font-medium uppercase tracking-[.06em] text-ink-3"
+          >
+            <Wand2 aria-hidden="true" size={14} />
+            {t(pp("transforms.title"))}
+          </h2>
+          <p className="mt-1 text-xs text-ink-3">
+            {t(pp("transforms.savedDescription"))}
+          </p>
+        </div>
+        <TransformCards open={sub.show} cardRef={sub.cardRef} />
+      </section>
       <ExpertSection summary={t(e("expert"))}>
         <SettingsGroup>
           <PostProcessTimeout />
