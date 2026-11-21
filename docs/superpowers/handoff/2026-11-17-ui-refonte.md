@@ -1,6 +1,6 @@
 # Handoff — Settings redesign (plan C)
 
-Branch `feat/ui-refonte`, created from `feat/handy-flow-brand` (`6a7487c`). Not pushed.
+Done on a temporary branch from `feat/handy-flow-brand` (`6a7487c`), then merged into `feat/handy-flow-brand` and `main`.
 Plan: `docs/superpowers/plans/2026-11-17-ui-refonte.md`.
 
 ## What changed

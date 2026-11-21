@@ -5,7 +5,7 @@ You work on the user's **Windows PC**. Everything here could only be done on Win
 ## Context
 
 - Repo `gaviash/Handy-Flow`: Windows fork of Handy, Tauri 2 (Rust in `src-tauri/src`, React 18 + Tailwind 4 + Zustand + i18next in `src/`).
-- Branch to check: **`feat/ui-refonte`**, which is plan C on top of `feat/handy-flow-brand` (plans A and B). It may not be pushed yet: if `git fetch` doesn't see it, ask the user to push it from the Linux copy (`/home/joseph/Claude-Remote/Handy-Flow`).
+- Branch to check: **`feat/handy-flow-brand`** (same content as `main`): plans A, B and C. Plan C (the settings redesign) was merged there directly.
 - Read first:
   - `docs/superpowers/handoff/2026-11-17-ui-refonte.md`: what plan C changed, the default decisions, the deferred minor points.
   - `docs/superpowers/plans/2026-11-17-ui-refonte.md`: Global Constraints (machine, builds, never touch `Data\`) and Review Focus.
@@ -27,7 +27,7 @@ State at handoff (Linux):
 
 ## 1. Regenerate the bindings (≈10 min)
 
-1. `git switch feat/ui-refonte && bun install`
+1. `git switch feat/handy-flow-brand && git pull && bun install`
 2. `bun run tauri dev`, wait for the window, then close it.
 3. `git diff src/bindings.ts`. Plan B edited it by hand (`Learned.source`, `Source`, `LearningStats`, `getLearningStats`).
    - Empty diff, or formatting only: commit `chore: regenerate bindings`.
