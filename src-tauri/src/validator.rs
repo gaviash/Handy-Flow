@@ -15,7 +15,8 @@ Accept a candidate only when \"term\" is a proper name (person, place, product, 
 term (jargon, tool, file name, acronym, code identifier), or a word the speech recognizer distorts into other \
 words (\"spikes\" → \"specs\", \"point oeuvre\" → \".env\", \"postgéré\" → \"PostgreSQL\"). Refuse grammar, \
 agreement, spelling of a common word, synonyms, style and any change of meaning (another day, number, name or \
-idea). Copy \"heard\" and \"term\" exactly as given; \"kind\" is \"name\" or \"technical\".
+idea). Empty \"pasted\" and \"kept\": the candidates come from the user's past corrections, judge them alone. \
+Copy \"heard\" and \"term\" exactly as given; \"kind\" is \"name\" or \"technical\".
 Reply with JSON only: {\"accepted\": [{\"heard\": \"...\", \"term\": \"...\", \"kind\": \"name\"}]}. \
 Nothing to accept: {\"accepted\": []}.";
 
@@ -149,7 +150,7 @@ fn schema() -> serde_json::Value {
 }
 
 /// The validator's raw reply; `None` when it can't or may not answer.
-async fn ask(app: &AppHandle, message: String) -> Option<String> {
+pub(crate) async fn ask(app: &AppHandle, message: String) -> Option<String> {
     let skip = |reason: &str| log::debug!("Learning: validator unavailable ({reason})");
     let settings = crate::settings::get_settings(app);
     // The user's switch for LLM learning, and context sending, both hold.

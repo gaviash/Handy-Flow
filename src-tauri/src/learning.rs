@@ -169,6 +169,9 @@ pub struct Memory {
     pub words: Vec<Learned>,
     #[serde(default)]
     pub rules: Vec<StyleRule>,
+    /// Unix seconds of the one re-validation of pending words (EX-5); 0 = not yet.
+    #[serde(default)]
+    pub revalidated_at: i64,
 }
 
 pub const WORDS_MAX: usize = 2000;
@@ -182,6 +185,7 @@ fn parse_memory(json: &[u8]) -> Memory {
             serde_json::from_slice::<Vec<Learned>>(json).map(|words| Memory {
                 words,
                 rules: Vec::new(),
+                revalidated_at: 0,
             })
         })
         .unwrap_or_default()
@@ -924,6 +928,93 @@ pub(crate) fn record_decision(
     record_word(m, &c, now)
 }
 
+/// EX-5: pending words sent once to the validator, one candidate per word
+/// (its latest heard form). Empty once done.
+pub(crate) fn pending_candidates(m: &Memory) -> Vec<Candidate> {
+    if m.revalidated_at != 0 {
+        return Vec::new();
+    }
+    m.words
+        .iter()
+        .filter(|w| !w.active)
+        .filter_map(|w| {
+            Some(Candidate {
+                term: w.term.clone(),
+                heard: w.heard.last()?.clone(),
+                kind: w.kind,
+            })
+        })
+        .collect()
+}
+
+/// The validator's reply on pending words: accepted → active, refused →
+/// removed; a void or missing reply changes nothing (retried at next start).
+pub(crate) fn apply_revalidation(
+    m: &mut Memory,
+    sent: &[Candidate],
+    reply: Option<&str>,
+    now: i64,
+) -> Vec<LearnedNews> {
+    let Some(accepted) = reply.and_then(|r| crate::validator::parse_reply(r, sent)) else {
+        return Vec::new();
+    };
+    let mut news = Vec::new();
+    for c in sent {
+        let ok = accepted.iter().any(|(a, _)| a == c);
+        if let Some(w) = m
+            .words
+            .iter_mut()
+            .find(|w| !w.active && same_term(&w.term, &c.term))
+        {
+            if ok {
+                w.active = true;
+                w.kind = WordKind::Term;
+                news.push(LearnedNews::Word {
+                    term: w.term.clone(),
+                });
+            } else {
+                w.heard.clear();
+            }
+        }
+    }
+    m.words.retain(|w| !w.heard.is_empty());
+    m.revalidated_at = now;
+    news
+}
+
+/// EX-5: once after startup, the words still pending go to the validator.
+pub async fn revalidate_pending(app: AppHandle) {
+    let now = chrono::Utc::now().timestamp();
+    let sent = with_memory(&app, |m| {
+        let sent = pending_candidates(m);
+        if sent.is_empty() && m.revalidated_at == 0 {
+            m.revalidated_at = now;
+            save(&app, m);
+        }
+        sent
+    });
+    if sent.is_empty() {
+        return;
+    }
+    let reply = crate::validator::ask(&app, crate::validator::message("", "", &sent)).await;
+    let news = with_memory(&app, |m| {
+        let news = apply_revalidation(m, &sent, reply.as_deref(), now);
+        if reply.is_some() {
+            save(&app, m);
+        }
+        news
+    });
+    log::info!(
+        "Learning: {} pending word(s) re-validated, {} made usable",
+        sent.len(),
+        news.len()
+    );
+    if !news.is_empty() {
+        let _ = app.emit("learned-words", &news);
+        announce(&app, &news);
+    }
+}
+
 /// Stores the decided candidates and announces what became usable (F95:
 /// once, grouped, with an undo).
 fn record_decisions(app: &AppHandle, decided: Vec<(Candidate, crate::validator::Decision)>) {
@@ -1473,6 +1564,52 @@ mod tests {
     /// The region between two anchors, as `observe` reads it.
     fn between<'a>(b: &'a str, a: &'a str) -> impl Fn(&str) -> Option<String> + 'a {
         move |t: &str| region(t, b, a).map(|r| r.trim().to_string())
+    }
+
+    #[test]
+    fn pending_words_are_revalidated_once() {
+        let pending = |term: &str, heard: &str| Learned {
+            term: term.into(),
+            heard: vec![heard.into()],
+            count: 1,
+            last_seen: 0,
+            kind: WordKind::Misheard,
+            active: false,
+            used: 0,
+        };
+        let mut m = Memory {
+            words: vec![
+                pending("specs", "spikes"),
+                pending("slop", "slope"),
+                pending("devra correspondre", "devrait correspondre"),
+            ],
+            ..Default::default()
+        };
+        let sent = pending_candidates(&m);
+        assert_eq!(sent.len(), 3);
+        // Void or unreachable: nothing changes, retried at the next start.
+        assert!(apply_revalidation(&mut m, &sent, None, 5).is_empty());
+        assert!(apply_revalidation(&mut m, &sent, Some("nope"), 5).is_empty());
+        assert_eq!((m.words.len(), m.revalidated_at), (3, 0));
+        let reply = r#"{"accepted":[{"heard":"spikes","term":"specs","kind":"technical"},
+            {"heard":"slope","term":"slop","kind":"technical"}]}"#;
+        let news = apply_revalidation(&mut m, &sent, Some(reply), 5);
+        assert_eq!(news.len(), 2);
+        let terms: Vec<(&str, bool, WordKind)> = m
+            .words
+            .iter()
+            .map(|w| (w.term.as_str(), w.active, w.kind))
+            .collect();
+        assert_eq!(
+            terms,
+            vec![
+                ("specs", true, WordKind::Term),
+                ("slop", true, WordKind::Term)
+            ]
+        );
+        assert_eq!(m.revalidated_at, 5);
+        // Done once: nothing is sent again.
+        assert!(pending_candidates(&m).is_empty());
     }
 
     #[test]

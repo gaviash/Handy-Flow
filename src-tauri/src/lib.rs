@@ -1183,6 +1183,8 @@ pub fn run(cli_args: CliArgs) {
             app.manage(TranscriptionCoordinator::new(app_handle.clone()));
 
             initialize_core_logic(&app_handle);
+            // EX-5: words still pending go to the learning validator once.
+            tauri::async_runtime::spawn(learning::revalidate_pending(app_handle.clone()));
 
             // Secure Input monitor (macOS): detects stuck secure input that
             // silently blocks keyed shortcuts, warns the user, and activates
