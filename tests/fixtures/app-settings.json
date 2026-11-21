@@ -73,6 +73,48 @@
       "description": "Applies a saved transformation to the selected text.",
       "id": "transform_3",
       "name": "Transformation 3"
+    },
+    "transform_4": {
+      "current_binding": "",
+      "default_binding": "",
+      "description": "Applies a saved transformation to the selected text.",
+      "id": "transform_4",
+      "name": "Transformation 4"
+    },
+    "transform_5": {
+      "current_binding": "",
+      "default_binding": "",
+      "description": "Applies a saved transformation to the selected text.",
+      "id": "transform_5",
+      "name": "Transformation 5"
+    },
+    "transform_6": {
+      "current_binding": "",
+      "default_binding": "",
+      "description": "Applies a saved transformation to the selected text.",
+      "id": "transform_6",
+      "name": "Transformation 6"
+    },
+    "transform_7": {
+      "current_binding": "",
+      "default_binding": "",
+      "description": "Applies a saved transformation to the selected text.",
+      "id": "transform_7",
+      "name": "Transformation 7"
+    },
+    "transform_8": {
+      "current_binding": "",
+      "default_binding": "",
+      "description": "Applies a saved transformation to the selected text.",
+      "id": "transform_8",
+      "name": "Transformation 8"
+    },
+    "transform_9": {
+      "current_binding": "",
+      "default_binding": "",
+      "description": "Applies a saved transformation to the selected text.",
+      "id": "transform_9",
+      "name": "Transformation 9"
     }
   },
   "chinese_script": "as_transcribed",
@@ -128,6 +170,29 @@
   "experimental_enabled": false,
   "external_script_path": null,
   "extra_recording_buffer_ms": 120,
+  "features": {
+    "learning_validator": {
+      "model": "",
+      "provider_id": "",
+      "reasoning": "Off"
+    },
+    "rewrite": {
+      "model": "",
+      "provider_id": "",
+      "reasoning": "Off"
+    },
+    "rewrite_fallback": {
+      "model": "",
+      "provider_id": "",
+      "reasoning": "Off"
+    },
+    "transcription_api": {
+      "model": "",
+      "provider_id": "",
+      "reasoning": "Off"
+    }
+  },
+  "features_migrated": false,
   "filler_word_removal_enabled": true,
   "heading_style": "editorial",
   "history_limit": 5,
@@ -177,30 +242,6 @@
     "openrouter": "",
     "zai": ""
   },
-  "features": {
-    "rewrite": {
-      "provider_id": "",
-      "model": "",
-      "reasoning": "Off"
-    },
-    "rewrite_fallback": {
-      "provider_id": "",
-      "model": "",
-      "reasoning": "Off"
-    },
-    "learning_validator": {
-      "provider_id": "",
-      "model": "",
-      "reasoning": "Off"
-    },
-    "transcription_api": {
-      "provider_id": "",
-      "model": "",
-      "reasoning": "Off"
-    }
-  },
-  "provider_models": {},
-  "features_migrated": false,
   "post_process_prompts": [
     {
       "id": "adaptive_house",
@@ -299,6 +340,7 @@
   ],
   "post_process_selected_prompt_id": "adaptive_house",
   "post_process_timeout_secs": 8,
+  "provider_models": {},
   "recording_retention_period": "days30",
   "reliable_paste": true,
   "rewrite_context": {
@@ -357,6 +399,6 @@
   "vad_backend": "silero",
   "vad_enabled": true,
   "vscode_screen_reader": true,
-  "whats_new_last_seen_version": "0.2.8",
+  "whats_new_last_seen_version": "0.2.9",
   "word_correction_threshold": 0.18
 }
