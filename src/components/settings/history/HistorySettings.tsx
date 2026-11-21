@@ -90,15 +90,6 @@ const IconButton: React.FC<{
 );
 
 const PAGE_SIZE = 30;
-/** Retention value → its label key in settings.debug.recordingRetention. */
-const RETENTION_LABEL: Record<string, string> = {
-  never: "never",
-  preserve_limit: "preserveLimit",
-  days3: "days3",
-  days30: "days30",
-  weeks2: "weeks2",
-  months3: "months3",
-};
 /** As long as the undo toast stays up (NoticePanel TOAST_MS). */
 const UNDO_MS = 8000;
 
@@ -170,7 +161,6 @@ const HeaderButton: React.FC<HeaderButtonProps> = ({
 
 export const HistorySettings: React.FC = () => {
   const { t } = useTranslation();
-  const sub = useSubPage<"retention">();
   const osType = useOsType();
   const { getSetting } = useSettings();
   const retention = getSetting("recording_retention_period") ?? "never";
@@ -481,36 +471,16 @@ export const HistorySettings: React.FC = () => {
   }
 
   const title = t("sidebar.history");
-  if (sub.open === "retention")
-    return (
-      <SubPage
-        parent={title}
-        title={t("settings.history.retention")}
-        onBack={sub.back}
-      >
-        <SettingsGroup>
-          <RecordingRetentionPeriodSelector descriptionMode="inline" grouped />
-          {/* history.rs: the count only applies to "keep the last N". */}
-          {retention === "preserve_limit" && (
-            <HistoryLimit descriptionMode="inline" grouped />
-          )}
-        </SettingsGroup>
-      </SubPage>
-    );
-
   return (
     <div className="max-w-3xl w-full mx-auto space-y-6">
       <h1 className="page-title">{title}</h1>
-      <SettingCard
-        ref={sub.cardRef("retention")}
-        icon={Archive}
-        title={t("settings.history.retention")}
-        summary={t(
-          `settings.debug.recordingRetention.${RETENTION_LABEL[retention] ?? "never"}`,
-          { count: Number(getSetting("history_limit") ?? 5) },
+      <SettingsGroup title={t("settings.history.retention")} icon={Archive}>
+        <RecordingRetentionPeriodSelector descriptionMode="tooltip" grouped />
+        {/* history.rs: the count only applies to "keep the last N". */}
+        {retention === "preserve_limit" && (
+          <HistoryLimit descriptionMode="tooltip" grouped />
         )}
-        onOpen={() => sub.show("retention")}
-      />
+      </SettingsGroup>
       <div className="space-y-2">
         <div className="px-4 flex items-center justify-end">
           <div className="flex items-center gap-2">

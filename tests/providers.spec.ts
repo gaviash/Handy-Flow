@@ -32,7 +32,6 @@ test("models differ per feature and selections persist on reload", async ({
   const mock = await mockTauri(page, { settings: providerSettings });
   const open = async () => {
     await page.getByRole("button", { name: "Models", exact: true }).click();
-    await page.getByRole("button", { name: /^Usage by feature/ }).click();
   };
   await page.goto("/");
   await open();
@@ -105,7 +104,6 @@ test("a provider in use cannot be removed", async ({ page }) => {
     page.getByText("Provider in use by Rewrite").first(),
   ).toBeVisible();
   await page.getByRole("button", { name: "Transcription models" }).click();
-  await page.getByRole("button", { name: /^Usage by feature/ }).click();
   await expect(
     page
       .getByRole("group", { name: "Rewrite", exact: true })

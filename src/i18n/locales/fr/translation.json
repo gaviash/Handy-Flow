@@ -23,7 +23,8 @@
     "appearance": "Apparence",
     "label": "Sections",
     "vocabulary": "Vocabulaire",
-    "context": "Contexte"
+    "context": "Contexte",
+    "transforms": "Transformations"
   },
   "onboarding": {
     "customModelDescription": "Non officiellement pris en charge",
@@ -507,20 +508,15 @@
       },
       "dictationShortcut": "Raccourci de dictée",
       "shortcuts": "Raccourcis",
-      "shortcutsExpert": "seuil de maintien",
-      "micExpert": "canal d'entrée, écran du portable fermé",
       "sounds": "Sons",
       "startup": "Démarrage",
       "defaultMic": "Micro par défaut",
       "statusRaw": "{{shortcut}} : dictée telle quelle",
       "statusEnhanced": "{{shortcut}} : dictée améliorée",
       "statusMic": "Micro : {{mic}}",
-      "languagesSummary": "{{spoken}} · interface {{app}}",
       "soundsOn": "Activés · {{volume}} %",
       "soundsOff": "Coupés",
-      "startsWithWindows": "Au démarrage de Windows",
-      "startsByHand": "Lancé à la main",
-      "hidden": "caché"
+      "generalExpert": "seuil de maintien, canal d’entrée, écran du portable fermé"
     },
     "models": {
       "title": "Modèles",
@@ -568,7 +564,8 @@
       "providersSummary": "Fournisseurs : {{count}} · clés : {{keys}}",
       "local": "locale",
       "engineExpert": "moteur",
-      "featureProblem": "{{name}} : {{status}}"
+      "featureProblem": "{{name}} : {{status}}",
+      "change": "Changer"
     },
     "languages": {
       "title": "Langues"
@@ -1247,11 +1244,7 @@
         }
       },
       "updates": "Mises à jour",
-      "updatesOn": "Vérifiées automatiquement",
-      "updatesOff": "Non vérifiées",
-      "diagnostic": "Diagnostic",
-      "diagnosticSummary": "Dossier de l'application, journaux",
-      "logsExpert": "journaux"
+      "diagnostic": "Diagnostic"
     },
     "appearance": {
       "title": "Apparence",
@@ -1419,16 +1412,16 @@
       "none": "aucun",
       "notConfigured": "Non configuré",
       "provider": "Fournisseur",
-      "rewriteUses": "Réécriture : {{value}}",
-      "fallbackUses": "Secours : {{value}}",
-      "fallbackShort": "secours {{value}}",
-      "providerHelp": "Le même fournisseur peut servir à d'autres fonctions (transcription, validateur) : tout se règle dans Modèles.",
-      "cleanup": "Nettoyage",
-      "fillersRemoved": "Hésitations retirées",
-      "fillersKept": "Hésitations conservées",
-      "transformsSummary": "Polish · instruction vocale · enregistrées : {{count}}",
-      "allShortcuts": "Tous les raccourcis dans Général",
-      "expert": "consigne, délai"
+      "expert": "consigne, délai",
+      "createOwn": "Créer la vôtre",
+      "createOwnHelp": "Votre propre consigne sur le texte sélectionné",
+      "noShortcut": "Pas de raccourci",
+      "cleanup": "Nettoyage"
+    },
+    "transformsPage": {
+      "subtitle": "Sélectionnez un texte, puis appuyez sur un raccourci : il est réécrit sur place.",
+      "ready": "Utilise {{provider}} · {{model}}, le modèle de l'amélioration",
+      "setup": "Choisissez un modèle d'amélioration dans Modèles."
     }
   },
   "footer": {

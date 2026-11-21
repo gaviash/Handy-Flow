@@ -9,6 +9,7 @@ export { ModelsSettings } from "./models/ModelsSettings";
 export { AppearanceSettings } from "./appearance/AppearanceSettings";
 export { VocabularySettings } from "./vocabulary/VocabularySettings";
 export { ContextPage } from "./context/ContextPage";
+export { TransformsPage } from "./transforms/TransformsPage";
 
 // Individual setting components
 export { MicrophoneSelector } from "./MicrophoneSelector";

@@ -23,7 +23,8 @@
     "appearance": "Appearance",
     "label": "Sections",
     "vocabulary": "Vocabulary",
-    "context": "Context"
+    "context": "Context",
+    "transforms": "Transformations"
   },
   "onboarding": {
     "customModelDescription": "Sense suport oficial",
@@ -507,20 +508,15 @@
       },
       "dictationShortcut": "Dictation shortcut",
       "shortcuts": "Shortcuts",
-      "shortcutsExpert": "hold threshold",
-      "micExpert": "input channel, laptop lid closed",
       "sounds": "Sounds",
       "startup": "Startup",
       "defaultMic": "Default microphone",
       "statusRaw": "{{shortcut}}: dictation as is",
       "statusEnhanced": "{{shortcut}}: enhanced dictation",
       "statusMic": "Microphone: {{mic}}",
-      "languagesSummary": "{{spoken}} · interface {{app}}",
       "soundsOn": "On · {{volume}} %",
       "soundsOff": "Off",
-      "startsWithWindows": "Starts with Windows",
-      "startsByHand": "Started by hand",
-      "hidden": "hidden"
+      "generalExpert": "hold threshold, input channel, laptop lid closed"
     },
     "models": {
       "title": "Models",
@@ -568,7 +564,8 @@
       "providersSummary": "Providers: {{count}} · keys: {{keys}}",
       "local": "local",
       "engineExpert": "engine",
-      "featureProblem": "{{name}}: {{status}}"
+      "featureProblem": "{{name}}: {{status}}",
+      "change": "Change"
     },
     "languages": {
       "title": "Llengües"
@@ -1247,11 +1244,7 @@
         }
       },
       "updates": "Updates",
-      "updatesOn": "Checked automatically",
-      "updatesOff": "Not checked",
-      "diagnostic": "Diagnostics",
-      "diagnosticSummary": "App folder, logs",
-      "logsExpert": "logs"
+      "diagnostic": "Diagnostics"
     },
     "appearance": {
       "title": "Appearance",
@@ -1419,16 +1412,16 @@
       "none": "none",
       "notConfigured": "Not configured",
       "provider": "Provider",
-      "rewriteUses": "Rewrite: {{value}}",
-      "fallbackUses": "Fallback: {{value}}",
-      "fallbackShort": "fallback {{value}}",
-      "providerHelp": "The same provider can serve other features (speech, validator): it is all set in Models.",
-      "cleanup": "Cleanup",
-      "fillersRemoved": "Hesitations removed",
-      "fillersKept": "Hesitations kept",
-      "transformsSummary": "Polish · voice instruction · saved: {{count}}",
-      "allShortcuts": "All shortcuts in General",
-      "expert": "prompt, delay"
+      "expert": "prompt, delay",
+      "createOwn": "Create your own",
+      "createOwnHelp": "Your own instruction on selected text",
+      "noShortcut": "No shortcut",
+      "cleanup": "Cleanup"
+    },
+    "transformsPage": {
+      "subtitle": "Select some text, then press a shortcut: the text is rewritten in place.",
+      "ready": "Uses {{provider}} · {{model}}, the Enhancement model",
+      "setup": "Choose an Enhancement model in Models."
     }
   },
   "footer": {
