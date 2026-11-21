@@ -496,6 +496,7 @@ pub fn local_candidates(inserted: &str, fin: &str) -> Vec<Local> {
 }
 
 /// The candidates alone, guards logged by reason (never with their text).
+#[cfg(test)]
 pub fn candidates(inserted: &str, fin: &str) -> Vec<Candidate> {
     local_candidates(inserted, fin)
         .into_iter()
@@ -1551,15 +1552,13 @@ pub fn finish(
     region: &dyn Fn(&str) -> Option<String>,
 ) -> Option<String> {
     // The final reading failed: uncertain, nothing learned (R7).
-    let Some(text) = final_read else {
-        return None;
-    };
+    let text = final_read?;
     // Sent or cleared: the last reading is what the user kept.
     if text.trim().is_empty() {
         return last.filter(|_| learnable(end, true, true));
     }
     match region(&text) {
-        Some(r) => Some(r).filter(|_| learnable(end, true, true)),
+        Some(r) => learnable(end, true, true).then_some(r),
         // Text changed around it (Wispr anchor_mismatch_transcript_intact).
         None => {
             let intact = bounded || last.as_ref().is_some_and(|l| text.contains(l.as_str()));

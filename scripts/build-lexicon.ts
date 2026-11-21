@@ -20,7 +20,10 @@ for (const lang of ["fr", "en"]) {
     const word = line.split(" ")[0]?.trim().toLowerCase();
     if (word) seen.add(word);
   }
-  const out = join(import.meta.dir, `../src-tauri/resources/lexicon/${lang}.txt`);
+  const out = join(
+    import.meta.dir,
+    `../src-tauri/resources/lexicon/${lang}.txt`,
+  );
   writeFileSync(out, [...seen].slice(0, 50_000).join("\n") + "\n");
   console.log(`${lang}: ${Math.min(seen.size, 50_000)} words`);
 }
