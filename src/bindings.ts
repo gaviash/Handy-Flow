@@ -364,14 +364,14 @@ async getDictationStats() : Promise<Result<DictationStats, string>> {
     else return { status: "error", error: e  as any };
 }
 },
+async getLearnedWords() : Promise<Learned[]> {
+    return await TAURI_INVOKE("get_learned_words");
+},
 /**
  * EX-7.2: what learning decided over the last 30 days.
  */
 async getLearningStats() : Promise<LearningStats> {
     return await TAURI_INVOKE("get_learning_stats");
-},
-async getLearnedWords() : Promise<Learned[]> {
-    return await TAURI_INVOKE("get_learned_words");
 },
 async deleteLearnedWord(term: string) : Promise<void> {
     await TAURI_INVOKE("delete_learned_word", { term });
@@ -1508,7 +1508,7 @@ selected_channel?: number | null; clamshell_microphone?: string | null; selected
  * Every language the person dictates in (codes, e.g. ["en", "zh"]),
  * picked during onboarding. Empty until then.
  */
-spoken_languages?: string[]; overlay_position?: OverlayPosition; debug_mode?: boolean; log_level?: LogLevel; custom_words?: string[]; model_unload_timeout?: ModelUnloadTimeout; word_correction_threshold?: number; history_limit?: number; recording_retention_period?: RecordingRetentionPeriod; paste_method?: PasteMethod; clipboard_handling?: ClipboardHandling; auto_submit?: boolean; auto_submit_key?: AutoSubmitKey; post_process_enabled?: boolean; post_process_provider_id?: string; post_process_providers?: PostProcessProvider[]; post_process_api_keys?: SecretMap; post_process_models?: Partial<{ [key in string]: string }>; features?: FeatureModels; provider_models?: Partial<{ [key in string]: ModelEntry[] }>; features_migrated?: boolean; post_process_prompts?: LLMPrompt[]; post_process_selected_prompt_id?: string | null; mute_while_recording?: boolean; append_trailing_space?: boolean; app_language?: string; theme?: Theme; palette?: Palette; heading_style?: HeadingStyle; ui_density?: UiDensity; pill_tone?: PillTone;
+spoken_languages?: string[]; overlay_position?: OverlayPosition; debug_mode?: boolean; log_level?: LogLevel; custom_words?: string[]; model_unload_timeout?: ModelUnloadTimeout; word_correction_threshold?: number; history_limit?: number; recording_retention_period?: RecordingRetentionPeriod; paste_method?: PasteMethod; clipboard_handling?: ClipboardHandling; auto_submit?: boolean; auto_submit_key?: AutoSubmitKey; post_process_enabled?: boolean; post_process_provider_id?: string; post_process_providers?: PostProcessProvider[]; post_process_api_keys?: SecretMap; post_process_models?: Partial<{ [key in string]: string }>; features?: FeatureModels; provider_models?: Partial<{ [key in string]: ModelEntry[] }>; features_migrated?: boolean; post_process_prompts?: LLMPrompt[]; post_process_selected_prompt_id?: string | null; mute_while_recording?: boolean; append_trailing_space?: boolean; app_language?: string; theme?: Theme; palette?: Palette; heading_style?: HeadingStyle; ui_density?: UiDensity; pill_tone?: PillTone; 
 /**
  * The dictation pill shows its text label ("Pastille") or only the wave.
  */
@@ -1843,7 +1843,7 @@ last_seen: number; kind?: WordKind;
 /**
  * A pending word (seen once, needs a second sighting) is not used yet.
  */
-active?: boolean;
+active?: boolean; 
 /**
  * Pasted texts that held the term (Wispr `frequencyUsed`, E78).
  */
@@ -2080,6 +2080,7 @@ export type ShortcutBinding = { id: string; name: string; description: string; d
  * A user snippet (F120): said on its own, `trigger` inserts `text`.
  */
 export type Snippet = { trigger: string; text: string }
+export type SoundTheme = "marimba" | "pop" | "custom"
 /**
  * Where a learned entry comes from (EX-6.1). The user's own words are
  * `settings.custom_words`, not entries here.
@@ -2089,7 +2090,6 @@ export type Source = "user_edits" |
  * Reserved: words read on screen (Wispr `app_context`, off there too).
  */
 "app_context"
-export type SoundTheme = "marimba" | "pop" | "custom"
 /**
  * Phase of the streaming overlay card, emitted to drive its UI state.
  */
