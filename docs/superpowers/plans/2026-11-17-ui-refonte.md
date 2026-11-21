@@ -34,11 +34,29 @@ Deux plans changent les Réglages et passent **avant** celui-ci :
 3. **Vocabulaire** (Task 8) : la carte « Juge des corrections » devient **« Validateur d'apprentissage »**. On garde l'interrupteur (`learning_judge_enabled`) et la ligne d'état lue dans `get_feature_statuses` (`LearningValidator`), avec un lien « Choisir le modèle → Modèles », sans menu de fournisseur. On ajoute la ligne de compteurs du plan B.
 4. La section « Révision du 2026-11-18 » ci-dessus est **remplacée** pour tout ce qui touche au menu du fournisseur du juge. La relecture de l'état après chaque écriture (garde `saving`) reste due, désormais sur `get_feature_statuses`.
 
+## Révision du 2026-11-21 (plans A et B livrés)
+
+Les plans A (`4164a0e`) et B (`8c50245`…`197d24e`) sont sur `feat/handy-flow-brand` et `main`. Ce qu'ils changent pour ce plan :
+1. **Mots appris : seuls les mots en attente expirent** (`learning.rs:291`, « Wispr never expires its dictionary »). `LearningSettings.tsx:20-29` dit encore le contraire : encre qui pâlit et infobulle « expire le … » sur tous les mots. Corrigé en Task 8.
+2. **Validateur sans modèle utilisable ≠ inactif** : sans réponse, `validator::fallback` décide en local avec le lexique (terme rare ou technique et proche de l'entendu → appris, sinon en attente). Le texte partagé `settings.features.problem.NoModel` (« Inactif · aucun modèle utilisable ») reste pour les autres fonctions. La carte Validateur a son propre texte (Task 8).
+3. **`learning_judge_enabled` coupe deux choses** : le validateur des mots (`features.rs:341`) et le juge des règles de style (`judge.rs:124`). Le texte FR actuel (`settings.postProcessing.learning.judge.description`) le dit déjà : on le garde.
+4. **`FeatureSummary`** (`S/models/FeatureModelsCard.tsx`, déjà rendu dans `LearningSettings.tsx:103`) produit la ligne d'état du validateur : la carte le réutilise, on ne recode pas la logique.
+5. **`src/bindings.ts` a été modifié à la main** par le plan B (`Learned.source`, `Source`, `LearningStats`, `getLearningStats`). À régénérer sur Windows avant de commencer (Task 0).
+6. **Vérifications manuelles du plan B (Task 9) pas encore faites** (jonction Bloc-notes et Windows Terminal, « point oeuvre » → `.env`, lignes `Learning: candidate …`). Ce plan peut démarrer sans elles, mais elles doivent être faites avant le build 1/2 : un défaut d'apprentissage trouvé après la refonte serait plus dur à isoler.
+7. **Pas d'UI pour `Memory.refused`** (annulation définitive) : volontairement hors portée de ce plan.
+
 ## Global Constraints
 
 - **Branche :** créer `feat/ui-refonte` depuis `feat/handy-flow-brand`, **une fois les plans A et B fusionnés sur cette branche** (vérifier avec `git log --oneline | grep -i "per feature\|validator"`). Ne jamais pousser vers `upstream`.
 - **Machine :** sur ce PC, `bunx` n'existe pas et Playwright le lance (`playwright.config.ts`). Mettre sur le `PATH` un `bunx.cmd` contenant `@bun x %*` (dans le scratchpad, sans toucher au repo). Il n'y a pas non plus de `Desktop\Handy Flow` installé : avant chaque étape « remplacer Handy Flow », demander à l'utilisateur le dossier cible. Pousser vers `origin` seulement si l'utilisateur le demande.
-- **Tests :** logique Rust pure avec `cargo test --release --lib` (dans `src-tauri`). Logique TS avec un petit script `bun` à asserts, comme `src/lib/utils/appearance.test.ts`. UI avec Playwright headless (`bun run test:playwright`).
+- **Machine Linux (copie `/home/joseph/Claude-Remote/Handy-Flow`) :** le code et les tests peuvent se faire ici, les builds et le remplacement de Handy Flow restent sur le PC Windows. Ne pas toucher `/home/joseph/Handy-Flow` (commit CI jamais poussé), sauf comme `CARGO_TARGET_DIR`. Environnement :
+  ```
+  source /tmp/handy-plan-a-env            # sysroot ; /tmp peut être vidé au redémarrage, le recréer alors
+  export CARGO_TARGET_DIR=/home/joseph/Handy-Flow/src-tauri/target
+  export PATH=$HOME/.bun/bin:$PATH
+  ```
+  Playwright : `./node_modules/.bin/playwright test --trace off`. Les tests de capture d'écran échouent sous Linux (le dépôt n'a que des références `-win32.png`) : les ignorer, puis supprimer les `*-chrome-linux.png` générés avant chaque commit.
+- **Tests :** logique Rust pure avec `cargo test --lib` (dans `src-tauri`, `--release` sous Windows). Logique TS avec un petit script `bun` à asserts, comme `src/lib/utils/appearance.test.ts`. UI avec Playwright headless (`bun run test:playwright` sous Windows, commande ci-dessus sous Linux).
 - **Builds :** `bun run tauri build --no-bundle -- --profile fast` → `src-tauri/target/fast/handy.exe`. **Deux builds au total**, un par incrément (voir plus bas). Ne jamais modifier les sources pendant un build.
 - **Après chaque build :** remplacer `C:\Users\gavri\Desktop\Handy Flow\Handy Flow.exe`, les DLL de `src-tauri/transcribe-libs` et `resources\`. Sauvegarder d'abord `Data\` et l'ancien exe, fermer `Handy Flow.exe`, puis relancer. **Ne jamais toucher `Data\`** ni `Desktop\Handy`.
 - **Aucun test qui prend le clavier, le focus, la souris ou l'audio du PC.** Pas de dictée simulée. Les essais réels sont faits par l'utilisateur.
@@ -94,7 +112,9 @@ Débogage      (si debug_mode) + backend clavier, Expérimental, logs
 ### Task 0 : Préparer la branche
 
 - [ ] `git switch feat/handy-flow-brand && git switch -c feat/ui-refonte`
-- [ ] `bun install`, puis `bun run build`, `bun run check:translations` et `bun run test:playwright` pour enregistrer l'état de départ. Noter les échecs déjà présents : au 2026-11-18, `check:translations` échoue (1/25 langues) et Playwright passe à 84/84.
+- [ ] Sur Windows : `bun run tauri dev` pour régénérer `src/bindings.ts` (modifié à la main par le plan B). Le diff doit être vide ou de forme seulement ; sinon, corriger le code qui utilisait les types écrits à la main, et faire un commit `chore: regenerate bindings`.
+- [ ] `bun install`, puis `bun run build`, `bun run check:translations`, Playwright et `cargo test --lib` pour enregistrer l'état de départ. Noter les échecs déjà présents. Au 2026-11-21 : `cargo test --lib` donne 536 passés ; sous Linux, les 26 tests de capture d'écran échouent (références `-win32` seulement) ; refaire le compte de Playwright et de `check:translations`, les chiffres du 2026-11-18 (84/84, 1/25) sont périmés.
+- [ ] Vérifier que les vérifications manuelles du plan B (Task 9) sont faites, ou les noter comme dues avant le build 1/2 (Révision du 2026-11-21, point 6).
 
 ### Task 1 : Rétention « 30 jours » acceptée
 
@@ -194,15 +214,15 @@ Sous-pages :
 - [ ] Visible : `ToggleSwitch` apprentissage (`learning_enabled`), champ nom (`user_name`).
 - [ ] Cartes :
   - **Mots personnels** (`BookA`) → « {n} mots » → `CustomWords`, retiré d'Avancé
-  - **Mots appris** (`Sparkles`) → « {m} mots, dont {k} en attente » → ligne de compteurs du plan B (« 30 derniers jours : … », `get_learning_stats`) puis liste avec supprimer, actualiser, exporter, effacer (confirmation conservée)
+  - **Mots appris** (`Sparkles`) → « {m} mots, dont {k} en attente » → ligne de compteurs du plan B (« 30 derniers jours : … », `get_learning_stats`) puis liste avec supprimer, actualiser, exporter, effacer (confirmation conservée). **Corriger l'expiration** (Révision du 2026-11-21, point 1) : l'encre qui pâlit (`inkLeft`) et l'infobulle `words.expires` ne s'appliquent qu'aux mots en attente (`!w.active`) ; un mot actif reste à pleine encre, sans date. Mettre à jour le commentaire `FORGET_AFTER_S` (« un mot en attente non confirmé en 30 jours est oublié »). Test Playwright : un mot actif ancien n'a pas d'infobulle d'expiration, un mot en attente en a une.
   - **Règles de style** (`PenLine`) → « {r} règles apprises » → liste avec suppression
-  - **Validateur d'apprentissage** (`Gavel`) → résumé selon le cas, dans cet ordre : « Désactivé » (`learning_judge_enabled` faux) ; « Inactif : apprentissage coupé » (`learning_enabled` faux) ; « Inactif : envoi du contexte coupé (onglet Contexte) » (`context_send_enabled` faux) ; « Utilise {fournisseur} · {modèle} · raisonnement {niveau} » ou « Automatique : {fournisseur} · {modèle} · raisonnement {niveau} » (statut `LearningValidator` de `get_feature_statuses`). Si le modèle ne raisonne pas, ajouter en `warn` : « Un modèle qui raisonne se trompe moins : choisis-en un dans Modèles. » ; sinon « Inactif : aucun modèle utilisable ». Sous-page : `ToggleSwitch` `learning_judge_enabled` (description **visible** : « Les mots que tu corriges sont envoyés à ce modèle pour décider s'ils sont appris. »), ligne d'état, bouton « Choisir le modèle → Modèles ». **Pas de menu de fournisseur.** Le bloc vient de `LearningSettings.tsx` tel que le plan A l'a laissé.
+  - **Validateur d'apprentissage** (`Gavel`) → résumé selon le cas, dans cet ordre : « Désactivé » (`learning_judge_enabled` faux) ; « Inactif : apprentissage coupé » (`learning_enabled` faux) ; « Inactif : envoi du contexte coupé (onglet Contexte) » (`context_send_enabled` faux) ; « Utilise {fournisseur} · {modèle} · raisonnement {niveau} » ou « Automatique : {fournisseur} · {modèle} · raisonnement {niveau} » (statut `LearningValidator` de `get_feature_statuses`). Si le modèle ne raisonne pas, ajouter en `warn` : « Un modèle qui raisonne se trompe moins : choisis-en un dans Modèles. » ; sinon (`NoKey`, `NoModel`, `NotChosen`) « Sans modèle : décision locale (lexique) », car `validator::fallback` apprend encore les termes rares ou techniques (Révision du 2026-11-21, point 2). Nouvelle clé dédiée au validateur (ex. `settings.postProcessing.learning.judge.local`), sans toucher à `settings.features.problem.NoModel`, partagée avec les autres fonctions. Le résumé réutilise `FeatureSummary` (point 4) avec ce seul cas surchargé. Sous-page : `ToggleSwitch` `learning_judge_enabled` avec la description **visible** existante `settings.postProcessing.learning.judge.description` (elle dit déjà que la correction part à une IA pour les règles de style **et** les mots, ce qui est exact : `judge.rs:124`), complétée d'une phrase « Coupé : rien n'est envoyé, les mots sont décidés sur ton PC. » ; ligne d'état, bouton « Choisir le modèle → Modèles ». **Pas de menu de fournisseur.** Le bloc vient de `LearningSettings.tsx` tel que le plan A l'a laissé.
   - **Snippets** (`TextQuote`) → « {s} snippets » → `SnippetSettings`
   - **Aide à la reconnaissance** (`AudioLines`) → « Activée · mots appris + expressions » → toggles ASR `enabled`, `learned_words`, `expressions`, liste repliable d'expressions et ligne de compatibilité du modèle (`support`)
 - [ ] `ExpertSection` : son du mot appris (`learned_sound_enabled`) et seuil de correction (`WordCorrectionThreshold`, retiré de Debug).
 - [ ] Les composants déplacés gardent leurs clés i18n actuelles (`settings.postProcessing.learning.*`…). On ne renomme pas les clés dans ce plan, seulement les valeurs FR si le texte change.
 - [ ] Test Playwright : la page s'affiche, la carte Mots personnels ouvre la sous-page et un ajout appelle l'update `custom_words`.
-- [ ] `tests/learning.spec.ts` (déjà adapté par le plan A à la ligne Validateur) : `openLearning` ouvre l'onglet Vocabulaire, et ces tests ouvrent la carte Validateur. Ils restent verts sans changer leurs attentes. Ajouter deux tests : avec `context_send_enabled: false`, la carte dit « envoi du contexte coupé » ; « Choisir le modèle » ouvre l'onglet Modèles.
+- [ ] `tests/learning.spec.ts` (10 tests, dont 6 sur le validateur et 1 sur les compteurs) : `openLearning` (`:4`, clique encore « Post Process ») ouvre l'onglet Vocabulaire, puis la carte voulue (Mots appris, Règles de style ou Validateur). Les tests « context sharing prevents it » et « links to the model picker » existent déjà : ne pas les dupliquer. Seule attente à changer : « without a usable model the validator is inactive » (`:114`) attend désormais le texte de décision locale.
 - [ ] Commit.
 
 ### Task 9 : Page Contexte (nouvelle)
@@ -297,7 +317,7 @@ Sous-pages :
 - [ ] Relier les labels aux champs (`htmlFor`/`id`, ou `aria-label`) : `SettingContainer.tsx:87`, `HistoryLimit.tsx:37`, champ nom, `PromptEditor`.
 - [ ] Overlay : remplacer les `div onClick` de fermeture des notices par des `<button aria-label>` (`RecordingOverlay.tsx:432,501`).
 - [ ] `SettingContainer` : passer `descriptionMode` à `"inline"` par défaut **uniquement** dans les nouvelles pages (prop explicite). Ne pas changer le défaut global.
-- [ ] Les clés `settings.postProcessing.learning.judge.provider.*` ont été retirées par le plan A (plus de menu) : vérifier qu'aucun composant ne les utilise encore, puis les supprimer de toutes les locales. Ajouter les nouveaux résumés des cartes Validateur, Fournisseurs et Utilisation par fonction, avec la valeur anglaise, aux 24 locales sans traduction. FR : « Validateur d'apprentissage » remplace « Juge des corrections » partout.
+- [ ] Les clés `settings.postProcessing.learning.judge.provider.*` ont été retirées par le plan A (plus de menu) : vérifier qu'aucun composant ne les utilise encore, puis les supprimer de toutes les locales. Ajouter les nouveaux résumés des cartes Validateur, Fournisseurs et Utilisation par fonction, avec la valeur anglaise, aux 24 locales sans traduction. FR : `learning.judge.label` vaut déjà « Validateur d'apprentissage » ; aucune valeur FR ne contient plus « juge » (vérifié le 2026-11-21), revérifier par grep en fin de plan.
 - [ ] `bun run check:translations` passe.
 - [ ] Commit.
 
