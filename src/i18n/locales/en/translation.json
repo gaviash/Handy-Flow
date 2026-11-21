@@ -1066,7 +1066,8 @@
       "saveError": "Couldn't change this entry's star.",
       "audioError": "Couldn't find this recording's audio.",
       "openFolderError": "Couldn't open the recordings folder.",
-      "deleted": "Entry deleted"
+      "deleted": "Entry deleted",
+      "retention": "Retention"
     },
     "debug": {
       "title": "Debug",
@@ -1138,7 +1139,7 @@
       },
       "recordingRetention": {
         "title": "Auto-Delete Recordings",
-        "description": "Automatically delete old recordings to save space",
+        "description": "Deletes old dictations, text and audio, to save space. Starred ones are kept.",
         "never": "Never",
         "preserveLimit": "Keep latest {{count}}",
         "days3": "After 3 days",

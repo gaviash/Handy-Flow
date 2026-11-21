@@ -64,6 +64,7 @@ const PAGES_WITH_OWN_TITLE: SidebarSection[] = [
   "vocabulary",
   "context",
   "advanced",
+  "history",
 ];
 
 const renderSettingsContent = (

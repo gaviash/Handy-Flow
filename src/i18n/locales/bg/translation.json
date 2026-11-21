@@ -1066,7 +1066,8 @@
       "saveError": "Couldn't change this entry's star.",
       "audioError": "Couldn't find this recording's audio.",
       "openFolderError": "Couldn't open the recordings folder.",
-      "deleted": "Entry deleted"
+      "deleted": "Entry deleted",
+      "retention": "Retention"
     },
     "debug": {
       "title": "Отстраняване",

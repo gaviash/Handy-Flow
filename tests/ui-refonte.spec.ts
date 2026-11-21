@@ -351,3 +351,21 @@ test("Advanced shows text insertion as a card and folds audio capture", async ({
   await page.getByText("Expert settings").click();
   await expect(page.getByText("Silence detector").first()).toBeVisible();
 });
+
+test("History opens on its retention, and the count only shows for 'keep the last'", async ({
+  page,
+}) => {
+  const mock = await mockTauri(page, {
+    settings: { recording_retention_period: "days30" },
+  });
+  await page.goto("/");
+  await page.getByRole("button", { name: "History", exact: true }).click();
+  const card = page.getByRole("button", { name: /^Retention/ });
+  await expect(card).toContainText("30 Days (Audio of the Last 20)");
+  await card.click();
+  await expect(page.getByText("Starred ones are kept.")).toBeVisible();
+  await expect(page.getByText("History Limit")).toHaveCount(0);
+  expect((await mock.calls()).map((c) => c.cmd)).toContain(
+    "get_history_entries",
+  );
+});

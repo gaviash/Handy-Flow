@@ -1066,7 +1066,8 @@
       "saveError": "Impossible de changer l'étoile de cette entrée.",
       "audioError": "Impossible de trouver l'audio de cet enregistrement.",
       "openFolderError": "Impossible d'ouvrir le dossier des enregistrements.",
-      "deleted": "Entrée supprimée"
+      "deleted": "Entrée supprimée",
+      "retention": "Conservation"
     },
     "debug": {
       "title": "Débogage",
@@ -1138,7 +1139,7 @@
       },
       "recordingRetention": {
         "title": "Suppression automatique des enregistrements",
-        "description": "Supprimer automatiquement les anciens enregistrements pour économiser de l'espace",
+        "description": "Supprime les anciennes dictées, texte et audio, pour économiser de l’espace. Les dictées étoilées sont gardées.",
         "never": "Jamais",
         "preserveLimit": "Conserver les {{count}} plus récents",
         "days3": "Après 3 jours",

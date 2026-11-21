@@ -11,6 +11,7 @@ import { EmptyMascot } from "../../shared/Mascot";
 import { convertFileSrc } from "@tauri-apps/api/core";
 import { readFile } from "@tauri-apps/plugin-fs";
 import {
+  Archive,
   Check,
   Copy,
   FileAudio,
@@ -40,6 +41,14 @@ import {
 import { formatDateTime } from "@/utils/dateFormat";
 import { AudioPlayer, AudioPlayerGroup } from "../../ui/AudioPlayer";
 import { Button } from "../../ui/Button";
+import {
+  SettingCard,
+  SettingsGroup,
+  SubPage,
+  useSubPage,
+} from "@/components/ui";
+import { HistoryLimit } from "../HistoryLimit";
+import { RecordingRetentionPeriodSelector } from "../RecordingRetentionPeriod";
 import { copyToClipboard } from "./clipboard";
 import {
   pickAndTranscribeFiles,
@@ -81,6 +90,15 @@ const IconButton: React.FC<{
 );
 
 const PAGE_SIZE = 30;
+/** Retention value → its label key in settings.debug.recordingRetention. */
+const RETENTION_LABEL: Record<string, string> = {
+  never: "never",
+  preserve_limit: "preserveLimit",
+  days3: "days3",
+  days30: "days30",
+  weeks2: "weeks2",
+  months3: "months3",
+};
 /** As long as the undo toast stays up (NoticePanel TOAST_MS). */
 const UNDO_MS = 8000;
 
@@ -152,8 +170,10 @@ const HeaderButton: React.FC<HeaderButtonProps> = ({
 
 export const HistorySettings: React.FC = () => {
   const { t } = useTranslation();
+  const sub = useSubPage<"retention">();
   const osType = useOsType();
   const { getSetting } = useSettings();
+  const retention = getSetting("recording_retention_period") ?? "never";
   const jobs = useTranscriptionJobsStore((state) => state.jobs);
   const reads = useFileReadsStore((state) => state.reads);
   const [entries, setEntries] = useState<HistoryEntry[]>([]);
@@ -456,8 +476,37 @@ export const HistorySettings: React.FC = () => {
     );
   }
 
+  const title = t("sidebar.history");
+  if (sub.open === "retention")
+    return (
+      <SubPage
+        parent={title}
+        title={t("settings.history.retention")}
+        onBack={sub.back}
+      >
+        <SettingsGroup>
+          <RecordingRetentionPeriodSelector descriptionMode="inline" grouped />
+          {/* history.rs: the count only applies to "keep the last N". */}
+          {retention === "preserve_limit" && (
+            <HistoryLimit descriptionMode="inline" grouped />
+          )}
+        </SettingsGroup>
+      </SubPage>
+    );
+
   return (
     <div className="max-w-3xl w-full mx-auto space-y-6">
+      <h1 className="page-title">{title}</h1>
+      <SettingCard
+        ref={sub.cardRef("retention")}
+        icon={Archive}
+        title={t("settings.history.retention")}
+        summary={t(
+          `settings.debug.recordingRetention.${RETENTION_LABEL[retention] ?? "never"}`,
+          { count: Number(getSetting("history_limit") ?? 5) },
+        )}
+        onOpen={() => sub.show("retention")}
+      />
       <div className="space-y-2">
         <div className="px-4 flex items-center justify-end">
           <div className="flex items-center gap-2">
@@ -674,6 +723,7 @@ const HistoryEntryComponent: React.FC<HistoryEntryProps> = ({
             </span>
             <button
               type="button"
+              aria-pressed={showOriginal}
               className="text-ink-2 underline hover:text-accent-text"
               onClick={() => {
                 setShowOriginal(!showOriginal);
@@ -712,6 +762,7 @@ const HistoryEntryComponent: React.FC<HistoryEntryProps> = ({
         {hasTranscription && !retrying && (expanded || overflows) && (
           <button
             type="button"
+            aria-expanded={expanded}
             onClick={() => setExpanded(!expanded)}
             className="text-xs font-medium text-ink-3 hover:text-logo-primary cursor-pointer"
           >
