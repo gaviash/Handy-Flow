@@ -142,6 +142,10 @@ pub struct Transform {
     pub instruction: String,
 }
 
+/// Saved transformations the user can create, each with its own shortcut
+/// (`transform_1`…). The settings UI reads the same count.
+pub const MAX_TRANSFORMS: usize = 9;
+
 pub fn default_transforms() -> Vec<Transform> {
     [
         ("Plus court", "Make it shorter."),
