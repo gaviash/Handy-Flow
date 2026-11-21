@@ -1841,7 +1841,7 @@ active?: boolean;
 /**
  * Pasted texts that held the term (Wispr `frequencyUsed`, E78).
  */
-used?: number }
+used?: number; source?: Source }
 /**
  * What just became usable, as announced to the user and undone exactly by
  * the notification's Undo: a new word, a new heard form of a known word, or
@@ -2066,6 +2066,15 @@ export type ShortcutBinding = { id: string; name: string; description: string; d
  * A user snippet (F120): said on its own, `trigger` inserts `text`.
  */
 export type Snippet = { trigger: string; text: string }
+/**
+ * Where a learned entry comes from (EX-6.1). The user's own words are
+ * `settings.custom_words`, not entries here.
+ */
+export type Source = "user_edits" | 
+/**
+ * Reserved: words read on screen (Wispr `app_context`, off there too).
+ */
+"app_context"
 export type SoundTheme = "marimba" | "pop" | "custom"
 /**
  * Phase of the streaming overlay card, emitted to drive its UI state.

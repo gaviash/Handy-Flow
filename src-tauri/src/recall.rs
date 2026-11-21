@@ -217,6 +217,7 @@ mod tests {
             kind,
             active: true,
             used,
+            source: Default::default(),
         }
     }
 

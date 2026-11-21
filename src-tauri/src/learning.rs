@@ -135,6 +135,19 @@ pub struct Learned {
     /// Pasted texts that held the term (Wispr `frequencyUsed`, E78).
     #[serde(default)]
     pub used: u32,
+    #[serde(default)]
+    pub source: Source,
+}
+
+/// Where a learned entry comes from (EX-6.1). The user's own words are
+/// `settings.custom_words`, not entries here.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize, Type)]
+#[serde(rename_all = "snake_case")]
+pub enum Source {
+    #[default]
+    UserEdits,
+    /// Reserved: words read on screen (Wispr `app_context`, off there too).
+    AppContext,
 }
 
 fn yes() -> bool {
@@ -172,6 +185,9 @@ pub struct Memory {
     /// Unix seconds of the one re-validation of pending words (EX-5); 0 = not yet.
     #[serde(default)]
     pub revalidated_at: i64,
+    /// Pairs the user undid, `(heard, term)` lowercased: never learned again (EX-6.2).
+    #[serde(default)]
+    pub refused: Vec<(String, String)>,
 }
 
 pub const WORDS_MAX: usize = 2000;
@@ -186,6 +202,7 @@ fn parse_memory(json: &[u8]) -> Memory {
                 words,
                 rules: Vec::new(),
                 revalidated_at: 0,
+                refused: Vec::new(),
             })
         })
         .unwrap_or_default()
@@ -696,6 +713,7 @@ pub(crate) fn record_word(m: &mut Memory, c: &Candidate, now: i64) -> Option<Lea
                 kind: c.kind,
                 active,
                 used: 0,
+                source: Source::UserEdits,
             });
             active.then(|| LearnedNews::Word {
                 term: c.term.clone(),
@@ -704,12 +722,35 @@ pub(crate) fn record_word(m: &mut Memory, c: &Candidate, now: i64) -> Option<Lea
     }
 }
 
-/// Undoes one heard form; a word left with none goes.
+/// Undoes one heard form; a word left with none goes. The pair is refused
+/// from now on.
 pub(crate) fn drop_form(m: &mut Memory, term: &str, heard: &str) {
+    refuse(m, heard, term);
     for w in m.words.iter_mut().filter(|w| same_term(&w.term, term)) {
         w.heard.retain(|h| !same_term(h, heard));
     }
     m.words.retain(|w| !w.heard.is_empty());
+}
+
+/// Removes a word; each of its forms is refused from now on.
+pub(crate) fn forget_word(m: &mut Memory, term: &str) {
+    let pairs: Vec<(String, String)> = m
+        .words
+        .iter()
+        .filter(|w| same_term(&w.term, term))
+        .flat_map(|w| w.heard.iter().map(|h| (h.clone(), w.term.clone())))
+        .collect();
+    for (h, t) in pairs {
+        refuse(m, &h, &t);
+    }
+    m.words.retain(|w| !same_term(&w.term, term));
+}
+
+fn refuse(m: &mut Memory, heard: &str, term: &str) {
+    let pair = (heard.to_lowercase(), term.to_lowercase());
+    if !m.refused.contains(&pair) {
+        m.refused.push(pair);
+    }
 }
 
 // ---------------------------------------------------------------- memory
@@ -1033,11 +1074,21 @@ fn record_decisions(app: &AppHandle, decided: Vec<(Candidate, crate::validator::
     }
 }
 
-/// A candidate already active with the same heard form: nothing to ask.
-pub(crate) fn already_known(m: &Memory, c: &Candidate) -> bool {
-    m.words.iter().any(|w| {
-        w.active && same_term(&w.term, &c.term) && w.heard.iter().any(|h| same_term(h, &c.heard))
-    })
+/// What memory alone decides about a candidate: a pair the user undid, or a
+/// word already active with this heard form (nothing to ask).
+pub(crate) fn memory_guard(m: &Memory, c: &Candidate) -> Option<&'static str> {
+    let pair = (c.heard.to_lowercase(), c.term.to_lowercase());
+    if m.refused.contains(&pair) {
+        return Some("undone");
+    }
+    m.words
+        .iter()
+        .any(|w| {
+            w.active
+                && same_term(&w.term, &c.term)
+                && w.heard.iter().any(|h| same_term(h, &c.heard))
+        })
+        .then_some("known")
 }
 
 /// F95, as Wispr: the overlay pill says what was learned, over the window the
@@ -1095,7 +1146,7 @@ pub fn get_learned_words(app: AppHandle) -> Vec<Learned> {
 #[specta::specta]
 pub fn delete_learned_word(app: AppHandle, term: String) {
     with_memory(&app, |m| {
-        m.words.retain(|l| l.term != term);
+        forget_word(m, &term);
         save(&app, m);
     });
 }
@@ -1519,7 +1570,13 @@ pub fn observe(
                 .map(|fin| candidates(&inserted, fin))
                 .unwrap_or_default()
                 .into_iter()
-                .filter(|c| !with_memory(&app, |m| already_known(m, c)))
+                .filter(|c| match with_memory(&app, |m| memory_guard(m, c)) {
+                    Some(reason) => {
+                        log::debug!("Learning: guarded ({reason})");
+                        false
+                    }
+                    None => true,
+                })
                 .collect();
             log::debug!(
                 "Learning: observation ended ({ended}); edited: {}, candidates: {}",
@@ -1567,6 +1624,51 @@ mod tests {
     }
 
     #[test]
+    fn an_undone_pair_is_never_learned_again() {
+        let mut m = Memory::default();
+        let c = super::candidates("Merci Jeff, à demain.", "Merci Jev, à demain.");
+        assert_eq!(memory_guard(&m, &c[0]), None);
+        record_word(&mut m, &c[0], 0);
+        // Known and active with this form: nothing to ask.
+        assert_eq!(memory_guard(&m, &c[0]), Some("known"));
+        // The notification's Undo: gone, and refused from now on.
+        drop_form(&mut m, "Jev", "Jeff");
+        assert!(m.words.is_empty());
+        assert_eq!(memory_guard(&m, &c[0]), Some("undone"));
+        // Another form of the same word is still welcome.
+        let other = Candidate {
+            term: "Jev".into(),
+            heard: "Chef".into(),
+            kind: WordKind::Term,
+        };
+        assert_eq!(memory_guard(&m, &other), None);
+        // Survives a save.
+        let back = parse_memory(&serde_json::to_vec(&m).unwrap());
+        assert_eq!(memory_guard(&back, &c[0]), Some("undone"));
+        // A word deleted from the list refuses each of its forms too.
+        record_word(&mut m, &other, 1);
+        forget_word(&mut m, "jev");
+        assert!(m.words.is_empty());
+        assert_eq!(memory_guard(&m, &other), Some("undone"));
+    }
+
+    #[test]
+    fn entries_say_where_they_come_from() {
+        let mut m = Memory::default();
+        record_word(
+            &mut m,
+            &super::candidates("Merci Jeff.", "Merci Jev.")[0],
+            0,
+        );
+        assert_eq!(m.words[0].source, Source::UserEdits);
+        // Older memory has no source: the user's edits.
+        let l: Learned =
+            serde_json::from_str(r#"{"term":"Qwen","heard":"Quen","count":1,"last_seen":0}"#)
+                .unwrap();
+        assert_eq!(l.source, Source::UserEdits);
+    }
+
+    #[test]
     fn pending_words_are_revalidated_once() {
         let pending = |term: &str, heard: &str| Learned {
             term: term.into(),
@@ -1576,6 +1678,7 @@ mod tests {
             kind: WordKind::Misheard,
             active: false,
             used: 0,
+            source: Default::default(),
         };
         let mut m = Memory {
             words: vec![
@@ -2104,6 +2207,7 @@ footer",
             kind,
             active: true,
             used: 0,
+            source: Default::default(),
         };
         let mut m = Memory::default();
         m.words.push(word("est", "et", WordKind::Misheard));
@@ -2124,6 +2228,7 @@ footer",
             kind: WordKind::Term,
             active: true,
             used: 0,
+            source: Default::default(),
         });
         assert!(mark_used(&mut m, "on compare quen et gemma", "", 500));
         assert_eq!(m.words[0].last_seen, 500);
@@ -2342,6 +2447,7 @@ footer",
             kind,
             active,
             used: 0,
+            source: Default::default(),
         }
     }
 
