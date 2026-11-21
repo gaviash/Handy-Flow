@@ -20,7 +20,10 @@ const DEFAULTS: Asr = {
 };
 
 /** Handy Adaptive (spec §7): what the speech model is told before it listens. */
-export const AsrContextSettings: React.FC = () => {
+export const AsrContextSettings: React.FC<{
+  /** Vocabulary shows what is told; Context shows the screen, then its limits. */
+  part: "vocabulary" | "screen" | "limits";
+}> = ({ part }) => {
   const { t } = useTranslation();
   const { getSetting, updateSetting, isUpdating } = useSettings();
   const [support, setSupport] = useState<AsrSupport | null>(null);
@@ -47,7 +50,7 @@ export const AsrContextSettings: React.FC = () => {
       disabled={disabled}
       label={t(key(label))}
       description={t(key("description"))}
-      descriptionMode="tooltip"
+      descriptionMode={part === "screen" ? "inline" : "tooltip"}
       grouped={true}
     />
   );
@@ -65,6 +68,7 @@ export const AsrContextSettings: React.FC = () => {
       grouped={true}
     >
       <Input
+        aria-label={t(key(label))}
         type="number"
         min={min}
         max={max}
@@ -78,6 +82,15 @@ export const AsrContextSettings: React.FC = () => {
       />
     </SettingContainer>
   );
+
+  if (part === "screen") return toggle("screen", "screen", !asr.enabled);
+  if (part === "limits")
+    return (
+      <>
+        {number("max_terms", "maxTerms", 1, 200)}
+        {number("capture_wait_ms", "captureWait", 0, 1000)}
+      </>
+    );
 
   return (
     <>
@@ -109,9 +122,6 @@ export const AsrContextSettings: React.FC = () => {
           </ul>
         </details>
       </SettingContainer>
-      {toggle("screen", "screen", !asr.enabled)}
-      {number("max_terms", "maxTerms", 1, 200)}
-      {number("capture_wait_ms", "captureWait", 0, 1000)}
     </>
   );
 };

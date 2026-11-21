@@ -35,6 +35,7 @@ export const HistoryLimit: React.FC<HistoryLimitProps> = ({
     >
       <div className="flex items-center space-x-2">
         <Input
+          aria-label={t("settings.debug.historyLimit.title")}
           type="number"
           min="0"
           max="1000"

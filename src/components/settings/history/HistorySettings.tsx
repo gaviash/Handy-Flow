@@ -11,6 +11,7 @@ import { EmptyMascot } from "../../shared/Mascot";
 import { convertFileSrc } from "@tauri-apps/api/core";
 import { readFile } from "@tauri-apps/plugin-fs";
 import {
+  Archive,
   Check,
   Copy,
   FileAudio,
@@ -22,7 +23,7 @@ import {
   X,
 } from "lucide-react";
 import { useTranslation } from "react-i18next";
-import { notify } from "@/stores/noticeStore";
+import { notify, useNoticeStore } from "@/stores/noticeStore";
 import {
   commands,
   events,
@@ -40,6 +41,14 @@ import {
 import { formatDateTime } from "@/utils/dateFormat";
 import { AudioPlayer, AudioPlayerGroup } from "../../ui/AudioPlayer";
 import { Button } from "../../ui/Button";
+import {
+  SettingCard,
+  SettingsGroup,
+  SubPage,
+  useSubPage,
+} from "@/components/ui";
+import { HistoryLimit } from "../HistoryLimit";
+import { RecordingRetentionPeriodSelector } from "../RecordingRetentionPeriod";
 import { copyToClipboard } from "./clipboard";
 import {
   pickAndTranscribeFiles,
@@ -81,6 +90,17 @@ const IconButton: React.FC<{
 );
 
 const PAGE_SIZE = 30;
+/** Retention value → its label key in settings.debug.recordingRetention. */
+const RETENTION_LABEL: Record<string, string> = {
+  never: "never",
+  preserve_limit: "preserveLimit",
+  days3: "days3",
+  days30: "days30",
+  weeks2: "weeks2",
+  months3: "months3",
+};
+/** As long as the undo toast stays up (NoticePanel TOAST_MS). */
+const UNDO_MS = 8000;
 
 // Long text folds to this many lines until "Show more".
 const FOLDED_LINES = 4;
@@ -150,8 +170,10 @@ const HeaderButton: React.FC<HeaderButtonProps> = ({
 
 export const HistorySettings: React.FC = () => {
   const { t } = useTranslation();
+  const sub = useSubPage<"retention">();
   const osType = useOsType();
   const { getSetting } = useSettings();
+  const retention = getSetting("recording_retention_period") ?? "never";
   const jobs = useTranscriptionJobsStore((state) => state.jobs);
   const reads = useFileReadsStore((state) => state.reads);
   const [entries, setEntries] = useState<HistoryEntry[]>([]);
@@ -159,6 +181,7 @@ export const HistorySettings: React.FC = () => {
   // Cleared once unfolded: the clipping it needs would cut the row's menus.
   const [arrived, setArrived] = useState<ReadonlySet<number>>(new Set());
   const [loading, setLoading] = useState(true);
+  const [loadFailed, setLoadFailed] = useState(false);
   const [hasMore, setHasMore] = useState(true);
   const sentinelRef = useRef<HTMLDivElement>(null);
   const entriesRef = useRef<HistoryEntry[]>([]);
@@ -169,37 +192,51 @@ export const HistorySettings: React.FC = () => {
     entriesRef.current = entries;
   }, [entries]);
 
-  const loadPage = useCallback(async (cursor?: number) => {
-    const isFirstPage = cursor === undefined;
-    if (!isFirstPage && loadingRef.current) return;
-    loadingRef.current = true;
+  // Deletions wait for the undo toast; leaving the page carries them out.
+  const pendingDeletes = useRef(new Map<number, () => void>());
 
-    if (isFirstPage) setLoading(true);
+  const loadPage = useCallback(
+    async (cursor?: number) => {
+      const isFirstPage = cursor === undefined;
+      if (!isFirstPage && loadingRef.current) return;
+      loadingRef.current = true;
 
-    try {
-      const result = await commands.getHistoryEntries(
-        cursor ?? null,
-        PAGE_SIZE,
-      );
-      if (result.status === "ok") {
-        const { entries: newEntries, has_more } = result.data;
-        setEntries((prev) => {
-          if (isFirstPage) return newEntries;
-          const existingIds = new Set(prev.map((entry) => entry.id));
-          return [
-            ...prev,
-            ...newEntries.filter((entry) => !existingIds.has(entry.id)),
-          ];
-        });
-        setHasMore(has_more);
+      if (isFirstPage) setLoading(true);
+
+      try {
+        const result = await commands.getHistoryEntries(
+          cursor ?? null,
+          PAGE_SIZE,
+        );
+        if (result.status === "error") throw result.error;
+        if (isFirstPage) setLoadFailed(false);
+        {
+          const { has_more } = result.data;
+          // An entry still waiting to be deleted stays hidden.
+          const newEntries = result.data.entries.filter(
+            (entry) => !pendingDeletes.current.has(entry.id),
+          );
+          setEntries((prev) => {
+            if (isFirstPage) return newEntries;
+            const existingIds = new Set(prev.map((entry) => entry.id));
+            return [
+              ...prev,
+              ...newEntries.filter((entry) => !existingIds.has(entry.id)),
+            ];
+          });
+          setHasMore(has_more);
+        }
+      } catch (error) {
+        console.error("Failed to load history entries:", error);
+        if (isFirstPage) setLoadFailed(true);
+        else notify({ title: t("settings.history.loadError") });
+      } finally {
+        setLoading(false);
+        loadingRef.current = false;
       }
-    } catch (error) {
-      console.error("Failed to load history entries:", error);
-    } finally {
-      setLoading(false);
-      loadingRef.current = false;
-    }
-  }, []);
+    },
+    [t],
+  );
 
   // Initial load
   useEffect(() => {
@@ -261,14 +298,10 @@ export const HistorySettings: React.FC = () => {
     );
     try {
       const result = await commands.toggleHistoryEntrySaved(id);
-      if (result.status !== "ok") {
-        // Revert on failure
-        setEntries((prev) =>
-          prev.map((e) => (e.id === id ? { ...e, saved: !e.saved } : e)),
-        );
-      }
+      if (result.status !== "ok") throw result.error;
     } catch (error) {
       console.error("Failed to toggle saved status:", error);
+      notify({ title: t("settings.history.saveError"), detail: String(error) });
       // Revert on failure
       setEntries((prev) =>
         prev.map((e) => (e.id === id ? { ...e, saved: !e.saved } : e)),
@@ -288,28 +321,66 @@ export const HistorySettings: React.FC = () => {
           }
           return convertFileSrc(result.data, "asset");
         }
-        return null;
+        throw result.error;
       } catch (error) {
         console.error("Failed to get audio file path:", error);
+        notify({ title: t("settings.history.audioError") });
         return null;
       }
     },
-    [osType],
+    [osType, t],
   );
 
-  const deleteAudioEntry = async (id: number) => {
-    // Optimistically remove
+  useEffect(() => {
+    const pending = pendingDeletes.current;
+    return () => pending.forEach((flush) => flush());
+  }, []);
+
+  // shortcut: a deletion still waiting is dropped if the app is killed in
+  // those 8 s (the entry stays, the safe way round).
+  const deleteAudioEntry = (id: number) => {
+    const index = entriesRef.current.findIndex((e) => e.id === id);
+    const entry = entriesRef.current[index];
+    if (!entry) return;
     setEntries((prev) => prev.filter((e) => e.id !== id));
-    try {
-      const result = await commands.deleteHistoryEntry(id);
-      if (result.status !== "ok") {
-        throw new Error(String(result.error));
+    const noticeId = `history-delete-${id}`;
+    const run = async () => {
+      pendingDeletes.current.delete(id);
+      // Once it runs, undoing is no longer possible: stop offering it.
+      useNoticeStore.getState().clearLocal(noticeId);
+      try {
+        const result = await commands.deleteHistoryEntry(id);
+        if (result.status !== "ok") throw result.error;
+      } catch (error) {
+        console.error("Failed to delete entry:", error);
+        notify({ title: t("settings.history.deleteError") });
+        loadPage();
       }
-    } catch (error) {
-      console.error("Failed to delete entry:", error);
-      loadPage();
-      throw error;
-    }
+    };
+    const timer = setTimeout(run, UNDO_MS);
+    pendingDeletes.current.set(id, () => {
+      clearTimeout(timer);
+      void run();
+    });
+    notify({
+      id: noticeId,
+      level: "info",
+      title: t("settings.history.deleted"),
+      detail: entry.post_processed_text ?? entry.transcription_text,
+      action: {
+        label: t("common.undo"),
+        onClick: () => {
+          if (!pendingDeletes.current.has(id)) return;
+          clearTimeout(timer);
+          pendingDeletes.current.delete(id);
+          useNoticeStore.getState().clearLocal(noticeId);
+          setEntries((prev) => {
+            const rest = prev.filter((e) => e.id !== id);
+            return [...rest.slice(0, index), entry, ...rest.slice(index)];
+          });
+        },
+      },
+    });
   };
 
   const transcribeFile = async () => {
@@ -329,12 +400,22 @@ export const HistorySettings: React.FC = () => {
       }
     } catch (error) {
       console.error("Failed to open recordings folder:", error);
+      notify({ title: t("settings.history.openFolderError") });
     }
   };
 
   let content: React.ReactNode;
 
-  if (loading) {
+  if (loadFailed) {
+    content = (
+      <div className="px-4 py-3 text-center text-ink-2" role="alert">
+        <p>{t("settings.history.loadError")}</p>
+        <Button variant="secondary" size="sm" onClick={() => loadPage()}>
+          {t("common.retry")}
+        </Button>
+      </div>
+    );
+  } else if (loading) {
     content = (
       <div className="px-4 py-3 text-center text-ink-2">
         {t("settings.history.loading")}
@@ -399,8 +480,37 @@ export const HistorySettings: React.FC = () => {
     );
   }
 
+  const title = t("sidebar.history");
+  if (sub.open === "retention")
+    return (
+      <SubPage
+        parent={title}
+        title={t("settings.history.retention")}
+        onBack={sub.back}
+      >
+        <SettingsGroup>
+          <RecordingRetentionPeriodSelector descriptionMode="inline" grouped />
+          {/* history.rs: the count only applies to "keep the last N". */}
+          {retention === "preserve_limit" && (
+            <HistoryLimit descriptionMode="inline" grouped />
+          )}
+        </SettingsGroup>
+      </SubPage>
+    );
+
   return (
     <div className="max-w-3xl w-full mx-auto space-y-6">
+      <h1 className="page-title">{title}</h1>
+      <SettingCard
+        ref={sub.cardRef("retention")}
+        icon={Archive}
+        title={t("settings.history.retention")}
+        summary={t(
+          `settings.debug.recordingRetention.${RETENTION_LABEL[retention] ?? "never"}`,
+          { count: Number(getSetting("history_limit") ?? 5) },
+        )}
+        onOpen={() => sub.show("retention")}
+      />
       <div className="space-y-2">
         <div className="px-4 flex items-center justify-end">
           <div className="flex items-center gap-2">
@@ -470,7 +580,7 @@ interface HistoryEntryProps {
   onToggleSaved: () => void;
   onCopyText: (text: string) => Promise<boolean>;
   getAudioUrl: (fileName: string) => Promise<string | null>;
-  deleteAudio: (id: number) => Promise<void>;
+  deleteAudio: (id: number) => void;
   retryTranscription: (id: number) => Promise<void>;
   cancelTranscription: (id: number) => Promise<void>;
 }
@@ -546,14 +656,7 @@ const HistoryEntryComponent: React.FC<HistoryEntryProps> = ({
     setTimeout(() => setShowCopied(false), 2000);
   };
 
-  const handleDeleteEntry = async () => {
-    try {
-      await deleteAudio(entry.id);
-    } catch (error) {
-      console.error("Failed to delete entry:", error);
-      notify({ title: t("settings.history.deleteError") });
-    }
-  };
+  const handleDeleteEntry = () => deleteAudio(entry.id);
 
   const formattedDate = formatDateTime(String(entry.timestamp), i18n.language);
 
@@ -624,6 +727,7 @@ const HistoryEntryComponent: React.FC<HistoryEntryProps> = ({
             </span>
             <button
               type="button"
+              aria-pressed={showOriginal}
               className="text-ink-2 underline hover:text-accent-text"
               onClick={() => {
                 setShowOriginal(!showOriginal);
@@ -662,6 +766,7 @@ const HistoryEntryComponent: React.FC<HistoryEntryProps> = ({
         {hasTranscription && !retrying && (expanded || overflows) && (
           <button
             type="button"
+            aria-expanded={expanded}
             onClick={() => setExpanded(!expanded)}
             className="text-xs font-medium text-ink-3 hover:text-logo-primary cursor-pointer"
           >

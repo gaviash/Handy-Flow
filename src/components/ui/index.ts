@@ -8,3 +8,7 @@ export { TextDisplay } from "./TextDisplay";
 export { Textarea } from "./Textarea";
 export { Tooltip } from "./Tooltip";
 export { InfoTooltip } from "./InfoTooltip";
+export { StatusHeader } from "./StatusHeader";
+export { SettingCard, CardGrid } from "./SettingCard";
+export { SubPage, useSubPage } from "./SubPage";
+export { ExpertSection } from "./ExpertSection";

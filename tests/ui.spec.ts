@@ -18,6 +18,7 @@ const muteSwitch = (page: Page) =>
 test("a checked switch paints the palette accent", async ({ page }) => {
   await mockTauri(page, { settings: { mute_while_recording: true } });
   await page.goto("/");
+  await page.getByRole("button", { name: /^Sounds/ }).click();
   const track = muteSwitch(page).locator("xpath=following-sibling::*[1]");
   await expect(track).toBeVisible();
   const bg = await track.evaluate((el) => getComputedStyle(el).backgroundColor);
@@ -27,7 +28,8 @@ test("a checked switch paints the palette accent", async ({ page }) => {
 test("primary button text uses on-accent, not white", async ({ page }) => {
   await mockTauri(page);
   await page.goto("/");
-  await page.getByRole("button", { name: "Advanced" }).click();
+  await page.getByRole("button", { name: "Vocabulary" }).click();
+  await page.getByRole("button", { name: /^Personal words/ }).click();
   await page.getByPlaceholder("Add a word").fill("example");
   const add = page.getByRole("button", { name: "Add", exact: true });
   const color = await add.evaluate((el) => getComputedStyle(el).color);
@@ -37,6 +39,7 @@ test("primary button text uses on-accent, not white", async ({ page }) => {
 test("settings rows follow the density setting", async ({ page }) => {
   await mockTauri(page, { settings: { ui_density: "compact" } });
   await page.goto("/");
+  await page.getByRole("button", { name: /^Sounds/ }).click();
   const row = page
     .getByText("Mute While Recording")
     .locator("xpath=ancestor::*[contains(@class,'row-setting')][1]");
@@ -52,6 +55,7 @@ test("reduced motion stops the switch transition", async ({ page }) => {
   await page.emulateMedia({ reducedMotion: "reduce" });
   await mockTauri(page);
   await page.goto("/");
+  await page.getByRole("button", { name: /^Sounds/ }).click();
   const track = muteSwitch(page).locator("xpath=following-sibling::*[1]");
   const d = await track.evaluate(
     (el) => getComputedStyle(el, "::after").transitionDuration,

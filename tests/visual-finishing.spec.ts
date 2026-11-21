@@ -32,7 +32,7 @@ test("settings pages do not skip heading levels", async ({ page }) => {
     "General",
     "History",
     "Models",
-    "Post Process",
+    "Enhancement",
     "Appearance",
     "Advanced",
     "About",

@@ -18,6 +18,7 @@ import type {
 } from "@/bindings";
 import { commands } from "@/bindings";
 import { notify } from "@/stores/noticeStore";
+import i18n from "@/i18n";
 import { applyAppearance, normalizeAppearance } from "@/lib/utils/appearance";
 
 interface SettingsStore {
@@ -402,14 +403,27 @@ export const useSettingsStore = create<SettingsStore>()(
 
         const updater = settingUpdaters[key];
         if (updater) {
-          await updater(value);
+          const result = await updater(value);
+          // Commands answer a Result: an error must not pass for a save.
+          if ((result as { status?: string } | null)?.status === "error")
+            throw (result as { error: unknown }).error;
         } else if (key !== "bindings" && key !== "selected_model") {
           console.warn(`No handler for setting: ${String(key)}`);
         }
       } catch (error) {
         console.error(`Failed to update setting ${String(key)}:`, error);
+        notify({
+          title: i18n.t("settings.saveFailed"),
+          detail: String(error),
+          level: "error",
+        });
         if (settings) {
-          set({ settings: { ...settings, [key]: originalValue } });
+          // Only this setting goes back: others saved meanwhile stay.
+          set((state) => ({
+            settings: state.settings
+              ? { ...state.settings, [key]: originalValue }
+              : null,
+          }));
           if (
             [
               "theme",

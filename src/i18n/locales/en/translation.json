@@ -16,12 +16,14 @@
     "general": "General",
     "models": "Models",
     "advanced": "Advanced",
-    "postProcessing": "Post Process",
+    "postProcessing": "Enhancement",
     "history": "History",
     "debug": "Debug",
     "about": "About",
     "appearance": "Appearance",
-    "label": "Sections"
+    "label": "Sections",
+    "vocabulary": "Vocabulary",
+    "context": "Context"
   },
   "onboarding": {
     "customModelDescription": "Not officially supported",
@@ -408,7 +410,8 @@
       "uses": "Uses {{provider}} · {{model}}",
       "changeInModels": "Change in Models",
       "saveError": "Could not save the model choice",
-      "speechOptions": "Speech API options"
+      "speechOptions": "Speech API options",
+      "validatorLocal": "No model · decided on your PC (lexicon)"
     },
     "modelSettings": {
       "title": "{{model}} Settings"
@@ -502,7 +505,22 @@
           "toggle": "Tap the shortcut to start recording, tap again to stop"
         }
       },
-      "dictationShortcut": "Dictation shortcut"
+      "dictationShortcut": "Dictation shortcut",
+      "shortcuts": "Shortcuts",
+      "shortcutsExpert": "hold threshold",
+      "micExpert": "input channel, laptop lid closed",
+      "sounds": "Sounds",
+      "startup": "Startup",
+      "defaultMic": "Default microphone",
+      "statusRaw": "{{shortcut}}: dictation as is",
+      "statusEnhanced": "{{shortcut}}: enhanced dictation",
+      "statusMic": "Microphone: {{mic}}",
+      "languagesSummary": "{{spoken}} · interface {{app}}",
+      "soundsOn": "On · {{volume}} %",
+      "soundsOff": "Off",
+      "startsWithWindows": "Starts with Windows",
+      "startsByHand": "Started by hand",
+      "hidden": "hidden"
     },
     "models": {
       "title": "Models",
@@ -544,7 +562,13 @@
       "rescan": {
         "label": "Find added models",
         "tooltip": "Rescan for models added to the models folder or Hugging Face cache outside Handy Flow"
-      }
+      },
+      "actionError": "Model action failed",
+      "featuresReady": "AI features ready.",
+      "providersSummary": "Providers: {{count}} · keys: {{keys}}",
+      "local": "local",
+      "engineExpert": "engine",
+      "featureProblem": "{{name}}: {{status}}"
     },
     "languages": {
       "title": "Languages"
@@ -738,7 +762,12 @@
           "traditionalTw": "Traditional (Taiwan)",
           "traditionalHk": "Traditional (Hong Kong)"
         }
-      }
+      },
+      "insertion": "Text insertion",
+      "insertionExpert": "paste delays, reliable paste",
+      "captureExpert": "audio capture",
+      "trailingSpaceOn": "trailing space",
+      "trailingSpaceOff": "no trailing space"
     },
     "postProcessing": {
       "hotkey": {
@@ -805,7 +834,8 @@
         "createPrompt": "Create Prompt",
         "cancel": "Cancel",
         "selectToEdit": "Select a prompt above to view and edit its details.",
-        "createFirst": "Click 'Create New Prompt' above to create your first post-processing prompt."
+        "createFirst": "Click 'Create New Prompt' above to create your first post-processing prompt.",
+        "saveError": "Couldn't save the prompt."
       },
       "timeout": {
         "title": "Fallback Delay",
@@ -945,7 +975,8 @@
         },
         "judge": {
           "label": "Learning Validator",
-          "description": "Sends your correction (before and after) to an AI to learn style rules and technical words."
+          "description": "Sends your correction (before and after) to an AI to learn style rules and technical words.",
+          "offNote": "Off: nothing is sent, words are decided on your PC."
         }
       },
       "styles": {
@@ -1030,7 +1061,13 @@
       },
       "viewChanges": "See the edits",
       "hideChanges": "Hide the edits",
-      "changesTooDifferent": "Rewritten too much to compare word by word."
+      "changesTooDifferent": "Rewritten too much to compare word by word.",
+      "loadError": "Couldn't load the history.",
+      "saveError": "Couldn't change this entry's star.",
+      "audioError": "Couldn't find this recording's audio.",
+      "openFolderError": "Couldn't open the recordings folder.",
+      "deleted": "Entry deleted",
+      "retention": "Retention"
     },
     "debug": {
       "title": "Debug",
@@ -1102,7 +1139,7 @@
       },
       "recordingRetention": {
         "title": "Auto-Delete Recordings",
-        "description": "Automatically delete old recordings to save space",
+        "description": "Deletes old dictations, text and audio, to save space. Starred ones are kept.",
         "never": "Never",
         "preserveLimit": "Keep latest {{count}}",
         "days3": "After 3 days",
@@ -1185,7 +1222,8 @@
       "title": "About",
       "version": {
         "title": "Version",
-        "description": "Current version of Handy Flow"
+        "description": "Current version of Handy Flow",
+        "unavailable": "Version unavailable"
       },
       "whatsNewUpdates": {
         "label": "Show What's New",
@@ -1207,7 +1245,13 @@
           "description": "High-performance tensor library for on-device machine learning inference",
           "details": "Handy Flow's local speech-to-text is built on transcribe.cpp and ggml. Thanks to the amazing work by Georgi Gerganov and contributors."
         }
-      }
+      },
+      "updates": "Updates",
+      "updatesOn": "Checked automatically",
+      "updatesOff": "Not checked",
+      "diagnostic": "Diagnostics",
+      "diagnosticSummary": "App folder, logs",
+      "logsExpert": "logs"
     },
     "appearance": {
       "title": "Appearance",
@@ -1261,7 +1305,7 @@
       },
       "overlay": {
         "title": "Dictation pill",
-        "description": "The overlay shown during dictation. Hidden remains available in Advanced.",
+        "description": "The style shown while you dictate. Choose Hidden to show nothing.",
         "pill": "Pill",
         "wave": "Wave",
         "live": "Live"
@@ -1276,7 +1320,7 @@
     "transcription": {
       "title": "Transcription models",
       "intro": "Choose how Handy Flow turns your voice into text. Text cleanup has its own settings.",
-      "reformulationLink": "Open Reformulation settings",
+      "reformulationLink": "Open Enhancement settings",
       "modeTitle": "Where should transcription run?",
       "localMode": "On this computer",
       "localDescription": "Audio stays on this computer.",
@@ -1342,6 +1386,49 @@
         "label": "Max Wait (s)",
         "description": "Past this delay, the local model transcribes instead."
       }
+    },
+    "saveFailed": "Setting not saved",
+    "vocabulary": {
+      "subtitle": "The words Handy Flow writes your way: yours, and those it learns from your corrections.",
+      "statusOn": "Personal words: {{custom}} · learned: {{learned}} · learning on",
+      "statusPaused": "Personal words: {{custom}} · learned: {{learned}} · learning paused",
+      "custom": "Personal words",
+      "count": "Total: {{count}}",
+      "learnedSummary": "Total: {{count}} · pending: {{pending}}",
+      "reasoningHint": "A reasoning model makes fewer mistakes: choose one in Models.",
+      "expert": "learned-word sound, correction threshold"
+    },
+    "context": {
+      "subtitle": "What Handy Flow reads around the cursor to adapt your dictation, and what it sends to the model.",
+      "statusOff": "Handy Flow doesn't read the screen.",
+      "statusLocal": "Read on your PC, nothing is sent.",
+      "statusSent": "The text around the cursor is sent to the model. Excluded: {{apps}} apps, {{sites}} sites.",
+      "exclusions": "Exclusions",
+      "exclusionsHelp": "In these apps and sites, nothing is read or sent, the text is not pasted automatically, and corrections are not learned.",
+      "exclusionsSummary": "Apps: {{apps}} · sites: {{sites}}",
+      "lastAt": "Last dictation: {{time}}",
+      "expert": "sources, limits, VS Code"
+    },
+    "enhancement": {
+      "subtitle": "A language model rewrites your dictation before pasting it.",
+      "statusOff": "Off: the dictation is pasted as is.",
+      "statusSetup": "Choose a provider and a model in Models.",
+      "statusReady": "{{shortcut}} rewrites with {{provider}}",
+      "statusDetail": "Model {{model}} · fallback: {{fallback}} · tone adapted to the app",
+      "openModels": "Open Models",
+      "none": "none",
+      "notConfigured": "Not configured",
+      "provider": "Provider",
+      "rewriteUses": "Rewrite: {{value}}",
+      "fallbackUses": "Fallback: {{value}}",
+      "fallbackShort": "fallback {{value}}",
+      "providerHelp": "The same provider can serve other features (speech, validator): it is all set in Models.",
+      "cleanup": "Cleanup",
+      "fillersRemoved": "Hesitations removed",
+      "fillersKept": "Hesitations kept",
+      "transformsSummary": "Polish · voice instruction · saved: {{count}}",
+      "allShortcuts": "All shortcuts in General",
+      "expert": "prompt, delay"
     }
   },
   "footer": {
@@ -1367,7 +1454,11 @@
     "open": "Open",
     "copy": "Copy",
     "clear": "Clear",
-    "noOptionsFound": "No options found"
+    "noOptionsFound": "No options found",
+    "retry": "Retry",
+    "undo": "Undo",
+    "cancel": "Cancel",
+    "moreInfo": "More information"
   },
   "errors": {
     "loadDirectory": "Error loading directory: {{error}}",
@@ -1459,5 +1550,14 @@
   },
   "about": {
     "forkOf": "Based on Handy, MIT license"
+  },
+  "status": {
+    "ok": "Ready",
+    "warn": "Needs setup",
+    "off": "Off",
+    "on": "On"
+  },
+  "expert": {
+    "title": "Expert settings"
   }
 }

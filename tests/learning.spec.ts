@@ -1,9 +1,14 @@
 import { test, expect } from "@playwright/test";
 import { mockTauri } from "./fixtures/tauri-mock";
 
-const openLearning = async (page: import("@playwright/test").Page) => {
+/** Opens Vocabulary, then the card whose title starts with `card`. */
+const openLearning = async (
+  page: import("@playwright/test").Page,
+  card = "Learning validator",
+) => {
   await page.goto("/");
-  await page.getByRole("button", { name: "Post Process", exact: true }).click();
+  await page.getByRole("button", { name: "Vocabulary", exact: true }).click();
+  await page.getByRole("button", { name: new RegExp(`^${card}`, "i") }).click();
 };
 
 test("undo removes only what was announced", async ({ page }) => {
@@ -51,9 +56,8 @@ test("style rules have their own Clear All", async ({ page }) => {
     ipc.invoke = (cmd: string, args: unknown) =>
       cmd === "plugin:dialog|ask" ? Promise.resolve(true) : invoke(cmd, args);
   });
-  await openLearning(page);
-  // The second Clear All belongs to the style rules.
-  const clear = page.getByRole("button", { name: "Clear All" }).nth(1);
+  await openLearning(page, "Style rules");
+  const clear = page.getByRole("button", { name: "Clear All" });
   await clear.scrollIntoViewIfNeeded();
   await clear.click();
   await expect
@@ -76,7 +80,7 @@ test("a failed export says so", async ({ page }) => {
           ? Promise.reject("access denied")
           : invoke(cmd, args);
   });
-  await openLearning(page);
+  await openLearning(page, "Learned words");
   const exportButton = page.getByRole("button", { name: "Export" });
   await exportButton.scrollIntoViewIfNeeded();
   await exportButton.click();
@@ -111,12 +115,16 @@ test("the validator shows the effective provider and model", async ({
   await expect(page.getByText(/Uses OpenAI · gpt-oss/)).toBeVisible();
 });
 
-test("without a usable model the validator is inactive", async ({ page }) => {
+test("without a usable model the validator decides locally", async ({
+  page,
+}) => {
   await mockTauri(page, {
     results: { get_feature_statuses: [status("NoModel")] },
   });
   await openLearning(page);
-  await expect(page.getByText(/Inactive · no usable model/)).toBeVisible();
+  await expect(
+    page.getByText("No model · decided on your PC (lexicon)"),
+  ).toBeVisible();
 });
 
 test("the validator summary links to the model picker", async ({ page }) => {
@@ -158,8 +166,10 @@ test("the validator status is re-read after a setting is saved", async ({
   const mock = await mockTauri(page, {
     results: { get_feature_statuses: [status()] },
   });
-  await openLearning(page);
+  await page.goto("/");
+  await page.getByRole("button", { name: "Vocabulary", exact: true }).click();
   await expect(page.getByText(/Uses Groq/)).toBeVisible();
+  await page.getByText("Expert settings").click();
   const reads = async () =>
     (await mock.calls()).filter((c) => c.cmd === "get_feature_statuses").length;
   const before = await reads();
@@ -186,10 +196,22 @@ test("the last 30 days of learning are counted", async ({ page }) => {
       },
     },
   });
-  await openLearning(page);
+  await openLearning(page, "Learned words");
   await expect(
     page.getByText(
       "Last 30 days: 12 corrections observed · 5 words learned · 2 pending · 4 rejected",
     ),
+  ).toBeVisible();
+});
+
+test("an automatic validator with nothing to resolve decides locally", async ({
+  page,
+}) => {
+  await mockTauri(page, {
+    results: { get_feature_statuses: [status("NotChosen", true)] },
+  });
+  await openLearning(page);
+  await expect(
+    page.getByText("No model · decided on your PC (lexicon)"),
   ).toBeVisible();
 });

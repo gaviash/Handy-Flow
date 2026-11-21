@@ -8,6 +8,9 @@ test("finding added models has an accessible name and description", async ({
   await mockTauri(page);
   await page.goto("/");
   await page.getByRole("button", { name: "Models", exact: true }).click();
+  await page
+    .getByRole("button", { name: /^Local transcription model/ })
+    .click();
   await page.getByText("Choose or download a local model").click();
   const button = page.getByRole("button", { name: "Find added models" });
   await button.hover();
@@ -16,18 +19,10 @@ test("finding added models has an accessible name and description", async ({
   );
 });
 
-test("dictation pill settings are grouped in appearance and linked from advanced", async ({
-  page,
-}) => {
+test("dictation pill settings are grouped in appearance", async ({ page }) => {
   const backend = await mockTauri(page);
   await page.goto("/");
-  await page.getByRole("button", { name: "Advanced", exact: true }).click();
-  await expect(
-    page.getByRole("radio", { name: "Live", exact: true }),
-  ).toHaveCount(0);
-  await page
-    .getByRole("button", { name: "Dictation pill → Appearance" })
-    .click();
+  await page.getByRole("button", { name: "Appearance", exact: true }).click();
   const group = page.locator("#dictation-pill");
   await expect(group.getByRole("radio", { name: "Expressive" })).toBeVisible();
   await expect(group.getByRole("radio", { name: "Live" })).toBeVisible();
@@ -63,6 +58,7 @@ test("French shortcut choices explain how recording starts and stops", async ({
 }) => {
   await mockTauri(page, { settings: { app_language: "fr" } });
   await page.goto("/");
+  await page.getByRole("button", { name: /^Raccourcis/ }).click();
   await page
     .getByRole("button", {
       name: "Maintenez pour enregistrer ; appuyez pour démarrer ou arrêter",
@@ -362,7 +358,7 @@ for (const palette of PALETTE_IDS)
       await page.emulateMedia({ reducedMotion: "reduce" });
       await page.goto("/");
       await expect(
-        page.getByRole("checkbox", { name: "Mute While Recording" }),
+        page.getByRole("button", { name: /^Shortcuts/ }),
       ).toBeVisible();
       await expect(page).toHaveScreenshot(`general-${palette}-${theme}.png`);
       await page

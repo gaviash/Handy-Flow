@@ -1,11 +1,16 @@
 import React, { useState } from "react";
 import { useTranslation } from "react-i18next";
 import type { Styles, Tone } from "@/bindings";
-import { Dropdown } from "../../ui/Dropdown";
+import { Segmented } from "../../ui/Segmented";
 import { SettingContainer } from "../../ui/SettingContainer";
 import { useSettings } from "../../../hooks/useSettings";
 
-const CATEGORIES: (keyof Styles)[] = ["email", "work", "personal", "other"];
+export const CATEGORIES: (keyof Styles)[] = [
+  "email",
+  "work",
+  "personal",
+  "other",
+];
 const TONES: Tone[] = ["formal", "casual", "very_casual", "excited", "default"];
 const DEFAULTS: Styles = {
   email: "formal",
@@ -34,14 +39,18 @@ export const StyleSettings: React.FC = () => {
           title={t(`settings.postProcessing.styles.categories.${category}`)}
           description={t("settings.postProcessing.styles.description")}
           descriptionMode="tooltip"
+          layout="stacked"
           grouped={true}
         >
-          <Dropdown
+          <Segmented
             options={options}
-            selectedValue={styles[category]}
-            onSelect={(value) => {
+            value={styles[category]}
+            ariaLabel={t(
+              `settings.postProcessing.styles.categories.${category}`,
+            )}
+            onChange={(value) => {
               setShown(category);
-              updateSetting("styles", { ...styles, [category]: value as Tone });
+              updateSetting("styles", { ...styles, [category]: value });
             }}
           />
         </SettingContainer>

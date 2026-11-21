@@ -12,12 +12,7 @@ import {
   normalizeAppearance,
 } from "@/lib/utils/appearance";
 
-export const AppearanceSettings: React.FC<{ focusPill?: boolean }> = ({
-  focusPill = false,
-}) => {
-  React.useEffect(() => {
-    if (focusPill) document.getElementById("dictation-pill")?.scrollIntoView();
-  }, [focusPill]);
+export const AppearanceSettings: React.FC = () => {
   const { t } = useTranslation();
   const { settings, updateSetting } = useSettings();
   if (!settings) return null;
@@ -103,7 +98,7 @@ export const AppearanceSettings: React.FC<{ focusPill?: boolean }> = ({
           </SettingContainer>
           <SettingContainer
             title={label("overlay.title")}
-          description={label("pillTone.description")}
+            description={label("pillTone.description")}
             grouped
           >
             <Segmented

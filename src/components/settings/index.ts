@@ -7,6 +7,8 @@ export { AboutSettings } from "./about/AboutSettings";
 export { PostProcessingSettings } from "./post-processing/PostProcessingSettings";
 export { ModelsSettings } from "./models/ModelsSettings";
 export { AppearanceSettings } from "./appearance/AppearanceSettings";
+export { VocabularySettings } from "./vocabulary/VocabularySettings";
+export { ContextPage } from "./context/ContextPage";
 
 // Individual setting components
 export { MicrophoneSelector } from "./MicrophoneSelector";
@@ -20,9 +22,6 @@ export { ShowOverlay } from "./ShowOverlay";
 export { ShortcutInput } from "./ShortcutInput";
 export { TranslateToEnglish } from "./TranslateToEnglish";
 export { CustomWords } from "./CustomWords";
-export { PostProcessingToggle } from "./PostProcessingToggle";
-export { PostProcessingSettingsApi } from "./PostProcessingSettingsApi";
-export { PostProcessingSettingsPrompts } from "./PostProcessingSettingsPrompts";
 export { FillerWordRemoval } from "./FillerWordRemoval";
 export { ChineseScriptSetting } from "./ChineseScript";
 export { PreferredLanguages } from "./PreferredLanguages";

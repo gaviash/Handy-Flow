@@ -28,14 +28,14 @@ import {
   type OnboardingStep as OnboardingPreviewStep,
 } from "./components/onboarding/onboardingStore";
 import {
-  AdvancedSettings,
-  AppearanceSettings,
   DebugSettings,
   ModelsSettings,
+  VocabularySettings,
 } from "./components/settings";
 import { ErrorBoundary } from "./components/ErrorBoundary";
 import { FileDropOverlay } from "./components/FileDropOverlay";
 import { Sidebar, SidebarSection, SECTIONS_CONFIG } from "./components/Sidebar";
+import type { ModelsTopic } from "./components/settings/models/ModelsSettings";
 import { WhatsNewGate } from "./components/whats-new";
 import { useSettings } from "./hooks/useSettings";
 import { useSettingsStore } from "./stores/settingsStore";
@@ -54,36 +54,51 @@ type OnboardingStep =
   | "replaceModel"
   | "done";
 
+/** Pages that draw their own title (and sub-page titles). */
+const PAGES_WITH_OWN_TITLE: SidebarSection[] = [
+  "general",
+  "appearance",
+  "about",
+  "models",
+  "postprocessing",
+  "vocabulary",
+  "context",
+  "advanced",
+  "history",
+];
+
 const renderSettingsContent = (
   section: SidebarSection,
   onPreviewOnboarding: (step: OnboardingPreviewStep) => void,
   onRunOnboarding: () => void,
   onRunModelMigration: () => void,
-  onSectionChange: (section: SidebarSection) => void,
-  focusPill: boolean,
+  onSectionChange: (section: SidebarSection, topic?: ModelsTopic) => void,
+  modelsTopic: ModelsTopic | null,
 ) => {
   if (section === "models") {
     return (
       <ModelsSettings
         onChangeLanguages={() => onSectionChange("general")}
         onShowReformulation={() => onSectionChange("postprocessing")}
+        initialTopic={modelsTopic ?? undefined}
       />
     );
   }
   if (section === "postprocessing") {
     return (
-      <PostProcessingSettings onShowModels={() => onSectionChange("models")} />
-    );
-  }
-  if (section === "advanced") {
-    return (
-      <AdvancedSettings
-        onShowAppearance={() => onSectionChange("appearance")}
+      <PostProcessingSettings
+        onShowModels={() => onSectionChange("models", "features")}
+        onShowGeneral={() => onSectionChange("general")}
       />
     );
   }
-  if (section === "appearance")
-    return <AppearanceSettings focusPill={focusPill} />;
+  if (section === "vocabulary") {
+    return (
+      <VocabularySettings
+        onShowModels={() => onSectionChange("models", "features")}
+      />
+    );
+  }
   if (section === "debug") {
     return (
       <DebugSettings
@@ -111,9 +126,16 @@ function App() {
   const [migrationModelId, setMigrationModelId] = useState<string | null>(null);
   const [currentSection, setCurrentSection] =
     useState<SidebarSection>("general");
-  const [focusPill, setFocusPill] = useState(false);
+  // The Models topic a link asked for; cleared when the sidebar is used.
+  const [modelsTopic, setModelsTopic] = useState<ModelsTopic | null>(null);
+  // Bumped by each sidebar click, so the active tab reopens on its overview.
+  const [visit, setVisit] = useState(0);
   const showHistory = useCallback(() => setCurrentSection("history"), []);
   const { settings, updateSetting } = useSettings();
+  // A section that is not enabled (Debug outside debug mode) is not shown.
+  const section = SECTIONS_CONFIG[currentSection].enabled(settings)
+    ? currentSection
+    : "general";
   const direction = getLanguageDirection(i18n.language);
   const refreshAudioDevices = useSettingsStore(
     (state) => state.refreshAudioDevices,
@@ -404,9 +426,10 @@ function App() {
         {/* Main content area that takes remaining space */}
         <div className="flex-1 flex overflow-hidden">
           <Sidebar
-            activeSection={currentSection}
+            activeSection={section}
             onSectionChange={(section) => {
-              setFocusPill(false);
+              setModelsTopic(null);
+              setVisit((n) => n + 1);
               setCurrentSection(section);
             }}
           />
@@ -414,28 +437,26 @@ function App() {
           <div className="flex-1 flex flex-col overflow-hidden">
             <div ref={settingsScrollRef} className="flex-1 overflow-y-auto">
               <div
-                key={currentSection}
+                key={`${section}-${visit}`}
                 ref={pageRef}
                 className="flex flex-col items-center p-4 gap-4 animate-rise"
               >
-                {!["general", "appearance", "about", "models"].includes(
-                  currentSection,
-                ) && (
+                {!PAGES_WITH_OWN_TITLE.includes(section) && (
                   <h1 className="page-title max-w-3xl w-full mx-auto">
-                    {t(SECTIONS_CONFIG[currentSection].labelKey)}
+                    {t(SECTIONS_CONFIG[section].labelKey)}
                   </h1>
                 )}
                 <SecureInputWarning />
                 {renderSettingsContent(
-                  currentSection,
+                  section,
                   setOnboardingPreview,
                   runOnboarding,
                   runModelMigration,
-                  (section) => {
-                    setFocusPill(section === "appearance");
+                  (section, topic) => {
+                    setModelsTopic(topic ?? null);
                     setCurrentSection(section);
                   },
-                  focusPill,
+                  modelsTopic,
                 )}
               </div>
             </div>
@@ -444,7 +465,10 @@ function App() {
         {/* Fixed footer at bottom */}
         <Footer
           onShowHistory={showHistory}
-          onShowModels={() => setCurrentSection("models")}
+          onShowModels={() => {
+            setModelsTopic(null);
+            setCurrentSection("models");
+          }}
         />
         <FileDropOverlay onDropped={showHistory} />
       </div>

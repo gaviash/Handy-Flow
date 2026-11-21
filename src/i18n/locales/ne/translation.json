@@ -21,7 +21,9 @@
     "debug": "डिबग",
     "about": "बारेमा",
     "appearance": "Appearance",
-    "label": "Sections"
+    "label": "Sections",
+    "vocabulary": "Vocabulary",
+    "context": "Context"
   },
   "onboarding": {
     "customModelDescription": "आधिकारिक रूपमा समर्थित छैन",
@@ -408,7 +410,8 @@
       "uses": "Uses {{provider}} · {{model}}",
       "changeInModels": "Change in Models",
       "saveError": "Could not save the model choice",
-      "speechOptions": "Speech API options"
+      "speechOptions": "Speech API options",
+      "validatorLocal": "No model · decided on your PC (lexicon)"
     },
     "modelSettings": {
       "title": "{{model}} सेटिङहरू"
@@ -502,7 +505,22 @@
           "toggle": "रेकर्डिङ सुरु गर्न सर्टकट ट्याप गर्नुहोस्, रोक्न फेरि ट्याप गर्नुहोस्"
         }
       },
-      "dictationShortcut": "Dictation shortcut"
+      "dictationShortcut": "Dictation shortcut",
+      "shortcuts": "Shortcuts",
+      "shortcutsExpert": "hold threshold",
+      "micExpert": "input channel, laptop lid closed",
+      "sounds": "Sounds",
+      "startup": "Startup",
+      "defaultMic": "Default microphone",
+      "statusRaw": "{{shortcut}}: dictation as is",
+      "statusEnhanced": "{{shortcut}}: enhanced dictation",
+      "statusMic": "Microphone: {{mic}}",
+      "languagesSummary": "{{spoken}} · interface {{app}}",
+      "soundsOn": "On · {{volume}} %",
+      "soundsOff": "Off",
+      "startsWithWindows": "Starts with Windows",
+      "startsByHand": "Started by hand",
+      "hidden": "hidden"
     },
     "models": {
       "title": "मोडेलहरू",
@@ -544,7 +562,13 @@
       "rescan": {
         "label": "थपिएका मोडेल खोज्नुहोस्",
         "tooltip": "Handy Flow बाहिरबाट मोडेल फोल्डर वा Hugging Face क्यासमा थपिएका मोडेलहरू फेरि स्क्यान गर्नुहोस्"
-      }
+      },
+      "actionError": "Model action failed",
+      "featuresReady": "AI features ready.",
+      "providersSummary": "Providers: {{count}} · keys: {{keys}}",
+      "local": "local",
+      "engineExpert": "engine",
+      "featureProblem": "{{name}}: {{status}}"
     },
     "languages": {
       "title": "भाषाहरू"
@@ -738,7 +762,12 @@
           "traditionalTw": "परम्परागत (ताइवान)",
           "traditionalHk": "परम्परागत (हङकङ)"
         }
-      }
+      },
+      "insertion": "Text insertion",
+      "insertionExpert": "paste delays, reliable paste",
+      "captureExpert": "audio capture",
+      "trailingSpaceOn": "trailing space",
+      "trailingSpaceOff": "no trailing space"
     },
     "postProcessing": {
       "hotkey": {
@@ -805,7 +834,8 @@
         "createPrompt": "प्रम्प्ट बनाउनुहोस्",
         "cancel": "रद्द गर्नुहोस्",
         "selectToEdit": "विवरण हेर्न र सम्पादन गर्न माथिबाट प्रम्प्ट चयन गर्नुहोस्।",
-        "createFirst": "आफ्नो पहिलो पोस्ट-प्रोसेसिङ प्रम्प्ट बनाउन माथिको 'नयाँ प्रम्प्ट बनाउनुहोस्' क्लिक गर्नुहोस्।"
+        "createFirst": "आफ्नो पहिलो पोस्ट-प्रोसेसिङ प्रम्प्ट बनाउन माथिको 'नयाँ प्रम्प्ट बनाउनुहोस्' क्लिक गर्नुहोस्।",
+        "saveError": "Couldn't save the prompt."
       },
       "timeout": {
         "title": "Fallback Delay",
@@ -945,7 +975,8 @@
         },
         "judge": {
           "label": "Learning Validator",
-          "description": "Sends your correction (before and after) to an AI to learn style rules and technical words."
+          "description": "Sends your correction (before and after) to an AI to learn style rules and technical words.",
+          "offNote": "Off: nothing is sent, words are decided on your PC."
         }
       },
       "styles": {
@@ -1030,7 +1061,13 @@
       },
       "viewChanges": "See the edits",
       "hideChanges": "Hide the edits",
-      "changesTooDifferent": "Rewritten too much to compare word by word."
+      "changesTooDifferent": "Rewritten too much to compare word by word.",
+      "loadError": "Couldn't load the history.",
+      "saveError": "Couldn't change this entry's star.",
+      "audioError": "Couldn't find this recording's audio.",
+      "openFolderError": "Couldn't open the recordings folder.",
+      "deleted": "Entry deleted",
+      "retention": "Retention"
     },
     "debug": {
       "title": "डिबग",
@@ -1185,7 +1222,8 @@
       "title": "बारेमा",
       "version": {
         "title": "संस्करण",
-        "description": "Handy Flow को हालको संस्करण"
+        "description": "Handy Flow को हालको संस्करण",
+        "unavailable": "Version unavailable"
       },
       "whatsNewUpdates": {
         "label": "नयाँ के छ देखाउनुहोस्",
@@ -1207,7 +1245,13 @@
           "description": "अन-डिभाइस मेसिन लर्निङ अनुमानका लागि उच्च-प्रदर्शन टेन्सर लाइब्रेरी",
           "details": "Handy Flow को स्थानीय स्पिच-टु-टेक्स्ट transcribe.cpp र ggml मा आधारित छ। Georgi Gerganov र योगदानकर्ताहरूको उत्कृष्ट कामका लागि धन्यवाद।"
         }
-      }
+      },
+      "updates": "Updates",
+      "updatesOn": "Checked automatically",
+      "updatesOff": "Not checked",
+      "diagnostic": "Diagnostics",
+      "diagnosticSummary": "App folder, logs",
+      "logsExpert": "logs"
     },
     "appearance": {
       "title": "Appearance",
@@ -1342,6 +1386,49 @@
         "label": "Max Wait (s)",
         "description": "Past this delay, the local model transcribes instead."
       }
+    },
+    "saveFailed": "Setting not saved",
+    "vocabulary": {
+      "subtitle": "The words Handy Flow writes your way: yours, and those it learns from your corrections.",
+      "statusOn": "Personal words: {{custom}} · learned: {{learned}} · learning on",
+      "statusPaused": "Personal words: {{custom}} · learned: {{learned}} · learning paused",
+      "custom": "Personal words",
+      "count": "Total: {{count}}",
+      "learnedSummary": "Total: {{count}} · pending: {{pending}}",
+      "reasoningHint": "A reasoning model makes fewer mistakes: choose one in Models.",
+      "expert": "learned-word sound, correction threshold"
+    },
+    "context": {
+      "subtitle": "What Handy Flow reads around the cursor to adapt your dictation, and what it sends to the model.",
+      "statusOff": "Handy Flow doesn't read the screen.",
+      "statusLocal": "Read on your PC, nothing is sent.",
+      "statusSent": "The text around the cursor is sent to the model. Excluded: {{apps}} apps, {{sites}} sites.",
+      "exclusions": "Exclusions",
+      "exclusionsHelp": "In these apps and sites, nothing is read or sent, the text is not pasted automatically, and corrections are not learned.",
+      "exclusionsSummary": "Apps: {{apps}} · sites: {{sites}}",
+      "lastAt": "Last dictation: {{time}}",
+      "expert": "sources, limits, VS Code"
+    },
+    "enhancement": {
+      "subtitle": "A language model rewrites your dictation before pasting it.",
+      "statusOff": "Off: the dictation is pasted as is.",
+      "statusSetup": "Choose a provider and a model in Models.",
+      "statusReady": "{{shortcut}} rewrites with {{provider}}",
+      "statusDetail": "Model {{model}} · fallback: {{fallback}} · tone adapted to the app",
+      "openModels": "Open Models",
+      "none": "none",
+      "notConfigured": "Not configured",
+      "provider": "Provider",
+      "rewriteUses": "Rewrite: {{value}}",
+      "fallbackUses": "Fallback: {{value}}",
+      "fallbackShort": "fallback {{value}}",
+      "providerHelp": "The same provider can serve other features (speech, validator): it is all set in Models.",
+      "cleanup": "Cleanup",
+      "fillersRemoved": "Hesitations removed",
+      "fillersKept": "Hesitations kept",
+      "transformsSummary": "Polish · voice instruction · saved: {{count}}",
+      "allShortcuts": "All shortcuts in General",
+      "expert": "prompt, delay"
     }
   },
   "footer": {
@@ -1367,7 +1454,11 @@
     "open": "खोल्नुहोस्",
     "copy": "कपी गर्नुहोस्",
     "clear": "खाली गर्नुहोस्",
-    "noOptionsFound": "कुनै विकल्प भेटिएन"
+    "noOptionsFound": "कुनै विकल्प भेटिएन",
+    "retry": "Retry",
+    "undo": "Undo",
+    "cancel": "Cancel",
+    "moreInfo": "More information"
   },
   "errors": {
     "loadDirectory": "डाइरेक्टरी लोड गर्दा त्रुटि: {{error}}",
@@ -1459,5 +1550,14 @@
   },
   "about": {
     "forkOf": "Based on Handy, MIT license"
+  },
+  "status": {
+    "ok": "Ready",
+    "warn": "Needs setup",
+    "off": "Off",
+    "on": "On"
+  },
+  "expert": {
+    "title": "Expert settings"
   }
 }
