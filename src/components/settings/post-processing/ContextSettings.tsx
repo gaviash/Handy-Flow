@@ -59,6 +59,7 @@ export const UserName: React.FC = () => {
       grouped={true}
     >
       <Input
+        aria-label={t("settings.postProcessing.context.userName.label")}
         variant="compact"
         value={name}
         onChange={(e) => setName(e.target.value)}

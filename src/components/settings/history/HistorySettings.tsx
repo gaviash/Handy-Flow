@@ -192,6 +192,9 @@ export const HistorySettings: React.FC = () => {
     entriesRef.current = entries;
   }, [entries]);
 
+  // Deletions wait for the undo toast; leaving the page carries them out.
+  const pendingDeletes = useRef(new Map<number, () => void>());
+
   const loadPage = useCallback(
     async (cursor?: number) => {
       const isFirstPage = cursor === undefined;
@@ -208,7 +211,11 @@ export const HistorySettings: React.FC = () => {
         if (result.status === "error") throw result.error;
         if (isFirstPage) setLoadFailed(false);
         {
-          const { entries: newEntries, has_more } = result.data;
+          const { has_more } = result.data;
+          // An entry still waiting to be deleted stays hidden.
+          const newEntries = result.data.entries.filter(
+            (entry) => !pendingDeletes.current.has(entry.id),
+          );
           setEntries((prev) => {
             if (isFirstPage) return newEntries;
             const existingIds = new Set(prev.map((entry) => entry.id));
@@ -324,8 +331,6 @@ export const HistorySettings: React.FC = () => {
     [osType, t],
   );
 
-  // Deletions wait for the undo toast; leaving the page carries them out.
-  const pendingDeletes = useRef(new Map<number, () => void>());
   useEffect(() => {
     const pending = pendingDeletes.current;
     return () => pending.forEach((flush) => flush());
@@ -369,11 +374,10 @@ export const HistorySettings: React.FC = () => {
           clearTimeout(timer);
           pendingDeletes.current.delete(id);
           useNoticeStore.getState().clearLocal(noticeId);
-          setEntries((prev) => [
-            ...prev.slice(0, index),
-            entry,
-            ...prev.slice(index),
-          ]);
+          setEntries((prev) => {
+            const rest = prev.filter((e) => e.id !== id);
+            return [...rest.slice(0, index), entry, ...rest.slice(index)];
+          });
         },
       },
     });

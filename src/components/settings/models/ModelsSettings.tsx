@@ -169,6 +169,8 @@ export const ModelsSettings: React.FC<ModelsSettingsProps> = ({
       ];
 
   const title = t(k("title"));
+  // Local transcription chosen, and no model to run it.
+  const noModel = !config.api && !loading && !config.localModel;
   // Features the user turned on that cannot run as set up.
   const OFF = [
     "RewriteOff",
@@ -311,7 +313,7 @@ export const ModelsSettings: React.FC<ModelsSettingsProps> = ({
         )}
       </div>
       <StatusHeader
-        tone={config.issue || broken ? "warn" : "ok"}
+        tone={config.issue || noModel || broken ? "warn" : "ok"}
         title={
           isLoading
             ? t(k("loading"))
@@ -327,14 +329,16 @@ export const ModelsSettings: React.FC<ModelsSettingsProps> = ({
         detail={
           isLoading
             ? undefined
-            : config.issue
-              ? `${t(k(config.issue))} ${t(k(config.localModel ? "usingLocal" : "noFallback"))}`
-              : broken
-                ? t("settings.models.featureProblem", {
-                    name: t(`settings.features.name.${broken.feature}`),
-                    status: featureStatusText(t, broken),
-                  })
-                : t("settings.models.featuresReady")
+            : noModel
+              ? t(k("downloadRequired"))
+              : config.issue
+                ? `${t(k(config.issue))} ${t(k(config.localModel ? "usingLocal" : "noFallback"))}`
+                : broken
+                  ? t("settings.models.featureProblem", {
+                      name: t(`settings.features.name.${broken.feature}`),
+                      status: featureStatusText(t, broken),
+                    })
+                  : t("settings.models.featuresReady")
         }
       />
       <CardGrid>

@@ -396,3 +396,53 @@ test("a setting's title names its field, and French says Amélioration", async (
     page.getByRole("button", { name: "Plus d'informations" }).first(),
   ).toBeVisible();
 });
+
+test("a pending deletion stays hidden when another one fails", async ({
+  page,
+}) => {
+  const two = historyWith("bonjour");
+  const [a] = two.get_history_entries.entries;
+  two.get_history_entries.entries = [
+    a,
+    { ...a, id: 8, file_name: "h-8.wav", transcription_text: "salut" },
+  ];
+  await page.clock.install();
+  await mockTauri(page, {
+    results: two,
+    errors: { delete_history_entry: "locked" },
+  });
+  await page.goto("/");
+  await page.getByRole("button", { name: "History", exact: true }).click();
+  await page.getByRole("button", { name: "Delete entry" }).first().click();
+  await page.clock.runFor(4_000);
+  await page.getByRole("button", { name: "Delete entry" }).first().click();
+  // The first delete fails and reloads the list; the second still waits.
+  await page.clock.runFor(5_000);
+  await expect(page.getByRole("button", { name: "Delete entry" })).toHaveCount(
+    1,
+  );
+});
+
+test("Models warns when nothing can transcribe", async ({ page }) => {
+  await mockTauri(page, { results: { get_current_model: "" } });
+  await page.goto("/");
+  await page.getByRole("button", { name: "Models", exact: true }).click();
+  await expect(page.getByText("Needs setup")).toBeVisible();
+  await expect(page.getByText("AI features ready.")).toHaveCount(0);
+});
+
+test("the name and history-limit fields carry their own names", async ({
+  page,
+}) => {
+  await mockTauri(page, {
+    settings: { recording_retention_period: "preserve_limit" },
+  });
+  await page.goto("/");
+  await page.getByRole("button", { name: "Vocabulary", exact: true }).click();
+  await expect(page.getByRole("textbox", { name: "Your Name" })).toBeVisible();
+  await page.getByRole("button", { name: "History", exact: true }).click();
+  await page.getByRole("button", { name: /^Retention/ }).click();
+  await expect(
+    page.getByRole("spinbutton", { name: "History Limit" }),
+  ).toBeVisible();
+});
