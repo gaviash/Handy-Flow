@@ -1342,7 +1342,8 @@
         "label": "Attente max (s)",
         "description": "Au-delà de ce délai, le modèle local transcrit à la place."
       }
-    }
+    },
+    "saveFailed": "Réglage non enregistré"
   },
   "footer": {
     "appName": "Handy Flow",

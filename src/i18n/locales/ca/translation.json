@@ -1342,7 +1342,8 @@
         "label": "Max Wait (s)",
         "description": "Past this delay, the local model transcribes instead."
       }
-    }
+    },
+    "saveFailed": "Setting not saved"
   },
   "footer": {
     "appName": "Handy Flow",
