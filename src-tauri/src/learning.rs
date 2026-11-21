@@ -1269,6 +1269,61 @@ pub fn region_near<'a>(text: &'a str, before: &str, after: &str, lines: usize) -
     Some(&rest[..end]).filter(|r| !r.trim().is_empty())
 }
 
+/// Why an observation ended (Wispr's end reasons, EX-3).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum End {
+    Window,
+    NextDictation,
+    Emptied,
+    AroundChanged,
+    NotFound,
+    Unreadable,
+}
+
+/// Whether an ended observation may teach anything: never when the text was
+/// lost or unreadable, nor when the final reading failed (R7, uncertain);
+/// after a change around it, only when the dictation is still intact.
+pub fn learnable(end: End, final_read_ok: bool, intact: bool) -> bool {
+    match end {
+        End::NotFound | End::Unreadable => false,
+        End::AroundChanged => final_read_ok && intact,
+        _ => final_read_ok,
+    }
+}
+
+/// The region to learn from once an observation ends. `final_read` is the
+/// field read once more at the end event (`None`: that read failed);
+/// `bounded`: the dictation had text on both sides; `region` cuts it out.
+pub fn finish(
+    last: Option<String>,
+    final_read: Option<String>,
+    bounded: bool,
+    end: End,
+    region: &dyn Fn(&str) -> Option<String>,
+) -> Option<String> {
+    // The final reading failed: uncertain, nothing learned (R7).
+    let Some(text) = final_read else {
+        return None;
+    };
+    // Sent or cleared: the last reading is what the user kept.
+    if text.trim().is_empty() {
+        return last.filter(|_| learnable(end, true, true));
+    }
+    match region(&text) {
+        Some(r) => Some(r).filter(|_| learnable(end, true, true)),
+        // Text changed around it (Wispr anchor_mismatch_transcript_intact).
+        None => {
+            let intact = bounded || last.as_ref().is_some_and(|l| text.contains(l.as_str()));
+            let end = if end == End::NotFound || end == End::Unreadable {
+                end
+            } else {
+                End::AroundChanged
+            };
+            last.filter(|_| learnable(end, true, intact))
+        }
+    }
+}
+
 /// F80–F83: watches the field the text was pasted into, then learns from the
 /// last reading whose anchors still hold.
 pub fn observe(
@@ -1301,17 +1356,24 @@ pub fn observe(
             let started = Instant::now();
             let mut last: Option<String> = None;
             let mut anchors: Option<(String, String)> = None;
-            // Lengths only in the log: the text itself stays private.
-            let mut ended = "the 60 s window closed";
-            // A newer dictation ended this one: learn from the last reading,
-            // never read its field again.
+            let cut = |text: &str, anchors: &Option<(String, String)>| {
+                let (before, after) = anchors.as_ref()?;
+                if terminal {
+                    region_near(text, before, after, lines)
+                } else {
+                    region(text, before, after)
+                }
+                .map(|r| r.trim().to_string())
+            };
+            // A newer dictation ended this one: one immediate reading, then
+            // never its field again.
+            let mut end = End::Window;
             while started.elapsed() < WINDOW {
                 if OBSERVATION.load(Ordering::SeqCst) != id {
-                    ended = "a newer dictation started";
+                    end = End::NextDictation;
                     break;
                 }
                 match crate::context::read_watched(terminal).map(|t| unify(&t)) {
-                    // An empty field was sent or cleared: keep the last reading.
                     Some(text) if !text.trim().is_empty() => {
                         if anchors.is_none() {
                             anchors = if terminal {
@@ -1320,34 +1382,30 @@ pub fn observe(
                                 locate(&text, &inserted, caret)
                             };
                         }
-                        match &anchors {
+                        if anchors.is_none() {
                             // The paste can take a moment to show up.
-                            None if started.elapsed() < Duration::from_secs(3) => {}
-                            None => {
-                                ended = "the pasted text never showed up in the field";
+                            if started.elapsed() >= Duration::from_secs(3) {
+                                end = End::NotFound;
                                 log::debug!("Learning: {}", mismatch(&text, &inserted));
                                 break;
                             }
-                            Some((before, after)) => match if terminal {
-                                region_near(&text, before, after, lines)
-                            } else {
-                                region(&text, before, after)
-                            } {
-                                Some(r) => last = Some(r.trim().to_string()),
+                        } else {
+                            match cut(&text, &anchors) {
+                                Some(r) => last = Some(r),
                                 // Text typed outside the dictation (Wispr: anchor_mismatch).
                                 None => {
-                                    ended = "the text around the dictation changed";
+                                    end = End::AroundChanged;
                                     break;
                                 }
-                            },
+                            }
                         }
                     }
                     Some(_) => {
-                        ended = "the field was emptied (sent)";
+                        end = End::Emptied;
                         break;
                     }
                     None => {
-                        ended = "the field could no longer be read";
+                        end = End::Unreadable;
                         break;
                     }
                 }
@@ -1355,6 +1413,16 @@ pub fn observe(
                 // (Wispr learns from the last reading before the send, E224).
                 std::thread::sleep(Duration::from_millis(300));
             }
+            // EX-3: one more reading at the end event, no 300 ms wait.
+            let final_read = match end {
+                End::NotFound | End::Unreadable => None,
+                _ => crate::context::read_watched(terminal).map(|t| unify(&t)),
+            };
+            let bounded = anchors
+                .as_ref()
+                .is_some_and(|(b, a)| !b.trim().is_empty() && !a.trim().is_empty());
+            let last = finish(last, final_read, bounded, end, &|t| cut(t, &anchors));
+            let ended = format!("{end:?}");
             let edited = last.as_ref().filter(|fin| *fin != &inserted);
             let found: Vec<Candidate> = edited
                 .map(|fin| candidates(&inserted, fin))
@@ -1401,6 +1469,106 @@ pub fn observe(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// The region between two anchors, as `observe` reads it.
+    fn between<'a>(b: &'a str, a: &'a str) -> impl Fn(&str) -> Option<String> + 'a {
+        move |t: &str| region(t, b, a).map(|r| r.trim().to_string())
+    }
+
+    #[test]
+    fn only_a_certain_end_is_learnable() {
+        assert!(learnable(End::Window, true, false));
+        assert!(learnable(End::NextDictation, true, false));
+        assert!(learnable(End::Emptied, true, false));
+        assert!(!learnable(End::Window, false, true), "final reading failed");
+        assert!(!learnable(End::AroundChanged, true, false));
+        assert!(learnable(End::AroundChanged, true, true));
+        assert!(!learnable(End::NotFound, true, true));
+        assert!(!learnable(End::Unreadable, true, true));
+    }
+
+    #[test]
+    fn an_observation_ends_with_a_final_reading() {
+        let r = between("Salut ", " !");
+        let last = || Some("Jef".to_string());
+        // O01: the window closes; the final reading holds a later fix.
+        assert_eq!(
+            finish(last(), Some("Salut Jev !".into()), true, End::Window, &r),
+            Some("Jev".into())
+        );
+        // O02 / L08: fixed then sent at once; a final reading that still holds
+        // the fix wins over the last poll.
+        assert_eq!(
+            finish(last(), Some("Salut Jev !".into()), true, End::Emptied, &r),
+            Some("Jev".into())
+        );
+        // Sent: the field is empty now, the last reading is what was sent.
+        assert_eq!(
+            finish(last(), Some(String::new()), true, End::Emptied, &r),
+            last()
+        );
+        // O03: a newer dictation ends it; one immediate reading.
+        assert_eq!(
+            finish(
+                last(),
+                Some("Salut Jev !".into()),
+                true,
+                End::NextDictation,
+                &r
+            ),
+            Some("Jev".into())
+        );
+        // The final reading failed: uncertain, nothing learned (R7).
+        assert_eq!(finish(last(), None, true, End::Window, &r), None);
+        // O06: text typed around it, anchors bounded on both sides: last reading.
+        assert_eq!(
+            finish(
+                last(),
+                Some("Bon. Salut Jef ! Ok".into()),
+                true,
+                End::AroundChanged,
+                &r
+            ),
+            last()
+        );
+        // Unbounded region, but the pasted text is still there unchanged: last reading.
+        assert_eq!(
+            finish(
+                last(),
+                Some("Bon. Jef ! Ok".into()),
+                false,
+                End::AroundChanged,
+                &r
+            ),
+            last()
+        );
+        // Unbounded and gone: nothing.
+        assert_eq!(
+            finish(
+                last(),
+                Some("Tout autre chose".into()),
+                false,
+                End::AroundChanged,
+                &r
+            ),
+            None
+        );
+        // O08: never found, or no longer readable: nothing.
+        assert_eq!(
+            finish(last(), Some("Salut Jev !".into()), true, End::NotFound, &r),
+            None
+        );
+        assert_eq!(
+            finish(
+                last(),
+                Some("Salut Jev !".into()),
+                true,
+                End::Unreadable,
+                &r
+            ),
+            None
+        );
+    }
 
     #[test]
     fn tracks_the_dictation_with_wispr_anchors() {
