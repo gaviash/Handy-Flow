@@ -1036,7 +1036,8 @@
       "loadError": "Couldn't load the history.",
       "saveError": "Couldn't change this entry's star.",
       "audioError": "Couldn't find this recording's audio.",
-      "openFolderError": "Couldn't open the recordings folder."
+      "openFolderError": "Couldn't open the recordings folder.",
+      "deleted": "Entry deleted"
     },
     "debug": {
       "title": "डिबग",
@@ -1375,7 +1376,8 @@
     "copy": "कपी गर्नुहोस्",
     "clear": "खाली गर्नुहोस्",
     "noOptionsFound": "कुनै विकल्प भेटिएन",
-    "retry": "Retry"
+    "retry": "Retry",
+    "undo": "Undo"
   },
   "errors": {
     "loadDirectory": "डाइरेक्टरी लोड गर्दा त्रुटि: {{error}}",

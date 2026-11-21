@@ -1036,7 +1036,8 @@
       "loadError": "Couldn't load the history.",
       "saveError": "Couldn't change this entry's star.",
       "audioError": "Couldn't find this recording's audio.",
-      "openFolderError": "Couldn't open the recordings folder."
+      "openFolderError": "Couldn't open the recordings folder.",
+      "deleted": "Entry deleted"
     },
     "debug": {
       "title": "Отлаживать",
@@ -1375,7 +1376,8 @@
     "copy": "Копировать",
     "clear": "Очистить",
     "noOptionsFound": "Вариантов не найдено",
-    "retry": "Retry"
+    "retry": "Retry",
+    "undo": "Undo"
   },
   "errors": {
     "loadDirectory": "Ошибка загрузки каталога: {{error}}.",

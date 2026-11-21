@@ -1036,7 +1036,8 @@
       "loadError": "Couldn't load the history.",
       "saveError": "Couldn't change this entry's star.",
       "audioError": "Couldn't find this recording's audio.",
-      "openFolderError": "Couldn't open the recordings folder."
+      "openFolderError": "Couldn't open the recordings folder.",
+      "deleted": "Entry deleted"
     },
     "debug": {
       "title": "调试",
@@ -1375,7 +1376,8 @@
     "copy": "复制",
     "clear": "清除",
     "noOptionsFound": "未找到选项",
-    "retry": "Retry"
+    "retry": "Retry",
+    "undo": "Undo"
   },
   "errors": {
     "loadDirectory": "加载目录时出错: {{error}}",

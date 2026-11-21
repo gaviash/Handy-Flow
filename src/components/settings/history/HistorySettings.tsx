@@ -22,7 +22,7 @@ import {
   X,
 } from "lucide-react";
 import { useTranslation } from "react-i18next";
-import { notify } from "@/stores/noticeStore";
+import { notify, useNoticeStore } from "@/stores/noticeStore";
 import {
   commands,
   events,
@@ -81,6 +81,8 @@ const IconButton: React.FC<{
 );
 
 const PAGE_SIZE = 30;
+/** As long as the undo toast stays up (NoticePanel TOAST_MS). */
+const UNDO_MS = 8000;
 
 // Long text folds to this many lines until "Show more".
 const FOLDED_LINES = 4;
@@ -302,19 +304,56 @@ export const HistorySettings: React.FC = () => {
     [osType, t],
   );
 
-  const deleteAudioEntry = async (id: number) => {
-    // Optimistically remove
+  // Deletions wait for the undo toast; leaving the page carries them out.
+  const pendingDeletes = useRef(new Map<number, () => void>());
+  useEffect(() => {
+    const pending = pendingDeletes.current;
+    return () => pending.forEach((flush) => flush());
+  }, []);
+
+  // shortcut: a deletion still waiting is dropped if the app is killed in
+  // those 8 s (the entry stays, the safe way round).
+  const deleteAudioEntry = (id: number) => {
+    const index = entriesRef.current.findIndex((e) => e.id === id);
+    const entry = entriesRef.current[index];
+    if (!entry) return;
     setEntries((prev) => prev.filter((e) => e.id !== id));
-    try {
-      const result = await commands.deleteHistoryEntry(id);
-      if (result.status !== "ok") {
-        throw new Error(String(result.error));
+    const run = async () => {
+      pendingDeletes.current.delete(id);
+      try {
+        const result = await commands.deleteHistoryEntry(id);
+        if (result.status !== "ok") throw result.error;
+      } catch (error) {
+        console.error("Failed to delete entry:", error);
+        notify({ title: t("settings.history.deleteError") });
+        loadPage();
       }
-    } catch (error) {
-      console.error("Failed to delete entry:", error);
-      loadPage();
-      throw error;
-    }
+    };
+    const timer = setTimeout(run, UNDO_MS);
+    pendingDeletes.current.set(id, () => {
+      clearTimeout(timer);
+      void run();
+    });
+    const title = t("settings.history.deleted");
+    const detail = entry.post_processed_text ?? entry.transcription_text;
+    notify({
+      level: "info",
+      title,
+      detail,
+      action: {
+        label: t("common.undo"),
+        onClick: () => {
+          clearTimeout(timer);
+          pendingDeletes.current.delete(id);
+          useNoticeStore.getState().clearLocal(`${title}|${detail}`);
+          setEntries((prev) => [
+            ...prev.slice(0, index),
+            entry,
+            ...prev.slice(index),
+          ]);
+        },
+      },
+    });
   };
 
   const transcribeFile = async () => {
@@ -485,7 +524,7 @@ interface HistoryEntryProps {
   onToggleSaved: () => void;
   onCopyText: (text: string) => Promise<boolean>;
   getAudioUrl: (fileName: string) => Promise<string | null>;
-  deleteAudio: (id: number) => Promise<void>;
+  deleteAudio: (id: number) => void;
   retryTranscription: (id: number) => Promise<void>;
   cancelTranscription: (id: number) => Promise<void>;
 }
@@ -561,14 +600,7 @@ const HistoryEntryComponent: React.FC<HistoryEntryProps> = ({
     setTimeout(() => setShowCopied(false), 2000);
   };
 
-  const handleDeleteEntry = async () => {
-    try {
-      await deleteAudio(entry.id);
-    } catch (error) {
-      console.error("Failed to delete entry:", error);
-      notify({ title: t("settings.history.deleteError") });
-    }
-  };
+  const handleDeleteEntry = () => deleteAudio(entry.id);
 
   const formattedDate = formatDateTime(String(entry.timestamp), i18n.language);
 

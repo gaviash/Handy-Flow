@@ -1036,7 +1036,8 @@
       "loadError": "Impossible de charger l'historique.",
       "saveError": "Impossible de changer l'étoile de cette entrée.",
       "audioError": "Impossible de trouver l'audio de cet enregistrement.",
-      "openFolderError": "Impossible d'ouvrir le dossier des enregistrements."
+      "openFolderError": "Impossible d'ouvrir le dossier des enregistrements.",
+      "deleted": "Entrée supprimée"
     },
     "debug": {
       "title": "Débogage",
@@ -1375,7 +1376,8 @@
     "copy": "Copier",
     "clear": "Effacer",
     "noOptionsFound": "Aucune option trouvée",
-    "retry": "Réessayer"
+    "retry": "Réessayer",
+    "undo": "Annuler"
   },
   "errors": {
     "loadDirectory": "Erreur lors du chargement du répertoire : {{error}}",
