@@ -1,4 +1,3 @@
-import { FeatureSummary } from "../models/FeatureModelsCard";
 import React, { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { ask, save } from "@tauri-apps/plugin-dialog";
@@ -13,27 +12,24 @@ import { ToggleSwitch } from "../../ui/ToggleSwitch";
 import { SettingContainer } from "../../ui/SettingContainer";
 import { Button } from "../../ui/Button";
 import { useSettings } from "../../../hooks/useSettings";
-import { AsrContextSettings } from "./AsrContextSettings";
 import { notify } from "@/stores/noticeStore";
 import { EmptyMascot } from "../../shared/Mascot";
 
-// Mirrors learning.rs: a word unused for 30 days is forgotten.
+// Mirrors learning.rs: a pending word not confirmed within 30 days is
+// forgotten. An active word is never forgotten (Wispr keeps its dictionary).
 const FORGET_AFTER_S = 30 * 86_400;
 const now = () => Date.now() / 1000;
 /** Learned or used in the last day: it glows once on arrival. */
 const isFresh = (lastSeen: number) => now() - lastSeen < 86_400;
-/** Full ink until the last week, then fading like drying ink, down to 45%. */
-const inkLeft = (lastSeen: number) => {
-  const daysLeft = (lastSeen + FORGET_AFTER_S - now()) / 86_400;
+/** A pending word: full ink until its last week, then fading down to 45%. */
+const inkLeft = (w: Learned) => {
+  if (w.active) return 1;
+  const daysLeft = (w.last_seen + FORGET_AFTER_S - now()) / 86_400;
   return daysLeft >= 7 ? 1 : 0.45 + (0.55 * Math.max(daysLeft, 0)) / 7;
 };
 
-/** Handy Adaptive (F96, F97, F113): learned spellings, delete, clear, export. */
-export const LearningSettings: React.FC<{ onShowModels?: () => void }> = ({
-  onShowModels,
-}) => {
-  const { t, i18n } = useTranslation();
-  const { getSetting, updateSetting, isUpdating } = useSettings();
+/** What Handy Flow learned: words, style rules and the last 30 days' counts. */
+export function useLearning() {
   const [words, setWords] = useState<Learned[]>([]);
   const [rules, setRules] = useState<StyleRule[]>([]);
   const [stats, setStats] = useState<LearningStats | null>(null);
@@ -43,12 +39,6 @@ export const LearningSettings: React.FC<{ onShowModels?: () => void }> = ({
       commands.getStyleRules().then(setRules),
       commands.getLearningStats().then(setStats),
     ]);
-  const pending = (
-    <span className="text-xs text-mid-gray">
-      {" "}
-      ({t("settings.postProcessing.learning.pending")})
-    </span>
-  );
   useEffect(() => {
     refresh();
     // A word learned while the page is open shows up at once, glowing.
@@ -57,7 +47,41 @@ export const LearningSettings: React.FC<{ onShowModels?: () => void }> = ({
       unlisten.then((f) => f());
     };
   }, []);
+  return { words, rules, stats, refresh };
+}
 
+type Learning = ReturnType<typeof useLearning>;
+
+const Pending: React.FC = () => {
+  const { t } = useTranslation();
+  return (
+    <span className="text-xs text-mid-gray">
+      {" "}
+      ({t("settings.postProcessing.learning.pending")})
+    </span>
+  );
+};
+
+/** Handy Adaptive (F121): whether corrections go to the learning validator. */
+export const ValidatorToggle: React.FC = () => {
+  const { t } = useTranslation();
+  const { getSetting, updateSetting, isUpdating } = useSettings();
+  return (
+    <ToggleSwitch
+      checked={getSetting("learning_judge_enabled") ?? true}
+      onChange={(v) => updateSetting("learning_judge_enabled", v)}
+      isUpdating={isUpdating("learning_judge_enabled")}
+      label={t("settings.postProcessing.learning.judge.label")}
+      description={`${t("settings.postProcessing.learning.judge.description")} ${t("settings.postProcessing.learning.judge.offNote")}`}
+      descriptionMode="inline"
+      grouped={true}
+    />
+  );
+};
+
+/** Handy Adaptive (F96, F97, F113): learned spellings, delete, clear, export. */
+export const LearnedWords: React.FC<Learning> = ({ words, stats, refresh }) => {
+  const { t, i18n } = useTranslation();
   const exportWords = async () => {
     const path = await save({ defaultPath: "handy-learned-words.json" });
     if (!path) return;
@@ -69,38 +93,8 @@ export const LearningSettings: React.FC<{ onShowModels?: () => void }> = ({
         title: t("settings.postProcessing.learning.words.exportError"),
       });
   };
-  const judgeOn = getSetting("learning_judge_enabled") ?? true;
-
   return (
     <>
-      <ToggleSwitch
-        checked={getSetting("learning_enabled") ?? true}
-        onChange={(v) => updateSetting("learning_enabled", v)}
-        isUpdating={isUpdating("learning_enabled")}
-        label={t("settings.postProcessing.learning.toggle.label")}
-        description={t("settings.postProcessing.learning.toggle.description")}
-        descriptionMode="tooltip"
-        grouped={true}
-      />
-      <ToggleSwitch
-        checked={getSetting("learned_sound_enabled") ?? true}
-        onChange={(v) => updateSetting("learned_sound_enabled", v)}
-        isUpdating={isUpdating("learned_sound_enabled")}
-        label={t("settings.postProcessing.learning.sound.label")}
-        description={t("settings.postProcessing.learning.sound.description")}
-        descriptionMode="tooltip"
-        grouped={true}
-      />
-      <ToggleSwitch
-        checked={judgeOn}
-        onChange={(v) => updateSetting("learning_judge_enabled", v)}
-        isUpdating={isUpdating("learning_judge_enabled")}
-        label={t("settings.postProcessing.learning.judge.label")}
-        description={t("settings.postProcessing.learning.judge.description")}
-        descriptionMode="tooltip"
-        grouped={true}
-      />
-      <FeatureSummary feature="LearningValidator" onShowModels={onShowModels} />
       <SettingContainer
         title={t("settings.postProcessing.learning.words.label")}
         description={t("settings.postProcessing.learning.words.description")}
@@ -126,16 +120,20 @@ export const LearningSettings: React.FC<{ onShowModels?: () => void }> = ({
                 <li
                   key={w.term}
                   className="flex items-center justify-between gap-2 text-sm"
-                  title={t("settings.postProcessing.learning.words.expires", {
-                    date: new Date(
-                      (w.last_seen + FORGET_AFTER_S) * 1000,
-                    ).toLocaleDateString(i18n.language, {
-                      day: "numeric",
-                      month: "long",
-                    }),
-                  })}
+                  title={
+                    w.active
+                      ? undefined
+                      : t("settings.postProcessing.learning.words.expires", {
+                          date: new Date(
+                            (w.last_seen + FORGET_AFTER_S) * 1000,
+                          ).toLocaleDateString(i18n.language, {
+                            day: "numeric",
+                            month: "long",
+                          }),
+                        })
+                  }
                 >
-                  <span style={{ opacity: inkLeft(w.last_seen) }}>
+                  <span style={{ opacity: inkLeft(w) }}>
                     <span
                       className={`font-semibold inline-block ${
                         isFresh(w.last_seen) ? "animate-learned" : ""
@@ -143,7 +141,7 @@ export const LearningSettings: React.FC<{ onShowModels?: () => void }> = ({
                     >
                       {w.term}
                     </span>
-                    {!w.active && pending}{" "}
+                    {!w.active && <Pending />}{" "}
                     <span className="text-mid-gray">
                       {t("settings.postProcessing.learning.words.heard", {
                         heard: w.heard.join(", "),
@@ -188,6 +186,15 @@ export const LearningSettings: React.FC<{ onShowModels?: () => void }> = ({
           </div>
         </div>
       </SettingContainer>
+    </>
+  );
+};
+
+/** Style preferences drawn from corrections. */
+export const StyleRules: React.FC<Learning> = ({ rules, refresh }) => {
+  const { t } = useTranslation();
+  return (
+    <>
       <SettingContainer
         title={t("settings.postProcessing.learning.rules.label")}
         description={t("settings.postProcessing.learning.rules.description")}
@@ -208,7 +215,7 @@ export const LearningSettings: React.FC<{ onShowModels?: () => void }> = ({
                 >
                   <span>
                     {r.rule}
-                    {!r.active && pending}
+                    {!r.active && <Pending />}
                   </span>
                   <Button
                     variant="secondary"
@@ -239,7 +246,6 @@ export const LearningSettings: React.FC<{ onShowModels?: () => void }> = ({
           </div>
         )}
       </SettingContainer>
-      <AsrContextSettings />
     </>
   );
 };

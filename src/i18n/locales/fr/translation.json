@@ -21,7 +21,8 @@
     "debug": "Débogage",
     "about": "À propos",
     "appearance": "Apparence",
-    "label": "Sections"
+    "label": "Sections",
+    "vocabulary": "Vocabulaire"
   },
   "onboarding": {
     "customModelDescription": "Non officiellement pris en charge",
@@ -408,7 +409,8 @@
       "uses": "Utilise {{provider}} · {{model}}",
       "changeInModels": "Modifier dans Modèles",
       "saveError": "Choix du modèle non enregistré",
-      "speechOptions": "Options de transcription par API"
+      "speechOptions": "Options de transcription par API",
+      "validatorLocal": "Sans modèle · décision locale (lexique)"
     },
     "modelSettings": {
       "title": "Paramètres de {{model}}"
@@ -947,7 +949,8 @@
         },
         "judge": {
           "label": "Validateur d’apprentissage",
-          "description": "Envoie votre correction (avant et après) à une IA pour apprendre des règles de style et des mots techniques."
+          "description": "Envoie votre correction (avant et après) à une IA pour apprendre des règles de style et des mots techniques.",
+          "offNote": "Coupé : rien n'est envoyé, les mots sont décidés sur votre PC."
         }
       },
       "styles": {
@@ -1350,7 +1353,17 @@
         "description": "Au-delà de ce délai, le modèle local transcrit à la place."
       }
     },
-    "saveFailed": "Réglage non enregistré"
+    "saveFailed": "Réglage non enregistré",
+    "vocabulary": {
+      "subtitle": "Les mots que Handy Flow écrit à votre façon : les vôtres, et ceux qu'il apprend de vos corrections.",
+      "statusOn": "Mots personnels : {{custom}} · appris : {{learned}} · apprentissage actif",
+      "statusPaused": "Mots personnels : {{custom}} · appris : {{learned}} · apprentissage en pause",
+      "custom": "Mots personnels",
+      "count": "Total : {{count}}",
+      "learnedSummary": "Total : {{count}} · en attente : {{pending}}",
+      "reasoningHint": "Un modèle qui raisonne se trompe moins : choisissez-en un dans Modèles.",
+      "expert": "son du mot appris, seuil de correction"
+    }
   },
   "footer": {
     "appName": "Handy Flow",
@@ -1473,7 +1486,8 @@
   "status": {
     "ok": "Prêt",
     "warn": "À configurer",
-    "off": "Désactivé"
+    "off": "Désactivé",
+    "on": "Activée"
   },
   "expert": {
     "title": "Réglages experts"

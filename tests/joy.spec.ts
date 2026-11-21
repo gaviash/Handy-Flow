@@ -33,7 +33,8 @@ test("a fresh learned word glows, an old one fades", async ({ page }) => {
     },
   });
   await page.goto("/");
-  await page.getByRole("button", { name: "Enhancement", exact: true }).click();
+  await page.getByRole("button", { name: "Vocabulary", exact: true }).click();
+  await page.getByRole("button", { name: /^Learned words/i }).click();
   await expect(page.getByText("Kubernetes", { exact: true })).toHaveClass(
     /animate-learned/,
   );
@@ -61,7 +62,8 @@ test("a snippet previews what saying it types", async ({ page }) => {
     settings: { snippets: [{ trigger: "signature", text: "Marie Dupont" }] },
   });
   await page.goto("/");
-  await page.getByRole("button", { name: "Enhancement", exact: true }).click();
+  await page.getByRole("button", { name: "Vocabulary", exact: true }).click();
+  await page.getByRole("button", { name: /^Snippets/ }).click();
   await page.getByRole("button", { name: "Preview", exact: true }).click();
   await expect(page.getByText("Say “signature” on its own")).toBeVisible();
   await expect(page.locator(".snippet-reveal")).toHaveText("Marie Dupont");

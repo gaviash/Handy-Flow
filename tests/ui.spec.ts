@@ -27,7 +27,8 @@ test("a checked switch paints the palette accent", async ({ page }) => {
 test("primary button text uses on-accent, not white", async ({ page }) => {
   await mockTauri(page);
   await page.goto("/");
-  await page.getByRole("button", { name: "Advanced" }).click();
+  await page.getByRole("button", { name: "Vocabulary" }).click();
+  await page.getByRole("button", { name: /^Personal words/ }).click();
   await page.getByPlaceholder("Add a word").fill("example");
   const add = page.getByRole("button", { name: "Add", exact: true });
   const color = await add.evaluate((el) => getComputedStyle(el).color);

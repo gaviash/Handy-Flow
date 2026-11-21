@@ -21,7 +21,8 @@
     "debug": "Felsökning",
     "about": "Om",
     "appearance": "Appearance",
-    "label": "Sections"
+    "label": "Sections",
+    "vocabulary": "Vocabulary"
   },
   "onboarding": {
     "customModelDescription": "Stöds inte officiellt",
@@ -408,7 +409,8 @@
       "uses": "Uses {{provider}} · {{model}}",
       "changeInModels": "Change in Models",
       "saveError": "Could not save the model choice",
-      "speechOptions": "Speech API options"
+      "speechOptions": "Speech API options",
+      "validatorLocal": "No model · decided on your PC (lexicon)"
     },
     "modelSettings": {
       "title": "{{model}}-inställningar"
@@ -947,7 +949,8 @@
         },
         "judge": {
           "label": "Learning Validator",
-          "description": "Sends your correction (before and after) to an AI to learn style rules and technical words."
+          "description": "Sends your correction (before and after) to an AI to learn style rules and technical words.",
+          "offNote": "Off: nothing is sent, words are decided on your PC."
         }
       },
       "styles": {
@@ -1350,7 +1353,17 @@
         "description": "Past this delay, the local model transcribes instead."
       }
     },
-    "saveFailed": "Setting not saved"
+    "saveFailed": "Setting not saved",
+    "vocabulary": {
+      "subtitle": "The words Handy Flow writes your way: yours, and those it learns from your corrections.",
+      "statusOn": "Personal words: {{custom}} · learned: {{learned}} · learning on",
+      "statusPaused": "Personal words: {{custom}} · learned: {{learned}} · learning paused",
+      "custom": "Personal words",
+      "count": "Total: {{count}}",
+      "learnedSummary": "Total: {{count}} · pending: {{pending}}",
+      "reasoningHint": "A reasoning model makes fewer mistakes: choose one in Models.",
+      "expert": "learned-word sound, correction threshold"
+    }
   },
   "footer": {
     "appName": "Handy Flow",
@@ -1473,7 +1486,8 @@
   "status": {
     "ok": "Ready",
     "warn": "Needs setup",
-    "off": "Off"
+    "off": "Off",
+    "on": "On"
   },
   "expert": {
     "title": "Expert settings"

@@ -16,9 +16,7 @@ import { FeatureSummary } from "../models/FeatureModelsCard";
 import { ShortcutInput } from "../ShortcutInput";
 import { PostProcessTimeout } from "./PostProcessTimeout";
 import { ContextSettings } from "./ContextSettings";
-import { LearningSettings } from "./LearningSettings";
 import { StyleSettings } from "./StyleSettings";
-import { SnippetSettings } from "./SnippetSettings";
 import { TransformSettings } from "./TransformSettings";
 import { useSettings } from "../../../hooks/useSettings";
 
@@ -356,15 +354,10 @@ export const PostProcessingSettings: React.FC<{
 
       <SettingsGroup title={t("settings.postProcessing.styles.title")}>
         <StyleSettings />
-        <SnippetSettings />
       </SettingsGroup>
 
       <SettingsGroup title={t("settings.postProcessing.context.title")}>
         <ContextSettings />
-      </SettingsGroup>
-
-      <SettingsGroup title={t("settings.postProcessing.learning.title")}>
-        <LearningSettings onShowModels={onShowModels} />
       </SettingsGroup>
 
       <SettingsGroup title={t("settings.postProcessing.prompts.title")}>

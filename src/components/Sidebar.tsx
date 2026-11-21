@@ -9,6 +9,7 @@ import {
   Info,
   SlidersHorizontal,
   Sparkles,
+  BookOpen,
 } from "lucide-react";
 import HandyFlowWordmark from "./icons/HandyFlowWordmark";
 import { useSettings } from "../hooks/useSettings";
@@ -20,6 +21,7 @@ import {
   PostProcessingSettings,
   ModelsSettings,
   AppearanceSettings,
+  VocabularySettings,
 } from "./settings";
 
 export type SidebarSection = keyof typeof SECTIONS_CONFIG;
@@ -60,6 +62,12 @@ export const SECTIONS_CONFIG = {
     icon: Sparkles,
     component: PostProcessingSettings,
     // Always shown: the page itself offers to turn the rewrite back on.
+    enabled: () => true,
+  },
+  vocabulary: {
+    labelKey: "sidebar.vocabulary",
+    icon: BookOpen,
+    component: VocabularySettings,
     enabled: () => true,
   },
   history: {

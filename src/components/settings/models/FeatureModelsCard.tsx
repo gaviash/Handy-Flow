@@ -30,7 +30,7 @@ const reasoningLevels: Reasoning[] = ["Off", "Low", "Medium", "High"];
 export const featureSelectClass =
   "w-full min-w-0 rounded-md border border-line-strong bg-wash px-2 py-1.5 text-sm text-text focus-visible:outline-2 focus-visible:outline-logo-primary disabled:opacity-60";
 
-function useFeatureStatuses() {
+export function useFeatureStatuses() {
   const settings = useSettingsStore((state) => state.settings);
   const saving = useSettingsStore((state) =>
     Object.values(state.isUpdating).some(Boolean),
@@ -54,10 +54,27 @@ function useFeatureStatuses() {
   return statuses;
 }
 
-function FeatureStatusLine({ status }: { status?: FeatureStatus }) {
-  const { t } = useTranslation();
-  if (!status) return null;
+/** Without a usable model the validator still decides on the PC (lexicon). */
+const LOCAL_FALLBACK = new Set([
+  "NoProvider",
+  "NoKey",
+  "NoModel",
+  "NotChatModel",
+  "UnsupportedProvider",
+]);
+
+/** One line on what a feature uses, or why it doesn't run. */
+export function featureStatusText(
+  t: (key: string, options?: Record<string, unknown>) => string,
+  status: FeatureStatus,
+): string {
   const problem = status.problem;
+  if (
+    problem &&
+    status.feature === "LearningValidator" &&
+    LOCAL_FALLBACK.has(problem)
+  )
+    return t("settings.features.validatorLocal");
   const description =
     problem === "NotChosen"
       ? t(`settings.features.empty.${status.feature}`)
@@ -67,18 +84,19 @@ function FeatureStatusLine({ status }: { status?: FeatureStatus }) {
             provider: status.provider_label,
             model: status.model,
           });
+  return !problem && status.model_reasons
+    ? `${description} · ${t("settings.features.reasoningStatus", {
+        level: t(`settings.features.level.${status.reasoning}`),
+      })}`
+    : description;
+}
+
+function FeatureStatusLine({ status }: { status?: FeatureStatus }) {
+  const { t } = useTranslation();
+  if (!status) return null;
   return (
     <p role="status" className="text-sm text-ink-2">
-      {description}
-      {!problem && status.model_reasons && (
-        <>
-          {" "}
-          ·{" "}
-          {t("settings.features.reasoningStatus", {
-            level: t(`settings.features.level.${status.reasoning}`),
-          })}
-        </>
-      )}
+      {featureStatusText(t, status)}
     </p>
   );
 }

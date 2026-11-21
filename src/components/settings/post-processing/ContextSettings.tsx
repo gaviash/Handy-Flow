@@ -9,7 +9,7 @@ import { useSettings } from "../../../hooks/useSettings";
 
 type ListKey = "context_excluded_apps" | "context_excluded_domains";
 
-const ExclusionList: React.FC<{
+export const ExclusionList: React.FC<{
   settingKey: ListKey;
   label: string;
   description: string;
@@ -46,7 +46,7 @@ const ExclusionList: React.FC<{
 };
 
 /** Handy Adaptive (F63): the user's name, always spelled right. */
-const UserName: React.FC = () => {
+export const UserName: React.FC = () => {
   const { t } = useTranslation();
   const { getSetting, updateSetting } = useSettings();
   const saved = getSetting("user_name") ?? "";
@@ -76,7 +76,6 @@ export const ContextSettings: React.FC = () => {
 
   return (
     <>
-      <UserName />
       <ToggleSwitch
         checked={getSetting("context_enabled") ?? true}
         onChange={(v) => updateSetting("context_enabled", v)}

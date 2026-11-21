@@ -94,3 +94,49 @@ test("the Enhancement tab stays visible with the rewrite off", async ({
     page.getByRole("button", { name: "Debug", exact: true }),
   ).toHaveCount(0);
 });
+
+test("Vocabulary opens personal words, adds one, and goes back to its card", async ({
+  page,
+}) => {
+  const mock = await mockTauri(page);
+  await page.goto("/");
+  await page.getByRole("button", { name: "Vocabulary", exact: true }).click();
+  await page.getByRole("button", { name: /^Personal words/ }).click();
+  await page.getByPlaceholder("Add a word").fill("Qwen");
+  await page.getByRole("button", { name: "Add", exact: true }).click();
+  await expect
+    .poll(async () => (await mock.calls()).map((c) => c.cmd))
+    .toContain("update_custom_words");
+  await page.getByRole("button", { name: "Vocabulary" }).last().click();
+  await expect(
+    page.getByRole("button", { name: /^Personal words/ }),
+  ).toBeFocused();
+});
+
+test("only a pending learned word shows when it expires", async ({ page }) => {
+  const old = Math.floor(Date.now() / 1000) - 40 * 86_400;
+  const word = (term: string, active: boolean) => ({
+    term,
+    heard: ["x"],
+    count: 1,
+    active,
+    last_seen: old,
+    source: "Correction",
+  });
+  await mockTauri(page, {
+    results: {
+      get_learned_words: [word("Qwen", true), word("Kiro", false)],
+    },
+  });
+  await page.goto("/");
+  await page.getByRole("button", { name: "Vocabulary", exact: true }).click();
+  await page.getByRole("button", { name: /^Learned words/i }).click();
+  await expect(page.locator("li", { hasText: "Qwen" })).not.toHaveAttribute(
+    "title",
+    /.+/,
+  );
+  await expect(page.locator("li", { hasText: "Kiro" })).toHaveAttribute(
+    "title",
+    /.+/,
+  );
+});
