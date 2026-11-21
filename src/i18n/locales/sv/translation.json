@@ -1375,6 +1375,27 @@
       "exclusionsSummary": "Apps: {{apps}} · sites: {{sites}}",
       "lastAt": "Last dictation: {{time}}",
       "expert": "sources, limits, VS Code"
+    },
+    "enhancement": {
+      "subtitle": "A language model rewrites your dictation before pasting it.",
+      "statusOff": "Off: the dictation is pasted as is.",
+      "statusSetup": "Choose a provider and a model in Models.",
+      "statusReady": "{{shortcut}} rewrites with {{provider}}",
+      "statusDetail": "Model {{model}} · fallback: {{fallback}} · tone adapted to the app",
+      "openModels": "Open Models",
+      "none": "none",
+      "notConfigured": "Not configured",
+      "provider": "Provider",
+      "rewriteUses": "Rewrite: {{value}}",
+      "fallbackUses": "Fallback: {{value}}",
+      "fallbackShort": "fallback {{value}}",
+      "providerHelp": "The same provider can serve other features (speech, validator): it is all set in Models.",
+      "cleanup": "Cleanup",
+      "fillersRemoved": "Hesitations removed",
+      "fillersKept": "Hesitations kept",
+      "transformsSummary": "Polish · voice instruction · saved: {{count}}",
+      "allShortcuts": "All shortcuts in General",
+      "expert": "prompt, delay"
     }
   },
   "footer": {

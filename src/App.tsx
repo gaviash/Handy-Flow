@@ -61,6 +61,7 @@ const PAGES_WITH_OWN_TITLE: SidebarSection[] = [
   "appearance",
   "about",
   "models",
+  "postprocessing",
   "vocabulary",
   "context",
 ];
@@ -83,7 +84,10 @@ const renderSettingsContent = (
   }
   if (section === "postprocessing") {
     return (
-      <PostProcessingSettings onShowModels={() => onSectionChange("models")} />
+      <PostProcessingSettings
+        onShowModels={() => onSectionChange("models")}
+        onShowGeneral={() => onSectionChange("general")}
+      />
     );
   }
   if (section === "vocabulary") {

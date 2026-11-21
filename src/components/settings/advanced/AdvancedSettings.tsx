@@ -9,7 +9,6 @@ import { PasteMethodSetting } from "../PasteMethod";
 import { TypingToolSetting } from "../TypingTool";
 import { ClipboardHandlingSetting } from "../ClipboardHandling";
 import { AutoSubmit } from "../AutoSubmit";
-import { PostProcessingToggle } from "../PostProcessingToggle";
 import { AppendTrailingSpace } from "../AppendTrailingSpace";
 import { HistoryLimit } from "../HistoryLimit";
 import { RecordingRetentionPeriodSelector } from "../RecordingRetentionPeriod";
@@ -61,7 +60,6 @@ export const AdvancedSettings: React.FC<{ onShowAppearance?: () => void }> = ({
       <SettingsGroup title={t("settings.advanced.groups.transcription")}>
         <VoiceActivityDetection descriptionMode="tooltip" grouped={true} />
         <LongFormChunking descriptionMode="tooltip" grouped={true} />
-        <FillerWordRemoval descriptionMode="tooltip" grouped={true} />
         <AppendTrailingSpace descriptionMode="tooltip" grouped={true} />
       </SettingsGroup>
 
@@ -75,7 +73,6 @@ export const AdvancedSettings: React.FC<{ onShowAppearance?: () => void }> = ({
 
       {experimentalEnabled && (
         <SettingsGroup title={t("settings.advanced.groups.experimental")}>
-          <PostProcessingToggle descriptionMode="tooltip" grouped={true} />
           <KeyboardImplementationSelector
             descriptionMode="tooltip"
             grouped={true}

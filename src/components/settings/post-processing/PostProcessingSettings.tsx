@@ -1,363 +1,263 @@
-import React, { useEffect, useState } from "react";
-import { Trans, useTranslation } from "react-i18next";
-import { commands } from "@/bindings";
-import { notify } from "@/stores/noticeStore";
-
+import React from "react";
+import { useTranslation } from "react-i18next";
 import {
-  Dropdown,
-  SettingContainer,
+  Eraser,
+  FileText,
+  Keyboard,
+  MessageCircle,
+  Server,
+  Wand2,
+} from "lucide-react";
+import type { FeatureStatus } from "@/bindings";
+import {
+  CardGrid,
+  ExpertSection,
+  SettingCard,
   SettingsGroup,
-  Textarea,
+  StatusHeader,
+  SubPage,
+  useSubPage,
 } from "@/components/ui";
 import { Button } from "../../ui/Button";
-import { Input } from "../../ui/Input";
-
-import { FeatureSummary } from "../models/FeatureModelsCard";
+import { Switch } from "../../ui/Switch";
+import { useSettings } from "../../../hooks/useSettings";
+import { useOsType } from "../../../hooks/useOsType";
+import { formatKeyCombination } from "../../../lib/utils/keyboard";
+import { FillerWordRemoval } from "../FillerWordRemoval";
+import { useFeatureStatuses } from "../models/FeatureModelsCard";
 import { ShortcutInput } from "../ShortcutInput";
 import { PostProcessTimeout } from "./PostProcessTimeout";
-import { StyleSettings } from "./StyleSettings";
+import { PromptEditor } from "./PromptEditor";
+import { StyleSettings, CATEGORIES } from "./StyleSettings";
 import { TransformSettings } from "./TransformSettings";
-import { useSettings } from "../../../hooks/useSettings";
 
-const PostProcessingSettingsApiComponent = ({
-  onShowModels,
-}: {
-  onShowModels?: () => void;
-}) => (
-  <>
-    <FeatureSummary feature="Rewrite" onShowModels={onShowModels} />
-    <FeatureSummary feature="RewriteFallback" />
-  </>
-);
+type Topic =
+  | "provider"
+  | "tone"
+  | "transforms"
+  | "cleanup"
+  | "shortcut"
+  | "prompt";
 
-const PostProcessingSettingsPromptsComponent: React.FC = () => {
-  const { t } = useTranslation();
-  const { getSetting, updateSetting, isUpdating, refreshSettings } =
-    useSettings();
-  const [isCreating, setIsCreating] = useState(false);
-  const [draftName, setDraftName] = useState("");
-  const [draftText, setDraftText] = useState("");
+const e = (key: string) => `settings.enhancement.${key}`;
+const pp = (key: string) => `settings.postProcessing.${key}`;
 
-  const prompts = getSetting("post_process_prompts") || [];
-  const selectedPromptId = getSetting("post_process_selected_prompt_id") || "";
-  const selectedPrompt =
-    prompts.find((prompt) => prompt.id === selectedPromptId) || null;
+/** "Groq · llama", or null when the feature has nothing it can use. */
+const uses = (status?: FeatureStatus) =>
+  status && !status.problem
+    ? `${status.provider_label} · ${status.model}`
+    : null;
 
-  useEffect(() => {
-    if (isCreating) return;
-
-    if (selectedPrompt) {
-      setDraftName(selectedPrompt.name);
-      setDraftText(selectedPrompt.prompt);
-    } else {
-      setDraftName("");
-      setDraftText("");
-    }
-  }, [
-    isCreating,
-    selectedPromptId,
-    selectedPrompt?.name,
-    selectedPrompt?.prompt,
-  ]);
-
-  const handlePromptSelect = (promptId: string | null) => {
-    if (!promptId) return;
-    updateSetting("post_process_selected_prompt_id", promptId);
-    setIsCreating(false);
-  };
-
-  const promptFailed = (error: unknown) =>
-    notify({
-      title: t("settings.postProcessing.prompts.saveError"),
-      detail: String(error),
-    });
-
-  const handleCreatePrompt = async () => {
-    if (!draftName.trim() || !draftText.trim()) return;
-
-    try {
-      const result = await commands.addPostProcessPrompt(
-        draftName.trim(),
-        draftText.trim(),
-      );
-      if (result.status === "error") throw result.error;
-      await refreshSettings();
-      updateSetting("post_process_selected_prompt_id", result.data.id);
-      setIsCreating(false);
-    } catch (error) {
-      console.error("Failed to create prompt:", error);
-      promptFailed(error);
-    }
-  };
-
-  const handleUpdatePrompt = async () => {
-    if (!selectedPromptId || !draftName.trim() || !draftText.trim()) return;
-
-    try {
-      const result = await commands.updatePostProcessPrompt(
-        selectedPromptId,
-        draftName.trim(),
-        draftText.trim(),
-      );
-      if (result.status === "error") throw result.error;
-      await refreshSettings();
-    } catch (error) {
-      console.error("Failed to update prompt:", error);
-      promptFailed(error);
-    }
-  };
-
-  const handleDeletePrompt = async (promptId: string) => {
-    if (!promptId) return;
-
-    try {
-      const result = await commands.deletePostProcessPrompt(promptId);
-      if (result.status === "error") throw result.error;
-      await refreshSettings();
-      setIsCreating(false);
-    } catch (error) {
-      console.error("Failed to delete prompt:", error);
-      promptFailed(error);
-    }
-  };
-
-  const handleCancelCreate = () => {
-    setIsCreating(false);
-    if (selectedPrompt) {
-      setDraftName(selectedPrompt.name);
-      setDraftText(selectedPrompt.prompt);
-    } else {
-      setDraftName("");
-      setDraftText("");
-    }
-  };
-
-  const handleStartCreate = () => {
-    setIsCreating(true);
-    setDraftName("");
-    setDraftText("");
-  };
-
-  const hasPrompts = prompts.length > 0;
-  // Handy Adaptive: the house prompt is code-owned and re-synced on launch.
-  const isHouse = selectedPromptId === "adaptive_house";
-  const isDirty =
-    !!selectedPrompt &&
-    (draftName.trim() !== selectedPrompt.name ||
-      draftText.trim() !== selectedPrompt.prompt.trim());
-
-  return (
-    <SettingContainer
-      title={t("settings.postProcessing.prompts.selectedPrompt.title")}
-      description={t(
-        "settings.postProcessing.prompts.selectedPrompt.description",
-      )}
-      descriptionMode="tooltip"
-      layout="stacked"
-      grouped={true}
-    >
-      <div className="space-y-3">
-        <div className="flex gap-2 min-w-0">
-          <Dropdown
-            selectedValue={selectedPromptId || null}
-            options={prompts.map((p) => ({
-              value: p.id,
-              label: p.name,
-            }))}
-            onSelect={(value) => handlePromptSelect(value)}
-            placeholder={
-              prompts.length === 0
-                ? t("settings.postProcessing.prompts.noPrompts")
-                : t("settings.postProcessing.prompts.selectPrompt")
-            }
-            disabled={
-              isUpdating("post_process_selected_prompt_id") || isCreating
-            }
-            className="flex-1 min-w-0"
-          />
-          <Button
-            onClick={handleStartCreate}
-            variant="primary"
-            size="md"
-            disabled={isCreating}
-            className="shrink-0"
-          >
-            {t("settings.postProcessing.prompts.createNew")}
-          </Button>
-        </div>
-
-        {!isCreating && hasPrompts && selectedPrompt && (
-          <div className="space-y-3">
-            <div className="space-y-2 flex flex-col">
-              <label className="text-sm font-semibold">
-                {t("settings.postProcessing.prompts.promptLabel")}
-              </label>
-              <Input
-                type="text"
-                value={draftName}
-                onChange={(e) => setDraftName(e.target.value)}
-                readOnly={isHouse}
-                placeholder={t(
-                  "settings.postProcessing.prompts.promptLabelPlaceholder",
-                )}
-                variant="compact"
-              />
-            </div>
-
-            <div className="space-y-2 flex flex-col">
-              <label className="text-sm font-semibold">
-                {t("settings.postProcessing.prompts.promptInstructions")}
-              </label>
-              <Textarea
-                value={draftText}
-                onChange={(e) => setDraftText(e.target.value)}
-                readOnly={isHouse}
-                placeholder={t(
-                  "settings.postProcessing.prompts.promptInstructionsPlaceholder",
-                )}
-              />
-              <p className="text-xs text-ink-3">
-                <Trans
-                  i18nKey="settings.postProcessing.prompts.promptTip"
-                  components={{ code: <code /> }}
-                />
-              </p>
-            </div>
-
-            <div className="flex gap-2 pt-2">
-              <Button
-                onClick={handleUpdatePrompt}
-                variant="primary"
-                size="md"
-                disabled={
-                  isHouse || !draftName.trim() || !draftText.trim() || !isDirty
-                }
-              >
-                {t("settings.postProcessing.prompts.updatePrompt")}
-              </Button>
-              <Button
-                onClick={() => handleDeletePrompt(selectedPromptId)}
-                variant="secondary"
-                size="md"
-                disabled={isHouse || !selectedPromptId || prompts.length <= 1}
-              >
-                {t("settings.postProcessing.prompts.deletePrompt")}
-              </Button>
-            </div>
-          </div>
-        )}
-
-        {!isCreating && !selectedPrompt && (
-          <div className="p-3 bg-wash rounded-md border border-line">
-            <p className="text-sm text-ink-3">
-              {hasPrompts
-                ? t("settings.postProcessing.prompts.selectToEdit")
-                : t("settings.postProcessing.prompts.createFirst")}
-            </p>
-          </div>
-        )}
-
-        {isCreating && (
-          <div className="space-y-3">
-            <div className="space-y-2 block flex flex-col">
-              <label className="text-sm font-semibold text-text">
-                {t("settings.postProcessing.prompts.promptLabel")}
-              </label>
-              <Input
-                type="text"
-                value={draftName}
-                onChange={(e) => setDraftName(e.target.value)}
-                placeholder={t(
-                  "settings.postProcessing.prompts.promptLabelPlaceholder",
-                )}
-                variant="compact"
-              />
-            </div>
-
-            <div className="space-y-2 flex flex-col">
-              <label className="text-sm font-semibold">
-                {t("settings.postProcessing.prompts.promptInstructions")}
-              </label>
-              <Textarea
-                value={draftText}
-                onChange={(e) => setDraftText(e.target.value)}
-                placeholder={t(
-                  "settings.postProcessing.prompts.promptInstructionsPlaceholder",
-                )}
-              />
-              <p className="text-xs text-ink-3">
-                <Trans
-                  i18nKey="settings.postProcessing.prompts.promptTip"
-                  components={{ code: <code /> }}
-                />
-              </p>
-            </div>
-
-            <div className="flex gap-2 pt-2">
-              <Button
-                onClick={handleCreatePrompt}
-                variant="primary"
-                size="md"
-                disabled={!draftName.trim() || !draftText.trim()}
-              >
-                {t("settings.postProcessing.prompts.createPrompt")}
-              </Button>
-              <Button
-                onClick={handleCancelCreate}
-                variant="secondary"
-                size="md"
-              >
-                {t("settings.postProcessing.prompts.cancel")}
-              </Button>
-            </div>
-          </div>
-        )}
-      </div>
-    </SettingContainer>
-  );
-};
-
-export const PostProcessingSettingsApi = React.memo(
-  PostProcessingSettingsApiComponent,
-);
-PostProcessingSettingsApi.displayName = "PostProcessingSettingsApi";
-
-export const PostProcessingSettingsPrompts = React.memo(
-  PostProcessingSettingsPromptsComponent,
-);
-PostProcessingSettingsPrompts.displayName = "PostProcessingSettingsPrompts";
-
+/** The rewrite: whether it runs, with what, in which tone. */
 export const PostProcessingSettings: React.FC<{
   onShowModels?: () => void;
-}> = ({ onShowModels }) => {
+  onShowGeneral?: () => void;
+}> = ({ onShowModels, onShowGeneral }) => {
   const { t } = useTranslation();
+  const { getSetting, updateSetting, isUpdating } = useSettings();
+  const osType = useOsType();
+  const sub = useSubPage<Topic>();
+  const statuses = useFeatureStatuses();
+  const rewrite = statuses.find((s) => s.feature === "Rewrite");
+  const fallback = statuses.find((s) => s.feature === "RewriteFallback");
 
-  return (
-    <div className="max-w-3xl w-full mx-auto space-y-6">
-      <SettingsGroup title={t("settings.postProcessing.hotkey.title")}>
-        <ShortcutInput
-          shortcutId="transcribe_with_post_process"
-          descriptionMode="tooltip"
-          grouped={true}
-        />
-      </SettingsGroup>
+  const enabled = getSetting("post_process_enabled") ?? false;
+  const shortcut =
+    formatKeyCombination(
+      getSetting("bindings")?.transcribe_with_post_process?.current_binding ??
+        "",
+      osType,
+    ) || t("settings.general.shortcut.none");
+  const provider = uses(rewrite);
+  const backup = uses(fallback) ?? t(e("none"));
+  const styles = getSetting("styles");
+  const transforms = (getSetting("transforms") ?? []).filter((x) =>
+    x.name.trim(),
+  ).length;
+  const title = t("sidebar.postProcessing");
 
-      <SettingsGroup title={t("settings.postProcessing.api.title")}>
-        <PostProcessingSettingsApi onShowModels={onShowModels} />
-        <PostProcessTimeout />
-      </SettingsGroup>
-
-      <SettingsGroup title={t("settings.postProcessing.transforms.title")}>
-        <TransformSettings />
-      </SettingsGroup>
-
-      <SettingsGroup title={t("settings.postProcessing.styles.title")}>
+  const page = (topic: Topic, heading: string, body: React.ReactNode) =>
+    sub.open === topic && (
+      <SubPage parent={title} title={heading} onBack={sub.back}>
+        {body}
+      </SubPage>
+    );
+  const open =
+    page(
+      "provider",
+      t(e("provider")),
+      <SettingsGroup>
+        <div className="px-4 py-3 text-sm space-y-1">
+          <p>
+            {t(e("rewriteUses"), {
+              value: provider ?? t(e("notConfigured")),
+            })}
+          </p>
+          <p>{t(e("fallbackUses"), { value: backup })}</p>
+          <p className="pt-2 text-ink-2">{t(e("providerHelp"))}</p>
+        </div>
+        <div className="px-4 pb-3">
+          <Button size="sm" variant="outline" onClick={onShowModels}>
+            {t("settings.features.changeInModels")}
+          </Button>
+        </div>
+      </SettingsGroup>,
+    ) ||
+    page(
+      "tone",
+      t(pp("styles.title")),
+      <SettingsGroup>
         <StyleSettings />
-      </SettingsGroup>
+      </SettingsGroup>,
+    ) ||
+    page(
+      "transforms",
+      t(pp("transforms.title")),
+      <SettingsGroup>
+        <TransformSettings />
+      </SettingsGroup>,
+    ) ||
+    page(
+      "cleanup",
+      t(e("cleanup")),
+      <SettingsGroup>
+        <FillerWordRemoval descriptionMode="inline" grouped />
+      </SettingsGroup>,
+    ) ||
+    page(
+      "shortcut",
+      t(pp("hotkey.title")),
+      <>
+        <SettingsGroup>
+          <ShortcutInput
+            shortcutId="transcribe_with_post_process"
+            descriptionMode="inline"
+            grouped
+          />
+        </SettingsGroup>
+        <Button size="sm" variant="outline" onClick={onShowGeneral}>
+          {t(e("allShortcuts"))}
+        </Button>
+      </>,
+    ) ||
+    page(
+      "prompt",
+      t(pp("prompts.title")),
+      <SettingsGroup>
+        <PromptEditor />
+      </SettingsGroup>,
+    );
+  if (open) return open;
 
-      <SettingsGroup title={t("settings.postProcessing.prompts.title")}>
-        <PostProcessingSettingsPrompts />
-      </SettingsGroup>
+  const ready = enabled && !!provider;
+  return (
+    <div className="mx-auto w-full max-w-3xl space-y-5 pb-4">
+      <div className="flex items-start justify-between gap-4">
+        <div className="space-y-2">
+          <h1 className="page-title">{title}</h1>
+          <p className="text-sm text-ink-2">{t(e("subtitle"))}</p>
+        </div>
+        <Switch
+          checked={enabled}
+          onChange={(on) => updateSetting("post_process_enabled", on)}
+          disabled={isUpdating("post_process_enabled")}
+          ariaLabel={t("settings.debug.postProcessingToggle.label")}
+        />
+      </div>
+      <StatusHeader
+        tone={!enabled ? "off" : ready ? "ok" : "warn"}
+        title={
+          !enabled
+            ? t(e("statusOff"))
+            : ready
+              ? t(e("statusReady"), {
+                  shortcut,
+                  provider: rewrite?.provider_label,
+                })
+              : t(e("statusSetup"))
+        }
+        detail={
+          ready &&
+          t(e("statusDetail"), { model: rewrite?.model, fallback: backup })
+        }
+      >
+        {enabled && !ready && (
+          <Button size="sm" variant="outline" onClick={onShowModels}>
+            {t(e("openModels"))}
+          </Button>
+        )}
+      </StatusHeader>
+      <CardGrid>
+        <SettingCard
+          ref={sub.cardRef("provider")}
+          icon={Server}
+          title={t(e("provider"))}
+          summary={
+            provider
+              ? uses(fallback)
+                ? `${provider} · ${t(e("fallbackShort"), { value: backup })}`
+                : provider
+              : t(e("notConfigured"))
+          }
+          tone={provider ? undefined : "warn"}
+          onOpen={() => sub.show("provider")}
+        />
+        <SettingCard
+          ref={sub.cardRef("tone")}
+          icon={MessageCircle}
+          title={t(pp("styles.title"))}
+          summary={CATEGORIES.map(
+            (c) =>
+              `${t(pp(`styles.categories.${c}`))} ${t(
+                pp(`styles.tones.${styles?.[c] ?? "default"}`),
+              ).toLowerCase()}`,
+          ).join(" · ")}
+          onOpen={() => sub.show("tone")}
+        />
+        <SettingCard
+          ref={sub.cardRef("transforms")}
+          icon={Wand2}
+          title={t(pp("transforms.title"))}
+          summary={t(e("transformsSummary"), { count: transforms })}
+          onOpen={() => sub.show("transforms")}
+        />
+        <SettingCard
+          ref={sub.cardRef("cleanup")}
+          icon={Eraser}
+          title={t(e("cleanup"))}
+          summary={t(
+            e(
+              (getSetting("filler_word_removal_enabled") ?? true)
+                ? "fillersRemoved"
+                : "fillersKept",
+            ),
+          )}
+          onOpen={() => sub.show("cleanup")}
+        />
+        <SettingCard
+          ref={sub.cardRef("shortcut")}
+          icon={Keyboard}
+          title={t(pp("hotkey.title"))}
+          summary={shortcut}
+          onOpen={() => sub.show("shortcut")}
+        />
+      </CardGrid>
+      <ExpertSection summary={t(e("expert"))}>
+        <SettingsGroup>
+          <PostProcessTimeout />
+        </SettingsGroup>
+        <SettingCard
+          ref={sub.cardRef("prompt")}
+          icon={FileText}
+          title={t(pp("prompts.title"))}
+          summary={
+            (getSetting("post_process_prompts") ?? []).find(
+              (p) => p.id === getSetting("post_process_selected_prompt_id"),
+            )?.name ?? ""
+          }
+          onOpen={() => sub.show("prompt")}
+        />
+      </ExpertSection>
     </div>
   );
 };

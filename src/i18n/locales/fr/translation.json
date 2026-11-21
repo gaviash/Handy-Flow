@@ -1375,6 +1375,27 @@
       "exclusionsSummary": "Applications : {{apps}} · sites : {{sites}}",
       "lastAt": "Dernière dictée : {{time}}",
       "expert": "sources, limites, VS Code"
+    },
+    "enhancement": {
+      "subtitle": "Un modèle de langage réécrit votre dictée avant de la coller.",
+      "statusOff": "Désactivée : la dictée est collée telle quelle.",
+      "statusSetup": "Choisissez un fournisseur et un modèle dans Modèles.",
+      "statusReady": "{{shortcut}} réécrit avec {{provider}}",
+      "statusDetail": "Modèle {{model}} · secours : {{fallback}} · ton adapté à l'application",
+      "openModels": "Ouvrir Modèles",
+      "none": "aucun",
+      "notConfigured": "Non configuré",
+      "provider": "Fournisseur",
+      "rewriteUses": "Réécriture : {{value}}",
+      "fallbackUses": "Secours : {{value}}",
+      "fallbackShort": "secours {{value}}",
+      "providerHelp": "Le même fournisseur peut servir à d'autres fonctions (transcription, validateur) : tout se règle dans Modèles.",
+      "cleanup": "Nettoyage",
+      "fillersRemoved": "Hésitations retirées",
+      "fillersKept": "Hésitations conservées",
+      "transformsSummary": "Polish · instruction vocale · enregistrées : {{count}}",
+      "allShortcuts": "Tous les raccourcis dans Général",
+      "expert": "consigne, délai"
     }
   },
   "footer": {

@@ -159,3 +159,87 @@ test("turning sending off changes what the Context page says", async ({
     page.getByText("Read on your PC, nothing is sent."),
   ).toBeVisible();
 });
+
+const rewriteStatus = (problem: string | null) => [
+  {
+    feature: "Rewrite",
+    provider_label: "Groq",
+    model: "llama",
+    automatic: false,
+    problem,
+    reasoning: "Off",
+    model_reasons: false,
+  },
+];
+const openEnhancement = async (page: import("@playwright/test").Page) => {
+  await page.goto("/");
+  await page.getByRole("button", { name: "Enhancement", exact: true }).click();
+};
+
+test("Enhancement says when the rewrite is off", async ({ page }) => {
+  await mockTauri(page, { settings: { post_process_enabled: false } });
+  await openEnhancement(page);
+  await expect(
+    page.getByText("Off: the dictation is pasted as is."),
+  ).toBeVisible();
+});
+
+test("Enhancement asks for setup when the rewrite has no key", async ({
+  page,
+}) => {
+  await mockTauri(page, {
+    settings: { post_process_enabled: true },
+    results: { get_feature_statuses: rewriteStatus("NoKey") },
+  });
+  await openEnhancement(page);
+  await expect(page.getByText("Needs setup")).toBeVisible();
+  await page.getByRole("button", { name: "Open Models" }).click();
+  await expect(
+    page.getByRole("group", { name: "Learning validator" }),
+  ).toBeVisible();
+});
+
+test("a tone is chosen with pills, and back returns to the Tone card", async ({
+  page,
+}) => {
+  const mock = await mockTauri(page, {
+    settings: { post_process_enabled: true },
+    results: { get_feature_statuses: rewriteStatus(null) },
+  });
+  await openEnhancement(page);
+  await expect(page.getByText(/rewrites with Groq/)).toBeVisible();
+  await page.getByRole("button", { name: /^Styles/ }).click();
+  await page
+    .getByRole("radiogroup", { name: "Work Messaging" })
+    .getByRole("radio", { name: "Formal" })
+    .click();
+  await expect
+    .poll(async () =>
+      (await mock.calls()).find((c) => c.cmd === "change_styles_setting"),
+    )
+    .toMatchObject({ args: { styles: { work: "formal" } } });
+  await page.getByRole("button", { name: "Enhancement" }).last().click();
+  await expect(page.getByRole("button", { name: /^Styles/ })).toBeFocused();
+});
+
+test("the provider sub-page only summarises and links to Models", async ({
+  page,
+}) => {
+  await mockTauri(page, {
+    settings: { post_process_enabled: true },
+    results: { get_feature_statuses: rewriteStatus(null) },
+  });
+  await openEnhancement(page);
+  await page.getByRole("button", { name: /^Provider/ }).click();
+  await expect(page.getByText("Rewrite: Groq · llama")).toBeVisible();
+  await expect(
+    page.locator("main input, main textarea, main select"),
+  ).toHaveCount(0);
+  await expect(
+    page.locator("input:not([type=checkbox]), textarea, select"),
+  ).toHaveCount(0);
+  await page.getByRole("button", { name: "Change in Models" }).click();
+  await expect(
+    page.getByRole("group", { name: "Learning validator" }),
+  ).toBeVisible();
+});

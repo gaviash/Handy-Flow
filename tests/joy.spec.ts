@@ -73,6 +73,7 @@ test("the style list shows an example of the tone", async ({ page }) => {
   await mockTauri(page);
   await page.goto("/");
   await page.getByRole("button", { name: "Enhancement", exact: true }).click();
+  await page.getByRole("button", { name: /^Styles/ }).click();
   await expect(page.getByText("Example for Email · Formal")).toBeVisible();
   await expect(
     page.getByText(/I confirm our meeting tomorrow at 10 a\.m\./),
