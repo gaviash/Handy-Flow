@@ -563,7 +563,12 @@
         "label": "Find tilføjede modeller",
         "tooltip": "Søg igen efter modeller, der er tilføjet til modelmappen eller Hugging Face-cachen uden for Handy Flow"
       },
-      "actionError": "Model action failed"
+      "actionError": "Model action failed",
+      "featuresReady": "AI features ready.",
+      "providersSummary": "Providers: {{count}} · keys: {{keys}}",
+      "local": "local",
+      "engineExpert": "engine",
+      "featureProblem": "{{name}}: {{status}}"
     },
     "languages": {
       "title": "Sprog"

@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { RefreshCw } from "lucide-react";
+import { Cpu, RefreshCw, Server, Workflow } from "lucide-react";
 import { Tooltip } from "@/components/ui/Tooltip";
 import { useModelStore } from "@/stores/modelStore";
 import { notify } from "@/stores/noticeStore";
@@ -15,7 +15,25 @@ import { ModelRow } from "./ModelRow";
 import { Legend } from "./Legend";
 import { useModelEntries } from "./modelEntries";
 import { CloudAsrSettings } from "./CloudAsrSettings";
-import { FeatureModelsCard } from "./FeatureModelsCard";
+import {
+  FeatureModelsCard,
+  featureStatusText,
+  useFeatureStatuses,
+} from "./FeatureModelsCard";
+import {
+  CardGrid,
+  ExpertSection,
+  SettingCard,
+  SettingsGroup,
+  StatusHeader,
+  SubPage,
+  useSubPage,
+} from "@/components/ui";
+import { ModelUnloadTimeoutSetting } from "../ModelUnloadTimeout";
+import { LongFormChunking } from "../LongFormChunking";
+import { AccelerationSelector } from "../AccelerationSelector";
+import { LanguageDetection } from "../LanguageDetection";
+import { LanguageDetectionWindow } from "../debug/LanguageDetectionWindow";
 import { ProvidersCard } from "./ProvidersCard";
 import { ModelSettingsCard } from "./ModelSettingsCard";
 import { useSettings } from "@/hooks/useSettings";
@@ -50,14 +68,21 @@ interface ModelsSettingsProps {
   /** Where the languages are changed (General). */
   onChangeLanguages?: () => void;
   onShowReformulation?: () => void;
+  /** Open straight on a topic, e.g. "features" from Enhancement. */
+  initialTopic?: ModelsTopic;
 }
+
+export type ModelsTopic = "providers" | "features" | "local";
 
 /** The Models page: onboarding's model table, filling the window. */
 export const ModelsSettings: React.FC<ModelsSettingsProps> = ({
   onChangeLanguages,
   onShowReformulation,
+  initialTopic,
 }) => {
   const { t } = useTranslation();
+  const sub = useSubPage<ModelsTopic>(initialTopic ?? null);
+  const statuses = useFeatureStatuses();
   const loading = useModelStore((s) => s.loading);
   const { facts, lists } = useModelEntries();
   const { filters, setFilters, searching, matches } = useModelFilters();
@@ -143,12 +168,137 @@ export const ModelsSettings: React.FC<ModelsSettingsProps> = ({
         },
       ];
 
+  const title = t(k("title"));
+  // Features the user turned on that cannot run as set up.
+  const OFF = [
+    "RewriteOff",
+    "ValidatorOff",
+    "LearningOff",
+    "ContextOff",
+    "NotChosen",
+  ];
+  const broken = statuses.find((s) => s.problem && !OFF.includes(s.problem));
+  const status = (f: string) => statuses.find((s) => s.feature === f);
+  const rewrite = status("Rewrite");
+  const validator = status("LearningValidator");
+  const speech = status("TranscriptionApi");
+  const providers = settings?.post_process_providers ?? [];
+  const keys = Object.values(settings?.post_process_api_keys ?? {}).filter(
+    Boolean,
+  ).length;
+
+  if (sub.open === "providers")
+    return (
+      <SubPage
+        parent={title}
+        title={t("settings.providers.title")}
+        onBack={sub.back}
+      >
+        <ProvidersCard />
+      </SubPage>
+    );
+  if (sub.open === "features")
+    return (
+      <SubPage
+        parent={title}
+        title={t("settings.features.title")}
+        onBack={sub.back}
+      >
+        <FeatureModelsCard />
+        <CloudAsrSettings />
+      </SubPage>
+    );
+  if (sub.open === "local")
+    return (
+      <SubPage
+        parent={title}
+        title={t(k(config.api ? "fallbackTitle" : "localTitle"))}
+        onBack={sub.back}
+      >
+        <section className="space-y-3" aria-labelledby="local-model-title">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <h2 id="local-model-title" className="text-base font-semibold">
+              {t(k(config.api ? "fallbackTitle" : "localTitle"))}
+            </h2>
+            {onChangeLanguages && (
+              <button
+                type="button"
+                onClick={onChangeLanguages}
+                className="shrink-0 cursor-pointer text-sm text-text underline decoration-line-strong underline-offset-[3px] hover:decoration-text focus:outline-none focus-visible:ring-1 focus-visible:ring-logo-primary"
+              >
+                {t("settings.models.changeLanguages")}
+              </button>
+            )}
+          </div>
+          <p className="text-sm text-ink-2">
+            {t(k(config.api ? "fallbackHelp" : "localHelp"))}
+          </p>
+          <p className="text-sm font-medium">
+            {loading
+              ? t(k("loading"))
+              : config.localModel?.name || t(k("localMissing"))}
+          </p>
+          {!loading && !config.localModel && (
+            <p role="status" className="text-sm text-text">
+              {t(k(config.api ? "noFallback" : "downloadRequired"))}
+            </p>
+          )}
+          {!config.api && <ModelSettingsCard />}
+          <details className="group" open={!config.localModel || undefined}>
+            <summary className="cursor-pointer rounded py-2 text-sm font-medium text-text underline decoration-line-strong underline-offset-4 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-logo-primary">
+              {t(k(config.api ? "chooseFallback" : "chooseLocal"))}
+            </summary>
+            <p className="mb-3 text-xs text-ink-2">
+              {t(k(config.api ? "catalogFallbackHelp" : "catalogLocalHelp"))}
+            </p>
+            <div className="mx-[12px] mb-[16px] flex-none empty:hidden">
+              <RetiredModelsNotice />
+            </div>
+            {loading ? (
+              <p className="py-8 text-center text-sm text-ink-2">
+                {t(k("loading"))}
+              </p>
+            ) : (
+              <div className="flex h-[480px] min-h-0 flex-col">
+                <ModelTable
+                  grading={facts}
+                  filters={filters}
+                  setFilters={setFilters}
+                  // "Yours" always shows at rest; a search hides empty sections.
+                  sections={sections.filter(
+                    (s) => s.rows.length || (s.key === "yours" && !searching),
+                  )}
+                  renderRow={(e) => (
+                    <ModelRow
+                      key={e.id}
+                      entry={e}
+                      role={config.api ? "fallback" : "primary"}
+                    />
+                  )}
+                  actionsHead={<Legend tier={facts.tier} />}
+                  footer={
+                    !searching &&
+                    lists.untested.length > 0 && (
+                      <Note>
+                        {t("settings.models.untestedHidden", {
+                          count: lists.untested.length,
+                        })}
+                      </Note>
+                    )
+                  }
+                  thinEdge
+                />
+              </div>
+            )}
+          </details>
+        </section>
+      </SubPage>
+    );
+
   return (
-    <div className="mx-auto w-full max-w-3xl space-y-7 pb-4">
-      {/* The title, and across from it where to change the languages the
-          grades are for. */}
+    <div className="mx-auto w-full max-w-3xl space-y-5 pb-4">
       <div className="space-y-2">
-        <h1 className="page-title">{t(k("title"))}</h1>
+        <h1 className="page-title">{title}</h1>
         <p className="text-sm text-ink-2">{t(k("intro"))}</p>
         {onShowReformulation && (
           <button
@@ -160,12 +310,10 @@ export const ModelsSettings: React.FC<ModelsSettingsProps> = ({
           </button>
         )}
       </div>
-      <div
-        role="status"
-        className={`rounded-lg border p-4 text-sm ${config.issue ? "border-warning text-text" : "border-line bg-wash text-text"}`}
-      >
-        <p className="font-medium">
-          {isLoading
+      <StatusHeader
+        tone={config.issue || broken ? "warn" : "ok"}
+        title={
+          isLoading
             ? t(k("loading"))
             : config.api
               ? t(k("apiSummary"), {
@@ -174,98 +322,79 @@ export const ModelsSettings: React.FC<ModelsSettingsProps> = ({
                 })
               : t(k("localSummary"), {
                   model: config.localModel?.name || t(k("localMissing")),
-                })}
-        </p>
-        {!isLoading && (
-          <p className="mt-1 text-ink-2">
-            {config.api
-              ? config.issue
-                ? `${t(k(config.issue))} ${t(k(config.localModel ? "usingLocal" : "noFallback"))}`
-                : t(k("configured"))
-              : t(k("localSummaryHelp"))}
-          </p>
-        )}
-      </div>
-      <ProvidersCard />
-      <FeatureModelsCard />
-      <CloudAsrSettings />
-      <section className="space-y-3" aria-labelledby="local-model-title">
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <h2 id="local-model-title" className="text-base font-semibold">
-            {t(k(config.api ? "fallbackTitle" : "localTitle"))}
-          </h2>
-          {onChangeLanguages && (
-            <button
-              type="button"
-              onClick={onChangeLanguages}
-              className="shrink-0 cursor-pointer text-sm text-text underline decoration-line-strong underline-offset-[3px] hover:decoration-text focus:outline-none focus-visible:ring-1 focus-visible:ring-logo-primary"
-            >
-              {t("settings.models.changeLanguages")}
-            </button>
-          )}
-        </div>
-        <p className="text-sm text-ink-2">
-          {t(k(config.api ? "fallbackHelp" : "localHelp"))}
-        </p>
-        <p className="text-sm font-medium">
-          {loading
-            ? t(k("loading"))
-            : config.localModel?.name || t(k("localMissing"))}
-        </p>
-        {!loading && !config.localModel && (
-          <p role="status" className="text-sm text-text">
-            {t(k(config.api ? "noFallback" : "downloadRequired"))}
-          </p>
-        )}
-        {!config.api && <ModelSettingsCard />}
-        <details className="group" open={!config.localModel || undefined}>
-          <summary className="cursor-pointer rounded py-2 text-sm font-medium text-text underline decoration-line-strong underline-offset-4 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-logo-primary">
-            {t(k(config.api ? "chooseFallback" : "chooseLocal"))}
-          </summary>
-          <p className="mb-3 text-xs text-ink-2">
-            {t(k(config.api ? "catalogFallbackHelp" : "catalogLocalHelp"))}
-          </p>
-          <div className="mx-[12px] mb-[16px] flex-none empty:hidden">
-            <RetiredModelsNotice />
-          </div>
-          {loading ? (
-            <p className="py-8 text-center text-sm text-ink-2">
-              {t(k("loading"))}
-            </p>
-          ) : (
-            <div className="flex h-[480px] min-h-0 flex-col">
-              <ModelTable
-                grading={facts}
-                filters={filters}
-                setFilters={setFilters}
-                // "Yours" always shows at rest; a search hides empty sections.
-                sections={sections.filter(
-                  (s) => s.rows.length || (s.key === "yours" && !searching),
-                )}
-                renderRow={(e) => (
-                  <ModelRow
-                    key={e.id}
-                    entry={e}
-                    role={config.api ? "fallback" : "primary"}
-                  />
-                )}
-                actionsHead={<Legend tier={facts.tier} />}
-                footer={
-                  !searching &&
-                  lists.untested.length > 0 && (
-                    <Note>
-                      {t("settings.models.untestedHidden", {
-                        count: lists.untested.length,
-                      })}
-                    </Note>
-                  )
-                }
-                thinEdge
-              />
-            </div>
-          )}
-        </details>
-      </section>
+                })
+        }
+        detail={
+          isLoading
+            ? undefined
+            : config.issue
+              ? `${t(k(config.issue))} ${t(k(config.localModel ? "usingLocal" : "noFallback"))}`
+              : broken
+                ? t("settings.models.featureProblem", {
+                    name: t(`settings.features.name.${broken.feature}`),
+                    status: featureStatusText(t, broken),
+                  })
+                : t("settings.models.featuresReady")
+        }
+      />
+      <CardGrid>
+        <SettingCard
+          ref={sub.cardRef("providers")}
+          icon={Server}
+          title={t("settings.providers.title")}
+          summary={t("settings.models.providersSummary", {
+            count: providers.length,
+            keys,
+          })}
+          onOpen={() => sub.show("providers")}
+        />
+        <SettingCard
+          ref={sub.cardRef("features")}
+          icon={Workflow}
+          title={t("settings.features.title")}
+          summary={[
+            rewrite &&
+              `${t("settings.features.name.Rewrite")} ${rewrite.problem ? "—" : rewrite.provider_label}`,
+            validator &&
+              `${t("settings.features.name.LearningValidator")} ${
+                validator.problem
+                  ? "—"
+                  : validator.automatic
+                    ? t("settings.features.empty.LearningValidator")
+                    : validator.provider_label
+              }`,
+            `${t("settings.features.name.TranscriptionApi")} ${
+              speech && !speech.problem
+                ? speech.provider_label
+                : t("settings.models.local")
+            }`,
+          ]
+            .filter(Boolean)
+            .join(" · ")}
+          tone={broken ? "warn" : undefined}
+          onOpen={() => sub.show("features")}
+        />
+        <SettingCard
+          ref={sub.cardRef("local")}
+          icon={Cpu}
+          title={t(k(config.api ? "fallbackTitle" : "localTitle"))}
+          summary={
+            loading
+              ? t(k("loading"))
+              : config.localModel?.name || t(k("localMissing"))
+          }
+          onOpen={() => sub.show("local")}
+        />
+      </CardGrid>
+      <ExpertSection summary={t("settings.models.engineExpert")}>
+        <SettingsGroup>
+          <ModelUnloadTimeoutSetting descriptionMode="inline" grouped />
+          <LongFormChunking descriptionMode="inline" grouped />
+          <AccelerationSelector descriptionMode="inline" grouped />
+          <LanguageDetection descriptionMode="inline" grouped />
+          <LanguageDetectionWindow descriptionMode="inline" grouped />
+        </SettingsGroup>
+      </ExpertSection>
     </div>
   );
 };

@@ -563,7 +563,12 @@
         "label": "Hinzugefügte Modelle suchen",
         "tooltip": "Erneut nach Modellen scannen, die außerhalb von Handy Flow zum Modellordner oder Hugging-Face-Cache hinzugefügt wurden"
       },
-      "actionError": "Model action failed"
+      "actionError": "Model action failed",
+      "featuresReady": "AI features ready.",
+      "providersSummary": "Providers: {{count}} · keys: {{keys}}",
+      "local": "local",
+      "engineExpert": "engine",
+      "featureProblem": "{{name}}: {{status}}"
     },
     "languages": {
       "title": "Sprachen"

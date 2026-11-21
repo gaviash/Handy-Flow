@@ -563,7 +563,12 @@
         "label": "Toegevoegde modellen zoeken",
         "tooltip": "Scannen naar modellen die buiten Handy Flow om zijn toegevoegd aan de modellenmap of Hugging Face-cache"
       },
-      "actionError": "Model action failed"
+      "actionError": "Model action failed",
+      "featuresReady": "AI features ready.",
+      "providersSummary": "Providers: {{count}} · keys: {{keys}}",
+      "local": "local",
+      "engineExpert": "engine",
+      "featureProblem": "{{name}}: {{status}}"
     },
     "languages": {
       "title": "Talen"

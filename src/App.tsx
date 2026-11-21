@@ -37,6 +37,7 @@ import {
 import { ErrorBoundary } from "./components/ErrorBoundary";
 import { FileDropOverlay } from "./components/FileDropOverlay";
 import { Sidebar, SidebarSection, SECTIONS_CONFIG } from "./components/Sidebar";
+import type { ModelsTopic } from "./components/settings/models/ModelsSettings";
 import { WhatsNewGate } from "./components/whats-new";
 import { useSettings } from "./hooks/useSettings";
 import { useSettingsStore } from "./stores/settingsStore";
@@ -71,28 +72,32 @@ const renderSettingsContent = (
   onPreviewOnboarding: (step: OnboardingPreviewStep) => void,
   onRunOnboarding: () => void,
   onRunModelMigration: () => void,
-  onSectionChange: (section: SidebarSection) => void,
+  onSectionChange: (section: SidebarSection, topic?: ModelsTopic) => void,
   focusPill: boolean,
+  modelsTopic: ModelsTopic | null,
 ) => {
   if (section === "models") {
     return (
       <ModelsSettings
         onChangeLanguages={() => onSectionChange("general")}
         onShowReformulation={() => onSectionChange("postprocessing")}
+        initialTopic={modelsTopic ?? undefined}
       />
     );
   }
   if (section === "postprocessing") {
     return (
       <PostProcessingSettings
-        onShowModels={() => onSectionChange("models")}
+        onShowModels={() => onSectionChange("models", "features")}
         onShowGeneral={() => onSectionChange("general")}
       />
     );
   }
   if (section === "vocabulary") {
     return (
-      <VocabularySettings onShowModels={() => onSectionChange("models")} />
+      <VocabularySettings
+        onShowModels={() => onSectionChange("models", "features")}
+      />
     );
   }
   if (section === "advanced") {
@@ -132,6 +137,10 @@ function App() {
   const [currentSection, setCurrentSection] =
     useState<SidebarSection>("general");
   const [focusPill, setFocusPill] = useState(false);
+  // The Models topic a link asked for; cleared when the sidebar is used.
+  const [modelsTopic, setModelsTopic] = useState<ModelsTopic | null>(null);
+  // Bumped by each sidebar click, so the active tab reopens on its overview.
+  const [visit, setVisit] = useState(0);
   const showHistory = useCallback(() => setCurrentSection("history"), []);
   const { settings, updateSetting } = useSettings();
   // A section that is not enabled (Debug outside debug mode) is not shown.
@@ -431,6 +440,8 @@ function App() {
             activeSection={section}
             onSectionChange={(section) => {
               setFocusPill(false);
+              setModelsTopic(null);
+              setVisit((n) => n + 1);
               setCurrentSection(section);
             }}
           />
@@ -438,7 +449,7 @@ function App() {
           <div className="flex-1 flex flex-col overflow-hidden">
             <div ref={settingsScrollRef} className="flex-1 overflow-y-auto">
               <div
-                key={section}
+                key={`${section}-${visit}`}
                 ref={pageRef}
                 className="flex flex-col items-center p-4 gap-4 animate-rise"
               >
@@ -453,11 +464,13 @@ function App() {
                   setOnboardingPreview,
                   runOnboarding,
                   runModelMigration,
-                  (section) => {
+                  (section, topic) => {
                     setFocusPill(section === "appearance");
+                    setModelsTopic(topic ?? null);
                     setCurrentSection(section);
                   },
                   focusPill,
+                  modelsTopic,
                 )}
               </div>
             </div>
@@ -466,7 +479,10 @@ function App() {
         {/* Fixed footer at bottom */}
         <Footer
           onShowHistory={showHistory}
-          onShowModels={() => setCurrentSection("models")}
+          onShowModels={() => {
+            setModelsTopic(null);
+            setCurrentSection("models");
+          }}
         />
         <FileDropOverlay onDropped={showHistory} />
       </div>

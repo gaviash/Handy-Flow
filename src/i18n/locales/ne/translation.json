@@ -563,7 +563,12 @@
         "label": "थपिएका मोडेल खोज्नुहोस्",
         "tooltip": "Handy Flow बाहिरबाट मोडेल फोल्डर वा Hugging Face क्यासमा थपिएका मोडेलहरू फेरि स्क्यान गर्नुहोस्"
       },
-      "actionError": "Model action failed"
+      "actionError": "Model action failed",
+      "featuresReady": "AI features ready.",
+      "providersSummary": "Providers: {{count}} · keys: {{keys}}",
+      "local": "local",
+      "engineExpert": "engine",
+      "featureProblem": "{{name}}: {{status}}"
     },
     "languages": {
       "title": "भाषाहरू"

@@ -563,7 +563,12 @@
         "label": "Find added models",
         "tooltip": "Rescan for models added to the models folder or Hugging Face cache outside Handy Flow"
       },
-      "actionError": "Model action failed"
+      "actionError": "Model action failed",
+      "featuresReady": "AI features ready.",
+      "providersSummary": "Providers: {{count}} · keys: {{keys}}",
+      "local": "local",
+      "engineExpert": "engine",
+      "featureProblem": "{{name}}: {{status}}"
     },
     "languages": {
       "title": "Languages"
@@ -1302,7 +1307,7 @@
     "transcription": {
       "title": "Transcription models",
       "intro": "Choose how Handy Flow turns your voice into text. Text cleanup has its own settings.",
-      "reformulationLink": "Open Reformulation settings",
+      "reformulationLink": "Open Enhancement settings",
       "modeTitle": "Where should transcription run?",
       "localMode": "On this computer",
       "localDescription": "Audio stays on this computer.",

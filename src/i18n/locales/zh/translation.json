@@ -563,7 +563,12 @@
         "label": "查找已添加的模型",
         "tooltip": "重新扫描在 Handy Flow 之外添加到模型文件夹或 Hugging Face 缓存中的模型"
       },
-      "actionError": "Model action failed"
+      "actionError": "Model action failed",
+      "featuresReady": "AI features ready.",
+      "providersSummary": "Providers: {{count}} · keys: {{keys}}",
+      "local": "local",
+      "engineExpert": "engine",
+      "featureProblem": "{{name}}: {{status}}"
     },
     "languages": {
       "title": "语言"

@@ -563,7 +563,12 @@
         "label": "Знайти додані моделі",
         "tooltip": "Пересканувати моделі, додані до папки моделей або кешу Hugging Face поза межами Handy Flow"
       },
-      "actionError": "Model action failed"
+      "actionError": "Model action failed",
+      "featuresReady": "AI features ready.",
+      "providersSummary": "Providers: {{count}} · keys: {{keys}}",
+      "local": "local",
+      "engineExpert": "engine",
+      "featureProblem": "{{name}}: {{status}}"
     },
     "languages": {
       "title": "Мови"

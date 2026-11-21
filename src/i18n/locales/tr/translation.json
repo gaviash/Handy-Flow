@@ -563,7 +563,12 @@
         "label": "Eklenen modelleri bul",
         "tooltip": "Handy Flow dışında modeller klasörüne veya Hugging Face önbelleğine eklenen modelleri yeniden tara"
       },
-      "actionError": "Model action failed"
+      "actionError": "Model action failed",
+      "featuresReady": "AI features ready.",
+      "providersSummary": "Providers: {{count}} · keys: {{keys}}",
+      "local": "local",
+      "engineExpert": "engine",
+      "featureProblem": "{{name}}: {{status}}"
     },
     "languages": {
       "title": "Diller"

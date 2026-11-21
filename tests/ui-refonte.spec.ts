@@ -316,3 +316,22 @@ test("exclusion lists are named for screen readers", async ({ page }) => {
     page.getByRole("textbox", { name: "Excluded Apps" }),
   ).toBeVisible();
 });
+
+test("'Change in Models' lands on Usage by feature, the sidebar on the overview", async ({
+  page,
+}) => {
+  await mockTauri(page, {
+    settings: { post_process_enabled: true },
+    results: { get_feature_statuses: rewriteStatus(null) },
+  });
+  await openEnhancement(page);
+  await page.getByRole("button", { name: /^Provider/ }).click();
+  await page.getByRole("button", { name: "Change in Models" }).click();
+  await expect(
+    page.getByRole("heading", { level: 1, name: "Usage by feature" }),
+  ).toBeVisible();
+  await page.getByRole("button", { name: "Models", exact: true }).click();
+  await expect(
+    page.getByRole("button", { name: /^Usage by feature/ }),
+  ).toBeVisible();
+});

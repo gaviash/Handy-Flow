@@ -563,7 +563,12 @@
         "label": "追加されたモデルを探す",
         "tooltip": "Handy Flow を使わずに models フォルダーまたは Hugging Face キャッシュに追加されたモデルを再スキャンします"
       },
-      "actionError": "Model action failed"
+      "actionError": "Model action failed",
+      "featuresReady": "AI features ready.",
+      "providersSummary": "Providers: {{count}} · keys: {{keys}}",
+      "local": "local",
+      "engineExpert": "engine",
+      "featureProblem": "{{name}}: {{status}}"
     },
     "languages": {
       "title": "言語"

@@ -563,7 +563,12 @@
         "label": "Търсене на добавени модели",
         "tooltip": "Сканиране отново за модели, добавени в папката с модели или кеша на Hugging Face извън Handy Flow"
       },
-      "actionError": "Model action failed"
+      "actionError": "Model action failed",
+      "featuresReady": "AI features ready.",
+      "providersSummary": "Providers: {{count}} · keys: {{keys}}",
+      "local": "local",
+      "engineExpert": "engine",
+      "featureProblem": "{{name}}: {{status}}"
     },
     "languages": {
       "title": "Езици"

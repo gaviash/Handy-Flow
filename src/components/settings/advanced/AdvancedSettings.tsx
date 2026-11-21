@@ -1,6 +1,5 @@
 import React from "react";
 import { useTranslation } from "react-i18next";
-import { ModelUnloadTimeoutSetting } from "../ModelUnloadTimeout";
 import { SettingsGroup } from "../../ui/SettingsGroup";
 import { PasteMethodSetting } from "../PasteMethod";
 import { TypingToolSetting } from "../TypingTool";
@@ -13,9 +12,6 @@ import { ExperimentalToggle } from "../ExperimentalToggle";
 import { useSettings } from "../../../hooks/useSettings";
 import { KeyboardImplementationSelector } from "../debug/KeyboardImplementationSelector";
 import { VoiceActivityDetection } from "../VoiceActivityDetection";
-import { LongFormChunking } from "../LongFormChunking";
-import { LanguageDetection } from "../LanguageDetection";
-import { AccelerationSelector } from "../AccelerationSelector";
 import { LazyStreamClose } from "../LazyStreamClose";
 import { AirPodsMode } from "../AirPodsMode";
 import { FillerWordRemoval } from "../FillerWordRemoval";
@@ -40,7 +36,6 @@ export const AdvancedSettings: React.FC<{ onShowAppearance?: () => void }> = ({
             {t("settings.appearance.overlay.title")} → {t("sidebar.appearance")}
           </button>
         </div>
-        <ModelUnloadTimeoutSetting descriptionMode="tooltip" grouped={true} />
         <ExperimentalToggle descriptionMode="tooltip" grouped={true} />
       </SettingsGroup>
 
@@ -53,7 +48,6 @@ export const AdvancedSettings: React.FC<{ onShowAppearance?: () => void }> = ({
 
       <SettingsGroup title={t("settings.advanced.groups.transcription")}>
         <VoiceActivityDetection descriptionMode="tooltip" grouped={true} />
-        <LongFormChunking descriptionMode="tooltip" grouped={true} />
         <AppendTrailingSpace descriptionMode="tooltip" grouped={true} />
       </SettingsGroup>
 
@@ -71,11 +65,9 @@ export const AdvancedSettings: React.FC<{ onShowAppearance?: () => void }> = ({
             descriptionMode="tooltip"
             grouped={true}
           />
-          <AccelerationSelector descriptionMode="tooltip" grouped={true} />
           <LazyStreamClose descriptionMode="tooltip" grouped={true} />
           <AirPodsMode descriptionMode="tooltip" grouped={true} />
           <VadBackendSelector descriptionMode="tooltip" grouped={true} />
-          <LanguageDetection descriptionMode="tooltip" grouped={true} />
         </SettingsGroup>
       )}
     </div>

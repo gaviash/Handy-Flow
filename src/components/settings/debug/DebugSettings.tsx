@@ -5,7 +5,6 @@ import { LiveLogViewer } from "./LiveLogViewer";
 import { PasteDelay } from "./PasteDelay";
 import { ReliablePasteToggle } from "./ReliablePaste";
 import { RecordingBuffer } from "./RecordingBuffer";
-import { LanguageDetectionWindow } from "./LanguageDetectionWindow";
 import { SettingsGroup } from "../../ui/SettingsGroup";
 import { AlwaysOnMicrophone } from "../AlwaysOnMicrophone";
 import { UpdateChecksToggle } from "../UpdateChecksToggle";
@@ -60,7 +59,6 @@ export const DebugSettings: React.FC<DebugSettingsProps> = ({
         />
         <ReliablePasteToggle descriptionMode="tooltip" grouped={true} />
         <RecordingBuffer descriptionMode="tooltip" grouped={true} />
-        <LanguageDetectionWindow descriptionMode="tooltip" grouped={true} />
         <AlwaysOnMicrophone descriptionMode="tooltip" grouped={true} />
         <KeyboardDiagnostic />
         <LiveLogViewer descriptionMode="tooltip" grouped={true} />

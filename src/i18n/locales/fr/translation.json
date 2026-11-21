@@ -563,7 +563,12 @@
         "label": "Rechercher les modèles ajoutés",
         "tooltip": "Réanalyser pour détecter les modèles ajoutés au dossier des modèles ou au cache Hugging Face en dehors de Handy Flow"
       },
-      "actionError": "L'action sur le modèle a échoué"
+      "actionError": "L'action sur le modèle a échoué",
+      "featuresReady": "Fonctions IA prêtes.",
+      "providersSummary": "Fournisseurs : {{count}} · clés : {{keys}}",
+      "local": "locale",
+      "engineExpert": "moteur",
+      "featureProblem": "{{name}} : {{status}}"
     },
     "languages": {
       "title": "Langues"
@@ -1302,7 +1307,7 @@
     "transcription": {
       "title": "Modèles de transcription",
       "intro": "Choisissez comment Handy Flow transforme votre voix en texte. La mise au propre se règle séparément.",
-      "reformulationLink": "Ouvrir les réglages de reformulation",
+      "reformulationLink": "Ouvrir les réglages d’Amélioration",
       "modeTitle": "Où effectuer la transcription ?",
       "localMode": "Sur cet ordinateur",
       "localDescription": "Le son reste sur cet ordinateur.",

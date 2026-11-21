@@ -8,6 +8,9 @@ test("finding added models has an accessible name and description", async ({
   await mockTauri(page);
   await page.goto("/");
   await page.getByRole("button", { name: "Models", exact: true }).click();
+  await page
+    .getByRole("button", { name: /^Local transcription model/ })
+    .click();
   await page.getByText("Choose or download a local model").click();
   const button = page.getByRole("button", { name: "Find added models" });
   await button.hover();
