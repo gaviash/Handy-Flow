@@ -166,12 +166,7 @@ pub async fn run(app: AppHandle, inserted: String, kept: String, app_name: Strin
     );
     let reply = match tokio::time::timeout(crate::validator::timeout(reasoning), call).await {
         Err(_) => return skip("timeout"),
-        Ok(Err(e)) => {
-            return skip(&format!(
-                "error: {}",
-                e.chars().take(80).collect::<String>()
-            ))
-        }
+        Ok(Err(e)) => return skip(&format!("error: {}", crate::validator::error_kind(&e))),
         Ok(Ok(None)) => return skip("empty reply"),
         Ok(Ok(Some(r))) => r,
     };

@@ -449,8 +449,16 @@ pub fn local_candidates(inserted: &str, fin: &str) -> Vec<Local> {
         } else {
             is_plural(&hk, &tk) || is_plural(&tk, &hk)
         };
+        // EX-4 (L07): a name far from a single common word replaces that
+        // word, it is not what the recognizer heard ("quelle" → "Kelmorine").
+        let common_source = looks_like_term
+            && !hk.contains(' ')
+            && crate::lexicon::is_common(&hk)
+            && distance(&hk, &tk) > 0.6;
         let guard = if term.is_empty() || heard.is_empty() {
             Some("no_substitution")
+        } else if common_source {
+            Some("common_source")
         } else if is_possessive_or_contraction(&hk, &tk) {
             Some("possessive")
         } else if affix {
@@ -818,20 +826,6 @@ pub(crate) fn drop_form(m: &mut Memory, term: &str, heard: &str) {
     m.words.retain(|w| !w.heard.is_empty());
 }
 
-/// Removes a word; each of its forms is refused from now on.
-pub(crate) fn forget_word(m: &mut Memory, term: &str) {
-    let pairs: Vec<(String, String)> = m
-        .words
-        .iter()
-        .filter(|w| same_term(&w.term, term))
-        .flat_map(|w| w.heard.iter().map(|h| (h.clone(), w.term.clone())))
-        .collect();
-    for (h, t) in pairs {
-        refuse(m, &h, &t);
-    }
-    m.words.retain(|w| !same_term(&w.term, term));
-}
-
 fn refuse(m: &mut Memory, heard: &str, term: &str) {
     let pair = (heard.to_lowercase(), term.to_lowercase());
     if !m.refused.contains(&pair) {
@@ -1042,6 +1036,10 @@ pub(crate) fn record_decision(
     now: i64,
 ) -> Option<LearnedNews> {
     use crate::validator::Decision;
+    // Undone while the validator was answering: stays undone.
+    if memory_guard(m, &c) == Some("undone") {
+        return None;
+    }
     c.kind = match d {
         Decision::Active => WordKind::Term,
         Decision::Pending => WordKind::Misheard,
@@ -1254,7 +1252,7 @@ pub fn get_learning_stats(app: AppHandle) -> LearningStats {
 #[specta::specta]
 pub fn delete_learned_word(app: AppHandle, term: String) {
     with_memory(&app, |m| {
-        forget_word(m, &term);
+        m.words.retain(|l| l.term != term);
         save(&app, m);
     });
 }
@@ -1429,17 +1427,18 @@ pub fn locate(text: &str, inserted: &str, caret: usize) -> Option<(String, Strin
 }
 
 /// A heard form that can't be an ordinary word: a capital after its first
-/// char, a digit or `_` ("RandyFlow", "jf2").
+/// char, a digit or `_` ("RandyFlow", "jf2"), or a word missing from the
+/// lexicon ("corvanti"; never "cloud", EX-4).
 fn no_real_word(form: &str) -> bool {
     form.chars().skip(1).any(char::is_uppercase)
         || form.chars().any(|c| c.is_ascii_digit() || c == '_')
+        || form.split(' ').any(|w| !crate::lexicon::is_common(w))
 }
 
 /// Spec §6 rule 5, §9.4: when no rewrite ran, a confirmed name replaces its
 /// heard forms, as whole words, case-insensitively.
-/// shortcut: no lexicon (spec R11), so only forms that can't be a real word
-/// are replaced ("cloud", "Jeff" are left to the rewrite's context check);
-/// a frequency list would let rare plain forms through.
+/// Only forms that can't be a real word are replaced ("cloud" is left to the
+/// rewrite's context check).
 pub(crate) fn replace_heard(text: &str, words: &[Learned]) -> String {
     let mut out = text.to_string();
     for w in words
@@ -1791,11 +1790,10 @@ mod tests {
         // Survives a save.
         let back = parse_memory(&serde_json::to_vec(&m).unwrap());
         assert_eq!(memory_guard(&back, &c[0]), Some("undone"));
-        // A word deleted from the list refuses each of its forms too.
-        record_word(&mut m, &other, 1);
-        forget_word(&mut m, "jev");
+        // An answer still in flight can't bring it back.
+        let d = crate::validator::Decision::Active;
+        assert!(record_decision(&mut m, c[0].clone(), &d, 2).is_none());
         assert!(m.words.is_empty());
-        assert_eq!(memory_guard(&m, &other), Some("undone"));
     }
 
     #[test]

@@ -722,6 +722,12 @@ async fn post_process_transcription(
 
 /// Spec §6 rule 5: the learned names are applied locally only when no
 /// rewrite came out, for a plain dictation, never in a private field.
+/// R1: a password, excluded or unchecked field is never watched, so none of
+/// its text reaches the learning validator or the judge.
+fn observable(sensitive: bool, excluded: bool, unchecked: bool) -> bool {
+    !sensitive && !excluded && !unchecked
+}
+
 fn learned_fallback(rewrote: bool, instruct: bool, snippet: bool, private: bool) -> bool {
     !rewrote && !instruct && !snippet && !private
 }
@@ -1550,7 +1556,7 @@ impl ShortcutAction for TranscribeAction {
                                 // F80: the pasted text is watched for the user's corrections.
                                 let observed = field
                                     .clone()
-                                    .filter(|_| !sensitive && !excluded)
+                                    .filter(|_| observable(sensitive, excluded, unchecked))
                                     .map(|f| (f, final_text.clone(), history_id, observed_app));
                                 // What was pasted counts the learned words it holds.
                                 let kept = final_text.clone();
@@ -1837,9 +1843,19 @@ pub static ACTION_MAP: Lazy<HashMap<String, Arc<dyn ShortcutAction>>> = Lazy::ne
 mod tests {
     use super::{
         complete_unless_cancelled, house_framing, is_blank_transcription, learned_fallback,
-        non_blank_post_processed_text, post_process_transcription, should_use_streaming_overlay,
-        strip_invisible_chars, strip_think_block, transform_text, PostProcessOutcome,
+        non_blank_post_processed_text, observable, post_process_transcription,
+        should_use_streaming_overlay, strip_invisible_chars, strip_think_block, transform_text,
+        PostProcessOutcome,
     };
+
+    #[test]
+    fn a_private_field_is_never_observed() {
+        assert!(observable(false, false, false));
+        assert!(!observable(true, false, false));
+        assert!(!observable(false, true, false));
+        // The password check didn't answer: private too (spec R1).
+        assert!(!observable(false, false, true));
+    }
 
     #[test]
     fn fallback_runs_after_a_rejected_rewrite() {

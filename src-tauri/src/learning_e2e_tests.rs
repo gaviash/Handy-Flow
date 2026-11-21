@@ -127,6 +127,27 @@ fn e13_bis_a_word_confirmed_twice_is_replaced_without_rewrite() {
 }
 
 #[test]
+fn a_rare_lowercase_form_confirmed_twice_is_replaced_but_a_common_one_never() {
+    let mut m = Memory::default();
+    for _ in 0..2 {
+        correct(
+            &mut m,
+            "On teste corvanti demain.",
+            "On teste Corvante demain.",
+        );
+        correct(
+            &mut m,
+            "Demande à cloud de relire.",
+            "Demande à Claude de relire.",
+        );
+    }
+    assert_eq!(
+        replace_heard("Lance corvanti et cloud.", &m.words),
+        "Lance Corvante et cloud."
+    );
+}
+
+#[test]
 fn e13_ter_an_unrelated_dictation_still_gets_the_spelling_without_a_mapping() {
     let mut m = Memory::default();
     correct(
@@ -235,7 +256,8 @@ fn golden_learning_filter_l01_to_l08_with_the_validator() {
     for (pasted, kept, reply, expected) in cases {
         assert_eq!(learned_with(pasted, kept, Some(&reply)), expected, "{kept}");
     }
-    // L04/L05 never reach the validator.
+    // L04/L05/L07 never reach the validator (L07: a common word is no source form, EX-4).
+    assert!(candidates("Testons quelle solution.", "Testons Kelmorine solution.").is_empty());
     assert!(candidates("On se voit mardi soir.", "On se voit jeudi soir.").is_empty());
     assert!(candidates("Le projet avance bien.", "Le projets avance bien.").is_empty());
 }
