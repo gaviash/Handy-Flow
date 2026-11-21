@@ -25,6 +25,7 @@ mod junction;
 mod language_detection;
 mod languages;
 mod learning;
+mod lexicon;
 mod llm_client;
 mod managers;
 mod memory;
