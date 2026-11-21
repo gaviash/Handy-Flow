@@ -115,6 +115,14 @@ pub async fn update_history_limit(
     Ok(())
 }
 
+fn parse_retention_period(
+    period: &str,
+) -> Result<crate::settings::RecordingRetentionPeriod, String> {
+    // The enum's serde names are the UI's values ("days30", "preserve_limit"…).
+    serde_json::from_value(serde_json::Value::String(period.to_string()))
+        .map_err(|_| format!("Invalid retention period: {}", period))
+}
+
 #[tauri::command]
 #[specta::specta]
 pub async fn update_recording_retention_period(
@@ -122,16 +130,7 @@ pub async fn update_recording_retention_period(
     history_manager: State<'_, Arc<HistoryManager>>,
     period: String,
 ) -> Result<(), String> {
-    use crate::settings::RecordingRetentionPeriod;
-
-    let retention_period = match period.as_str() {
-        "never" => RecordingRetentionPeriod::Never,
-        "preserve_limit" => RecordingRetentionPeriod::PreserveLimit,
-        "days3" => RecordingRetentionPeriod::Days3,
-        "weeks2" => RecordingRetentionPeriod::Weeks2,
-        "months3" => RecordingRetentionPeriod::Months3,
-        _ => return Err(format!("Invalid retention period: {}", period)),
-    };
+    let retention_period = parse_retention_period(&period)?;
 
     let mut settings = crate::settings::get_settings(&app);
     settings.recording_retention_period = retention_period;
@@ -171,4 +170,25 @@ pub fn get_dictation_stats(
         learned_words: crate::learning::count(&app) as u32,
         words_today,
     })
+}
+
+#[cfg(test)]
+mod retention_tests {
+    use super::parse_retention_period;
+    use crate::settings::RecordingRetentionPeriod as P;
+
+    #[test]
+    fn parse_retention_accepts_every_ui_choice() {
+        for (s, p) in [
+            ("never", P::Never),
+            ("preserve_limit", P::PreserveLimit),
+            ("days3", P::Days3),
+            ("days30", P::Days30),
+            ("weeks2", P::Weeks2),
+            ("months3", P::Months3),
+        ] {
+            assert_eq!(parse_retention_period(s), Ok(p), "{s}");
+        }
+        assert!(parse_retention_period("days31").is_err());
+    }
 }
