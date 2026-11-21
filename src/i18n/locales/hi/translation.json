@@ -23,7 +23,8 @@
     "appearance": "Appearance",
     "label": "Sections",
     "vocabulary": "Vocabulary",
-    "context": "Context"
+    "context": "Context",
+    "transforms": "Transformations"
   },
   "onboarding": {
     "customModelDescription": "आधिकारिक रूप से समर्थित नहीं",
@@ -463,6 +464,30 @@
           "transform_3": {
             "name": "Transformation 3",
             "description": "Applies the third saved transformation to the selected text."
+          },
+          "transform_4": {
+            "name": "Transformation 4",
+            "description": "Applies a saved transformation to the selected text."
+          },
+          "transform_5": {
+            "name": "Transformation 5",
+            "description": "Applies a saved transformation to the selected text."
+          },
+          "transform_6": {
+            "name": "Transformation 6",
+            "description": "Applies a saved transformation to the selected text."
+          },
+          "transform_7": {
+            "name": "Transformation 7",
+            "description": "Applies a saved transformation to the selected text."
+          },
+          "transform_8": {
+            "name": "Transformation 8",
+            "description": "Applies a saved transformation to the selected text."
+          },
+          "transform_9": {
+            "name": "Transformation 9",
+            "description": "Applies a saved transformation to the selected text."
           }
         },
         "errors": {
@@ -507,20 +532,15 @@
       },
       "dictationShortcut": "Dictation shortcut",
       "shortcuts": "Shortcuts",
-      "shortcutsExpert": "hold threshold",
-      "micExpert": "input channel, laptop lid closed",
       "sounds": "Sounds",
       "startup": "Startup",
       "defaultMic": "Default microphone",
       "statusRaw": "{{shortcut}}: dictation as is",
       "statusEnhanced": "{{shortcut}}: enhanced dictation",
       "statusMic": "Microphone: {{mic}}",
-      "languagesSummary": "{{spoken}} · interface {{app}}",
       "soundsOn": "On · {{volume}} %",
       "soundsOff": "Off",
-      "startsWithWindows": "Starts with Windows",
-      "startsByHand": "Started by hand",
-      "hidden": "hidden"
+      "generalExpert": "hold threshold, input channel, laptop lid closed"
     },
     "models": {
       "title": "मॉडल",
@@ -568,7 +588,8 @@
       "providersSummary": "Providers: {{count}} · keys: {{keys}}",
       "local": "local",
       "engineExpert": "engine",
-      "featureProblem": "{{name}}: {{status}}"
+      "featureProblem": "{{name}}: {{status}}",
+      "change": "Change"
     },
     "languages": {
       "title": "भाषाएं"
@@ -1247,11 +1268,7 @@
         }
       },
       "updates": "Updates",
-      "updatesOn": "Checked automatically",
-      "updatesOff": "Not checked",
-      "diagnostic": "Diagnostics",
-      "diagnosticSummary": "App folder, logs",
-      "logsExpert": "logs"
+      "diagnostic": "Diagnostics"
     },
     "appearance": {
       "title": "Appearance",
@@ -1419,16 +1436,19 @@
       "none": "none",
       "notConfigured": "Not configured",
       "provider": "Provider",
-      "rewriteUses": "Rewrite: {{value}}",
-      "fallbackUses": "Fallback: {{value}}",
-      "fallbackShort": "fallback {{value}}",
-      "providerHelp": "The same provider can serve other features (speech, validator): it is all set in Models.",
-      "cleanup": "Cleanup",
-      "fillersRemoved": "Hesitations removed",
-      "fillersKept": "Hesitations kept",
-      "transformsSummary": "Polish · voice instruction · saved: {{count}}",
-      "allShortcuts": "All shortcuts in General",
-      "expert": "prompt, delay"
+      "expert": "prompt, delay",
+      "createOwn": "Create your own",
+      "createOwnHelp": "Your own instruction on selected text",
+      "noShortcut": "No shortcut",
+      "cleanup": "Cleanup"
+    },
+    "transformsPage": {
+      "subtitle": "Select some text, then press a shortcut: the text is rewritten in place.",
+      "ready": "Uses {{provider}} · {{model}}, the Enhancement model",
+      "setup": "Choose an Enhancement model in Models.",
+      "create": "New transformation",
+      "full": "All 9 slots are used: delete one to create another.",
+      "delete": "Delete this transformation"
     }
   },
   "footer": {

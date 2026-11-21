@@ -223,7 +223,7 @@ test("a tone is chosen with pills, and back returns to the Tone card", async ({
   await expect(page.getByRole("button", { name: /^Styles/ })).toBeFocused();
 });
 
-test("the provider sub-page only summarises and links to Models", async ({
+test("Enhancement shows its model in a line that links to Models", async ({
   page,
 }) => {
   await mockTauri(page, {
@@ -231,15 +231,8 @@ test("the provider sub-page only summarises and links to Models", async ({
     results: { get_feature_statuses: rewriteStatus(null) },
   });
   await openEnhancement(page);
-  await page.getByRole("button", { name: /^Provider/ }).click();
-  await expect(page.getByText("Rewrite: Groq · llama")).toBeVisible();
-  await expect(
-    page.locator("main input, main textarea, main select"),
-  ).toHaveCount(0);
-  await expect(
-    page.locator("input:not([type=checkbox]), textarea, select"),
-  ).toHaveCount(0);
-  await page.getByRole("button", { name: "Change in Models" }).click();
+  await expect(page.getByText("Uses Groq · llama")).toBeVisible();
+  await page.getByRole("button", { name: "Change in Models" }).first().click();
   await expect(
     page.getByRole("group", { name: "Learning validator" }),
   ).toBeVisible();
@@ -317,23 +310,13 @@ test("exclusion lists are named for screen readers", async ({ page }) => {
   ).toBeVisible();
 });
 
-test("'Change in Models' lands on Usage by feature, the sidebar on the overview", async ({
-  page,
-}) => {
-  await mockTauri(page, {
-    settings: { post_process_enabled: true },
-    results: { get_feature_statuses: rewriteStatus(null) },
-  });
-  await openEnhancement(page);
-  await page.getByRole("button", { name: /^Provider/ }).click();
-  await page.getByRole("button", { name: "Change in Models" }).click();
-  await expect(
-    page.getByRole("heading", { level: 1, name: "Usage by feature" }),
-  ).toBeVisible();
+test("a click on the active tab returns to its overview", async ({ page }) => {
+  await mockTauri(page);
+  await page.goto("/");
   await page.getByRole("button", { name: "Models", exact: true }).click();
-  await expect(
-    page.getByRole("button", { name: /^Usage by feature/ }),
-  ).toBeVisible();
+  await page.getByRole("button", { name: /^Providers/ }).click();
+  await page.getByRole("button", { name: "Models", exact: true }).click();
+  await expect(page.getByRole("button", { name: /^Providers/ })).toBeVisible();
 });
 
 test("Advanced shows text insertion as a card and folds audio capture", async ({
@@ -352,34 +335,25 @@ test("Advanced shows text insertion as a card and folds audio capture", async ({
   await expect(page.getByText("Silence detector").first()).toBeVisible();
 });
 
-test("History opens on its retention, and the count only shows for 'keep the last'", async ({
+test("History shows its retention, and the count only for 'keep the last'", async ({
   page,
 }) => {
-  const mock = await mockTauri(page, {
+  await mockTauri(page, {
     settings: { recording_retention_period: "days30" },
   });
   await page.goto("/");
   await page.getByRole("button", { name: "History", exact: true }).click();
-  const card = page.getByRole("button", { name: /^Retention/ });
-  await expect(card).toContainText("30 Days (Audio of the Last 20)");
-  await card.click();
-  await expect(page.getByText("Starred ones are kept.")).toBeVisible();
+  await expect(page.getByText("30 Days (Audio of the Last 20)")).toBeVisible();
   await expect(page.getByText("History Limit")).toHaveCount(0);
-  expect((await mock.calls()).map((c) => c.cmd)).toContain(
-    "get_history_entries",
-  );
 });
 
-test("About groups updates and diagnostics in cards", async ({ page }) => {
+test("About shows updates and diagnostics directly", async ({ page }) => {
   await mockTauri(page);
   await page.goto("/");
   await page.getByRole("button", { name: "About", exact: true }).click();
-  await page.getByRole("button", { name: /^Updates/ }).click();
   await expect(
-    page.getByRole("heading", { level: 1, name: "Updates" }),
-  ).toBeVisible();
-  await page.getByRole("button", { name: "About" }).last().click();
-  await expect(page.getByRole("button", { name: /^Updates/ })).toBeFocused();
+    page.getByRole("checkbox", { name: "Check for Updates" }),
+  ).toBeAttached();
 });
 
 test("a setting's title names its field, and French says Amélioration", async ({
@@ -441,8 +415,105 @@ test("the name and history-limit fields carry their own names", async ({
   await page.getByRole("button", { name: "Vocabulary", exact: true }).click();
   await expect(page.getByRole("textbox", { name: "Your Name" })).toBeVisible();
   await page.getByRole("button", { name: "History", exact: true }).click();
-  await page.getByRole("button", { name: /^Retention/ }).click();
   await expect(
     page.getByRole("spinbutton", { name: "History Limit" }),
+  ).toBeVisible();
+});
+
+test("Transformations is its own tab of cards that open their editor", async ({
+  page,
+}) => {
+  await mockTauri(page, {
+    settings: {
+      transforms: [
+        { name: "Plus court", instruction: "Make it shorter." },
+        { name: "", instruction: "" },
+        { name: "En anglais", instruction: "Translate it into English." },
+      ],
+    },
+  });
+  await page.goto("/");
+  await page
+    .getByRole("button", { name: "Transformations", exact: true })
+    .click();
+  await expect(page.getByRole("button", { name: /Polish/ })).toBeVisible();
+  await expect(page.getByRole("button", { name: /Plus court/ })).toBeVisible();
+  await page.getByRole("button", { name: /Create your own/ }).click();
+  await expect(page.getByRole("textbox", { name: "Name" })).toHaveValue("");
+});
+
+test("Enhancement names its fallback line", async ({ page }) => {
+  await mockTauri(page, {
+    settings: { post_process_enabled: true },
+    results: {
+      get_feature_statuses: [
+        ...rewriteStatus(null),
+        {
+          feature: "RewriteFallback",
+          provider_label: "",
+          model: "",
+          automatic: false,
+          problem: "NotChosen",
+          reasoning: "Off",
+          model_reasons: false,
+        },
+      ],
+    },
+  });
+  await openEnhancement(page);
+  await expect(page.getByText("Rewrite fallback: None")).toBeVisible();
+});
+
+test("'New transformation' creates a fourth one, and it can be deleted", async ({
+  page,
+}) => {
+  const mock = await mockTauri(page);
+  await page.goto("/");
+  await page
+    .getByRole("button", { name: "Transformations", exact: true })
+    .click();
+  await page.getByRole("button", { name: "New transformation" }).click();
+  await page.getByRole("textbox", { name: "Name" }).fill("Résumer");
+  await page
+    .getByRole("textbox", { name: "Instruction" })
+    .fill("Summarize it.");
+  await page.getByRole("textbox", { name: "Name" }).focus();
+  const saved = async () =>
+    (await mock.calls())
+      .filter((c) => c.cmd === "change_transforms_setting")
+      .map((c) => (c.args as { transforms: { name: string }[] }).transforms)
+      .pop();
+  await expect.poll(saved).toHaveLength(4);
+  expect((await saved())?.[3]).toMatchObject({ name: "Résumer" });
+  await page
+    .getByRole("button", { name: "Delete this transformation" })
+    .click();
+  await expect.poll(async () => (await saved())?.[3]?.name).toBe("");
+  // Its shortcut is released too, so its keys stop being caught.
+  await expect
+    .poll(async () =>
+      (await mock.calls()).find((c) => c.cmd === "reset_binding"),
+    )
+    .toMatchObject({ args: { id: "transform_4" } });
+});
+
+test("a transformation with only an instruction keeps its card", async ({
+  page,
+}) => {
+  await mockTauri(page, {
+    settings: {
+      transforms: [
+        { name: "", instruction: "Make it shorter." },
+        { name: "Plus formel", instruction: "Make it more formal." },
+        { name: "En anglais", instruction: "Translate it into English." },
+      ],
+    },
+  });
+  await page.goto("/");
+  await page
+    .getByRole("button", { name: "Transformations", exact: true })
+    .click();
+  await expect(
+    page.getByRole("button", { name: /Make it shorter/ }),
   ).toBeVisible();
 });

@@ -1822,7 +1822,7 @@ pub static ACTION_MAP: Lazy<HashMap<String, Arc<dyn ShortcutAction>>> = Lazy::ne
         "polish".to_string(),
         Arc::new(TransformAction { slot: None }) as Arc<dyn ShortcutAction>,
     );
-    for i in 0..3 {
+    for i in 0..crate::adaptive::MAX_TRANSFORMS {
         map.insert(
             format!("transform_{}", i + 1),
             Arc::new(TransformAction { slot: Some(i) }) as Arc<dyn ShortcutAction>,
@@ -1841,6 +1841,16 @@ pub static ACTION_MAP: Lazy<HashMap<String, Arc<dyn ShortcutAction>>> = Lazy::ne
 
 #[cfg(test)]
 mod tests {
+
+    #[test]
+    fn every_transformation_slot_has_an_action() {
+        for i in 1..=crate::adaptive::MAX_TRANSFORMS {
+            assert!(
+                super::ACTION_MAP.contains_key(&format!("transform_{i}")),
+                "transform_{i}"
+            );
+        }
+    }
     use super::{
         complete_unless_cancelled, house_framing, is_blank_transcription, learned_fallback,
         non_blank_post_processed_text, observable, post_process_transcription,

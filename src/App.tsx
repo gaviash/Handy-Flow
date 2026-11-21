@@ -31,11 +31,11 @@ import {
   DebugSettings,
   ModelsSettings,
   VocabularySettings,
+  TransformsPage,
 } from "./components/settings";
 import { ErrorBoundary } from "./components/ErrorBoundary";
 import { FileDropOverlay } from "./components/FileDropOverlay";
 import { Sidebar, SidebarSection, SECTIONS_CONFIG } from "./components/Sidebar";
-import type { ModelsTopic } from "./components/settings/models/ModelsSettings";
 import { WhatsNewGate } from "./components/whats-new";
 import { useSettings } from "./hooks/useSettings";
 import { useSettingsStore } from "./stores/settingsStore";
@@ -61,6 +61,7 @@ const PAGES_WITH_OWN_TITLE: SidebarSection[] = [
   "about",
   "models",
   "postprocessing",
+  "transforms",
   "vocabulary",
   "context",
   "advanced",
@@ -72,31 +73,26 @@ const renderSettingsContent = (
   onPreviewOnboarding: (step: OnboardingPreviewStep) => void,
   onRunOnboarding: () => void,
   onRunModelMigration: () => void,
-  onSectionChange: (section: SidebarSection, topic?: ModelsTopic) => void,
-  modelsTopic: ModelsTopic | null,
+  onSectionChange: (section: SidebarSection) => void,
 ) => {
   if (section === "models") {
     return (
       <ModelsSettings
         onChangeLanguages={() => onSectionChange("general")}
         onShowReformulation={() => onSectionChange("postprocessing")}
-        initialTopic={modelsTopic ?? undefined}
       />
     );
   }
   if (section === "postprocessing") {
     return (
-      <PostProcessingSettings
-        onShowModels={() => onSectionChange("models", "features")}
-        onShowGeneral={() => onSectionChange("general")}
-      />
+      <PostProcessingSettings onShowModels={() => onSectionChange("models")} />
     );
   }
+  if (section === "transforms")
+    return <TransformsPage onShowModels={() => onSectionChange("models")} />;
   if (section === "vocabulary") {
     return (
-      <VocabularySettings
-        onShowModels={() => onSectionChange("models", "features")}
-      />
+      <VocabularySettings onShowModels={() => onSectionChange("models")} />
     );
   }
   if (section === "debug") {
@@ -126,8 +122,6 @@ function App() {
   const [migrationModelId, setMigrationModelId] = useState<string | null>(null);
   const [currentSection, setCurrentSection] =
     useState<SidebarSection>("general");
-  // The Models topic a link asked for; cleared when the sidebar is used.
-  const [modelsTopic, setModelsTopic] = useState<ModelsTopic | null>(null);
   // Bumped by each sidebar click, so the active tab reopens on its overview.
   const [visit, setVisit] = useState(0);
   const showHistory = useCallback(() => setCurrentSection("history"), []);
@@ -428,7 +422,6 @@ function App() {
           <Sidebar
             activeSection={section}
             onSectionChange={(section) => {
-              setModelsTopic(null);
               setVisit((n) => n + 1);
               setCurrentSection(section);
             }}
@@ -452,11 +445,7 @@ function App() {
                   setOnboardingPreview,
                   runOnboarding,
                   runModelMigration,
-                  (section, topic) => {
-                    setModelsTopic(topic ?? null);
-                    setCurrentSection(section);
-                  },
-                  modelsTopic,
+                  (section) => setCurrentSection(section),
                 )}
               </div>
             </div>
@@ -465,10 +454,7 @@ function App() {
         {/* Fixed footer at bottom */}
         <Footer
           onShowHistory={showHistory}
-          onShowModels={() => {
-            setModelsTopic(null);
-            setCurrentSection("models");
-          }}
+          onShowModels={() => setCurrentSection("models")}
         />
         <FileDropOverlay onDropped={showHistory} />
       </div>

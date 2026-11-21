@@ -98,7 +98,13 @@ You must not drive the user's keyboard, focus or microphone yourself. Prepare, t
    - Historique: delete then Undo, the dictation is still there after a restart.
    - Contexte: turning sending off changes the sentence.
    - All their usual settings are there with their values (the copy of `Data\`).
-4. Plan C Review Focus 7: change the Amélioration model in Modèles → Utilisation par fonction, then check the summary in Amélioration and the Validateur card (in Automatique) **without restarting**.
+4. Transformations tab:
+   - "New transformation" creates a 4th one (name, instruction).
+   - Assign it a shortcut and check that it transforms a selected text.
+   - Delete it: its shortcut must stop catching the keys (`reset_binding` now unbinds a binding with no default).
+   - `cargo test --lib every_transformation_slot` must pass: 9 slots, and the binding test only runs on Windows.
+   - The existing `settings_store.json` must receive `transform_4` to `transform_9` on load ("Adding missing binding" in the log).
+5. Plan C Review Focus 7: change the Amélioration model in Modèles → Utilisation par fonction, then check the summary in Amélioration and the Validateur card (in Automatique) **without restarting**.
 
 ## 6. Optional (only if the user asks)
 

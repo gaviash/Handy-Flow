@@ -283,8 +283,27 @@ fn restore_registration(app: &AppHandle, binding: &ShortcutBinding) {
 #[tauri::command]
 #[specta::specta]
 pub fn reset_binding(app: AppHandle, id: String) -> Result<BindingResponse, String> {
-    let binding = settings::get_stored_binding(&settings::get_settings(&app), &id)?;
-    change_binding(app, id, binding.default_binding)
+    let mut settings = settings::get_settings(&app);
+    let binding = settings::get_stored_binding(&settings, &id)?;
+    if !binding.default_binding.trim().is_empty() {
+        return change_binding(app, id, binding.default_binding);
+    }
+    // No default (a saved transformation): reset means unbound, so a deleted
+    // transformation's keys stop being caught.
+    if !binding.current_binding.trim().is_empty() {
+        if let Err(e) = unregister_shortcut(&app, binding.clone()) {
+            warn!("reset_binding: could not unregister '{}': {}", id, e);
+        }
+    }
+    let mut cleared = binding;
+    cleared.current_binding = String::new();
+    settings.bindings.insert(id, cleared.clone());
+    settings::write_settings(&app, settings);
+    Ok(BindingResponse {
+        success: true,
+        binding: Some(cleared),
+        error: None,
+    })
 }
 
 /// Unregister every binding while the user is recording a new shortcut in

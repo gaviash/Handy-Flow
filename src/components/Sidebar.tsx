@@ -11,7 +11,9 @@ import {
   Sparkles,
   BookOpen,
   Eye,
+  Wand2,
 } from "lucide-react";
+import { type } from "@tauri-apps/plugin-os";
 import HandyFlowWordmark from "./icons/HandyFlowWordmark";
 import { useSettings } from "../hooks/useSettings";
 import {
@@ -24,6 +26,7 @@ import {
   AppearanceSettings,
   VocabularySettings,
   ContextPage,
+  TransformsPage,
 } from "./settings";
 
 export type SidebarSection = keyof typeof SECTIONS_CONFIG;
@@ -65,6 +68,13 @@ export const SECTIONS_CONFIG = {
     component: PostProcessingSettings,
     // Always shown: the page itself offers to turn the rewrite back on.
     enabled: () => true,
+  },
+  transforms: {
+    labelKey: "sidebar.transforms",
+    icon: Wand2,
+    component: TransformsPage,
+    // Their shortcuts exist only in the Windows build (settings.rs).
+    enabled: () => type() === "windows",
   },
   vocabulary: {
     labelKey: "sidebar.vocabulary",
