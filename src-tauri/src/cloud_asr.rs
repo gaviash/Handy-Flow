@@ -137,7 +137,7 @@ struct Reply {
 
 /// The provider's `error.message`, short, as `: …`; nothing else of the body
 /// (it could echo what was sent).
-fn error_message(body: &str) -> String {
+pub(crate) fn error_message(body: &str) -> String {
     serde_json::from_str::<serde_json::Value>(body)
         .ok()
         .and_then(|v| v["error"]["message"].as_str().map(str::to_string))
