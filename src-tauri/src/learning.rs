@@ -1093,7 +1093,7 @@ pub(crate) fn apply_revalidation(
                 news.push(LearnedNews::Word {
                     term: w.term.clone(),
                 });
-            } else {
+            } else if w.heard.last() == Some(&c.heard) {
                 w.heard.clear();
                 note_later.push(Outcome::Rejected("refused"));
             }
@@ -1708,7 +1708,10 @@ pub fn observe(
                     tauri::async_runtime::spawn(async move {
                         let decided =
                             crate::validator::validate(&app, &inserted, &fin, found).await;
-                        record_decisions(&app, decided);
+                        // Switched off while the validator was retried.
+                        if crate::settings::get_settings(&app).learning_enabled {
+                            record_decisions(&app, decided);
+                        }
                     });
                 }
                 // The judge reads the correction for style rules and fillers.

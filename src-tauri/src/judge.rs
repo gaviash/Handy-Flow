@@ -83,13 +83,7 @@ pub fn judge_message(
 
 /// The judge's verdicts; an invalid reply gives none.
 pub fn parse_verdicts(reply: &str) -> Vec<Verdict> {
-    let reply = reply.trim();
-    // Tolerate a fenced reply.
-    let json = reply
-        .find('{')
-        .zip(reply.rfind('}'))
-        .map_or("", |(a, b)| &reply[a..=b]);
-    serde_json::from_str::<Reply>(json)
+    serde_json::from_str::<Reply>(json_body(reply).unwrap_or_default())
         .map(|r| r.items)
         .unwrap_or_default()
 }
@@ -136,15 +130,138 @@ pub(crate) fn judge_schema(
     (groq_gpt_oss || p.supports_structured_output).then_some(schema)
 }
 
-pub async fn run(app: AppHandle, inserted: String, kept: String, app_name: String) {
-    let skip = |reason: &str| log::debug!("Learning: judge skipped ({reason})");
-    let settings = crate::settings::get_settings(&app);
-    if !judge_allowed(&settings) {
-        return skip("disabled");
+/// Seconds between the tries of a style lesson: nobody waits for it.
+/// shortcut: tries live in memory, quitting drops them; store the lesson if
+/// lost ones still show in the log.
+const STYLE_RETRIES: &[u64] = &[5, 30, 120, 600, 3_600, 14_400];
+/// A word is short: past these the validator's local fallback decides.
+pub(crate) const WORD_RETRIES: &[u64] = &[5, 30];
+
+/// What one try gave.
+#[derive(Debug, PartialEq)]
+enum Try {
+    Reply(String),
+    /// Nothing a later try could change (switched off, no provider, bad key).
+    Stop,
+    Again {
+        /// The request itself was refused: the next try asks for plain JSON.
+        refused: bool,
+    },
+}
+
+fn after_error(e: &str) -> Try {
+    let status = |codes: &[&str]| codes.iter().any(|c| e.contains(&format!("status {c}")));
+    if status(&["401", "403", "404"]) {
+        return Try::Stop;
     }
-    let Some((provider, key, model, reasoning)) = judge_target(&settings) else {
-        return skip("no provider");
-    };
+    Try::Again {
+        refused: status(&["400", "422"]),
+    }
+}
+
+/// Calls `call(strict schema?)` until it replies or `delays` (seconds) run out.
+async fn with_retries<F, Fut>(delays: &[u64], mut call: F) -> Option<String>
+where
+    F: FnMut(bool) -> Fut,
+    Fut: std::future::Future<Output = Try>,
+{
+    let mut strict = true;
+    let mut delays = delays.iter();
+    loop {
+        match call(strict).await {
+            Try::Reply(r) => return Some(r),
+            Try::Stop => return None,
+            Try::Again { refused } => strict &= !refused,
+        }
+        tokio::time::sleep(std::time::Duration::from_secs(*delays.next()?)).await;
+    }
+}
+
+/// Asks the learning model in the background, with retries (the validator and
+/// the judge). Settings are read at each try: switching learning off stops it.
+pub(crate) async fn ask(
+    app: &AppHandle,
+    who: &str,
+    system: &str,
+    message: &str,
+    schema: serde_json::Value,
+    delays: &[u64],
+) -> Option<String> {
+    let list = schema["required"][0]
+        .as_str()
+        .unwrap_or_default()
+        .to_string();
+    let reply = with_retries(delays, |strict| {
+        let (schema, list) = (schema.clone(), list.clone());
+        async move {
+            let settings = crate::settings::get_settings(app);
+            // The user's switch for LLM learning, and context sending, both hold.
+            if !judge_allowed(&settings) {
+                log::debug!("Learning: {who} skipped (disabled)");
+                return Try::Stop;
+            }
+            let Some((provider, key, model, reasoning)) = judge_target(&settings) else {
+                log::debug!("Learning: {who} skipped (no provider)");
+                return Try::Stop;
+            };
+            let schema = judge_schema(&provider, &model, schema).filter(|_| strict);
+            log::debug!(
+                "Learning: {who} asks {} ({model}), {} chars, schema: {}, reasoning: {reasoning:?}",
+                provider.id,
+                message.chars().count(),
+                schema.is_some()
+            );
+            let call = crate::llm_client::send_chat_completion_with_schema(
+                &provider,
+                key,
+                &model,
+                message.to_string(),
+                Some(system.to_string()),
+                schema,
+                Some(reasoning),
+            );
+            let (outcome, why) =
+                match tokio::time::timeout(crate::validator::timeout(reasoning), call).await {
+                    Ok(Ok(Some(r))) if holds_list(&r, &list) => return Try::Reply(r),
+                    Ok(Ok(Some(_))) => (
+                        Try::Again { refused: false },
+                        "not the JSON asked".to_string(),
+                    ),
+                    Ok(Ok(None)) => (Try::Again { refused: false }, "empty reply".to_string()),
+                    Ok(Err(e)) => (after_error(&e), crate::validator::error_kind(&e)),
+                    Err(_) => (Try::Again { refused: false }, "timeout".to_string()),
+                };
+            log::warn!("Learning: {who} try failed ({why})");
+            outcome
+        }
+    })
+    .await;
+    if reply.is_none() {
+        log::debug!("Learning: {who} gave no reply");
+    }
+    reply
+}
+
+/// Whether the reply is an object with the list asked for: without a strict
+/// schema a model may answer `{}`, which must be asked again.
+fn holds_list(reply: &str, list: &str) -> bool {
+    json_body(reply)
+        .and_then(|j| serde_json::from_str::<serde_json::Value>(j).ok())
+        .is_some_and(|v| v[list].is_array())
+}
+
+/// The JSON object in a reply, fenced or not; `None` when there is none.
+fn json_body(reply: &str) -> Option<&str> {
+    let json = reply
+        .find('{')
+        .zip(reply.rfind('}'))
+        .and_then(|(a, b)| reply.get(a..=b))?;
+    serde_json::from_str::<serde_json::Value>(json)
+        .is_ok()
+        .then_some(json)
+}
+
+pub async fn run(app: AppHandle, inserted: String, kept: String, app_name: String) {
     let rules = crate::learning::all_rules(&app);
     let past = {
         use tauri::Manager;
@@ -155,20 +272,17 @@ pub async fn run(app: AppHandle, inserted: String, kept: String, app_name: Strin
             .unwrap_or_default()
     };
     let message = judge_message(&inserted, &kept, &app_name, &rules, &past);
-    let call = crate::llm_client::send_chat_completion_with_schema(
-        &provider,
-        key,
-        &model,
-        message,
-        Some(JUDGE_PROMPT.to_string()),
-        judge_schema(&provider, &model, schema()),
-        Some(reasoning),
-    );
-    let reply = match tokio::time::timeout(crate::validator::timeout(reasoning), call).await {
-        Err(_) => return skip("timeout"),
-        Ok(Err(e)) => return skip(&format!("error: {}", crate::validator::error_kind(&e))),
-        Ok(Ok(None)) => return skip("empty reply"),
-        Ok(Ok(Some(r))) => r,
+    let Some(reply) = ask(
+        &app,
+        "judge",
+        JUDGE_PROMPT,
+        &message,
+        schema(),
+        STYLE_RETRIES,
+    )
+    .await
+    else {
+        return;
     };
     let verdicts = parse_verdicts(&reply);
     log::debug!("Learning: judge returned {} item(s)", verdicts.len());
@@ -217,6 +331,39 @@ mod tests {
         assert!(!JUDGE_PROMPT.contains("misheard"));
         assert!(!JUDGE_PROMPT.contains("technical"));
         assert!(JUDGE_PROMPT.contains("style_rule") && JUDGE_PROMPT.contains("filler"));
+    }
+
+    #[test]
+    fn a_failed_lesson_is_asked_again_in_plain_json_after_a_refusal() {
+        let asked = std::cell::RefCell::new(Vec::new());
+        let run = |delays: &'static [u64], answers: Vec<Try>| {
+            asked.borrow_mut().clear();
+            let mut answers = answers.into_iter();
+            tauri::async_runtime::block_on(with_retries(delays, |strict| {
+                asked.borrow_mut().push(strict);
+                std::future::ready(answers.next().unwrap())
+            }))
+        };
+        let e = |s: &str| after_error(&format!("API request failed with status {s}: {{}}"));
+        // Quota, then a refused schema, then a reply.
+        let reply = run(
+            &[0, 0, 0],
+            vec![
+                e("429 Too Many Requests"),
+                e("400 Bad Request"),
+                Try::Reply("{}".into()),
+            ],
+        );
+        assert_eq!(reply.as_deref(), Some("{}"));
+        assert_eq!(*asked.borrow(), vec![true, true, false]);
+        assert!(holds_list(r#"{"items":[]}"#, "items"));
+        assert!(!holds_list("{}", "items") && !holds_list("désolé", "items"));
+        // A bad key is never asked again; tries run out with the delays.
+        assert_eq!(run(&[0, 0], vec![e("401 Unauthorized")]), None);
+        assert_eq!(asked.borrow().len(), 1);
+        let down = || after_error("HTTP request failed: timed out");
+        assert_eq!(run(&[0], vec![down(), down()]), None);
+        assert_eq!(asked.borrow().len(), 2);
     }
 
     #[test]

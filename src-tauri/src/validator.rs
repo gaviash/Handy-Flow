@@ -34,9 +34,14 @@ pub enum Decision {
     Rejected(&'static str),
 }
 
-/// A provider error without its body, which may echo the dictation.
-pub(crate) fn error_kind(e: &str) -> &str {
-    e.split(':').next().unwrap_or("error").trim()
+/// A provider error with its reason but not its body, which may echo the dictation.
+pub(crate) fn error_kind(e: &str) -> String {
+    let (kind, body) = e.split_once(':').unwrap_or((e, ""));
+    format!(
+        "{}{}",
+        kind.trim(),
+        crate::llm_client::error_reason(body.trim())
+    )
 }
 
 /// Longer for a model that reasons first.
@@ -172,33 +177,15 @@ fn schema() -> serde_json::Value {
 
 /// The validator's raw reply; `None` when it can't or may not answer.
 pub(crate) async fn ask(app: &AppHandle, message: String) -> Option<String> {
-    let skip = |reason: &str| log::debug!("Learning: validator unavailable ({reason})");
-    let settings = crate::settings::get_settings(app);
-    // The user's switch for LLM learning, and context sending, both hold.
-    if !crate::judge::judge_allowed(&settings) {
-        skip("disabled");
-        return None;
-    }
-    let Some((provider, key, model, reasoning)) = crate::judge::judge_target(&settings) else {
-        skip("no provider");
-        return None;
-    };
-    let call = crate::llm_client::send_chat_completion_with_schema(
-        &provider,
-        key,
-        &model,
-        message,
-        Some(VALIDATOR_PROMPT.to_string()),
-        crate::judge::judge_schema(&provider, &model, schema()),
-        Some(reasoning),
-    );
-    match tokio::time::timeout(timeout(reasoning), call).await {
-        Err(_) => skip("timeout"),
-        Ok(Err(e)) => skip(&format!("error: {}", error_kind(&e))),
-        Ok(Ok(None)) => skip("empty reply"),
-        Ok(Ok(Some(r))) => return Some(r),
-    }
-    None
+    crate::judge::ask(
+        app,
+        "validator",
+        VALIDATOR_PROMPT,
+        &message,
+        schema(),
+        crate::judge::WORD_RETRIES,
+    )
+    .await
 }
 
 /// EX-2: asks the validator about every candidate of one correction.
@@ -320,6 +307,12 @@ mod tests {
             "API request failed with status 400 Bad Request"
         );
         assert!(!error_kind(e).contains("gag"));
+        // Groq's reason is logged, never the generation it quotes.
+        let e = "API request failed with status 400 Bad Request: {\"error\":{\"message\":\"Failed to validate JSON.\",\"code\":\"json_validate_failed\",\"failed_generation\":\"regarde le gag\"}}";
+        assert_eq!(
+            error_kind(e),
+            "API request failed with status 400 Bad Request, json_validate_failed: Failed to validate JSON."
+        );
     }
 
     #[test]

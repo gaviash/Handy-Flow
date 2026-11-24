@@ -286,6 +286,17 @@ impl ProviderClient {
     }
 }
 
+/// Why a provider refused a request: its error code and short message. Never
+/// the rest of the body: `failed_generation` quotes the dictation.
+pub(crate) fn error_reason(body: &str) -> String {
+    let code = serde_json::from_str::<Value>(body)
+        .ok()
+        .and_then(|v| v["error"]["code"].as_str().map(str::to_string))
+        .map(|c| format!(", {}", c.chars().take(60).collect::<String>()))
+        .unwrap_or_default();
+    format!("{code}{}", crate::cloud_asr::error_message(body))
+}
+
 /// Process-wide client. A short idle timeout and TCP keepalive keep the pool
 /// from handing out connections that died during sleep or a network change.
 /// The shared client, for another API on the same pool (speech by API).
@@ -559,7 +570,12 @@ pub async fn send_chat_completion_with_schema(
         && matches!(status.as_u16(), 400 | 422)
         && !request_body.reasoning.is_empty()
     {
-        info!("Endpoint rejected reasoning fields (status {status}); retrying without them");
+        // Why, before the retry replaces the response: it may be no reasoning matter.
+        let body = response.text().await.unwrap_or_default();
+        info!(
+            "Endpoint rejected reasoning fields (status {status}{}); retrying without them",
+            error_reason(&body)
+        );
 
         request_body.reasoning = ReasoningParams::default();
         response = client
