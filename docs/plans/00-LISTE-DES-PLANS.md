@@ -2,7 +2,7 @@
 
 Source des idées : `../PLAN_LOTS.md` (diagnostic T, D, M, S, C ; lots K, A ; idées W de Willow ; H de tes données) et les idées V de Wispr (plus bas).
 Ordre d'implémentation. Les 15 plans sont rédigés et relus par Terra ; aucun n'est codé. Estimations : développement, hors essais réels.
-**Weave** = nom provisoire de la fonction de rédaction vocale.
+**Weaver** = nom provisoire de la fonction de rédaction vocale.
 
 **Mise à jour du 26/11** : passe 2 Willow + Wispr (`willow/00-PASSE-2.md`). Chaque plan a une section **J** (corrections du plan, améliorations retenues, questions). Plan 5 à revoir avant de coder. Le plan 0 passe avant le plan 1.
 
@@ -19,8 +19,8 @@ Ordre d'implémentation. Les 15 plans sont rédigés et relus par Terra ; aucun 
 | 8 | Vitesse et quota Groq (plan rédigé) | A7 réduite, W24, W18 (durée), H6 (W27, V17, V18 abandonnés) | 2, 4, 6 | 1,5 j |
 | 9 | Lecture des conversations (plan rédigé) | A2 (conversations), C1 (contenu), C2, W11 (V7 reporté) | 2, 8 | 2 j |
 | 10 | Contexte de développement (plan rédigé) | A2 (éditeurs), C6, W12, H2, V19 (V11 abandonné) | 2, 8 | 1,5 j |
-| 11 | Weave : l'essentiel (plan rédigé) | A3, W13 (brouillon, Tab, « déjà collé »), W28 à W31 | 6, 8, 9 | 3 j |
-| 12 | Weave : fil et panneau complet (plan rédigé) | W13 (propositions, résumé), W32 | 11 | 1,5 j |
+| 11 | Weaver : l'essentiel (plan rédigé) | A3, W13 (brouillon, Tab, « déjà collé »), W28 à W31 | 6, 8, 9 | 3 j |
+| 12 | Weaver : fil et panneau complet (plan rédigé) | W13 (propositions, résumé), W32 | 11 | 1,5 j |
 | 13 | Audio et micro (plan rédigé) | W15, W16, W34, W38, W26 (essai micro), V1, V2 | 8 | 1–1,5 j |
 | 14 | Gestes, insertion et reprise (plan rédigé) | A5, W14, W25, W41, W42, V3 (W17, W35 et W18 second essai écartés) | 8, 13 | 1 j |
 | 15 | Confort et interface (plan rédigé) | A6, W20, W22, W26 (recherche), W36 (W19, W21, W37, V12 écartés) | 11 | 1,5 j |
@@ -46,12 +46,12 @@ Lu en entier : `UX_BEHAVIORS`, `PERFORMANCE_UX`, `ARCHITECTURE`, `HANDOFF`. Lu e
 | V19 | Reconnaître l'agent dans le terminal (Claude Code, Codex) | ARCHITECTURE §3 |
 | V21 | Exemples de tes textes fournis par toi | ARCHITECTURE §5 |
 
-Numéros absents (V4, V5, V13 à V16, V20) : déjà dans Handy, déjà dans une idée W, de niche, ou **refusés par toi le 15/11** : bloc-notes de secours, vérification après collage, pas de collage si la fenêtre a changé. W30 ne concerne que Weave.
+Numéros absents (V4, V5, V13 à V16, V20) : déjà dans Handy, déjà dans une idée W, de niche, ou **refusés par toi le 15/11** : bloc-notes de secours, vérification après collage, pas de collage si la fenêtre a changé. W30 ne concerne que Weaver.
 
 ## Changements depuis la version 1
 - Plan 3 trop large : le bouton « apprendre de ça » et le signalement passent en 5, après les mots et le style qu'ils alimentent.
 - Plan 5 coupé : style appris (5), préférences (6).
-- Plan 9 coupé en trois : retouche (7, avancée), Weave essentiel (11), Weave complet (12).
+- Plan 9 coupé en trois : retouche (7, avancée), Weaver essentiel (11), Weaver complet (12).
 - Plan 10 coupé : audio (13), gestes et reprise (14).
 - C1 était seulement en 7 alors que les boutons polluent déjà la dictée : boutons en 2, contenu en 9. C2 va en 9, où le texte sert.
 - W24 (identifiant et échéance par dictée) avancé en 8 : l'envoi pendant la parole en a besoin.
