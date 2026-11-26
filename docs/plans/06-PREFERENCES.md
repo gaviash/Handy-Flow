@@ -23,10 +23,10 @@ Tu écris une fois comment tu veux que Handy écrive et qui tu es ; il s'en sert
 |---|---|
 | 1 | Une préférence écrite est une `StyleRule` du plan 5 avec `by_user` : même liste, étiquette « par moi ». Elle l'emporte toujours sur une règle apprise et n'est jamais retirée par le juge |
 | 2 | Portée : partout ou une catégorie. Ordre total : par toi + catégorie, par toi + partout, apprise + catégorie. En cas de contradiction, le modèle reçoit l'ordre et le plus haut l'emporte |
-| 3 | Limites : 200 caractères, 20 par portée ; 600 caractères envoyés par dictée, 1 500 pour Weave |
+| 3 | Limites : 200 caractères, 20 par portée ; 600 caractères envoyés par dictée, 1 500 pour Weaver |
 | 4 | Suggestions cliquables en français quand la liste est vide |
-| 5 | « À propos de moi » : sections titre + texte (10 de 1 000 caractères), chiffrées. Dictée : seulement les noms que tu coches (« aide à l'orthographe »), jamais un numéro ni un identifiant. Weave : 2 000 caractères au plus |
-| 6 | Signature : un champ à part, utilisé seulement par Weave et seulement en mail |
+| 5 | « À propos de moi » : sections titre + texte (10 de 1 000 caractères), chiffrées. Dictée : seulement les noms que tu coches (« aide à l'orthographe »), jamais un numéro ni un identifiant. Weaver : 2 000 caractères au plus |
+| 6 | Signature : un champ à part, utilisé seulement par Weaver et seulement en mail |
 | 7 | Import depuis une autre IA : un texte à coller, découpé **localement** en sections, relu par toi avant d'être gardé |
 | 8 | Fiches de référence : sections « À propos de moi » attachées à une catégorie |
 | 9 | Exemples de toi (V21) : jusqu'à 5 textes collés par catégorie, 600 caractères chacun ; ils passent avant les exemples tirés de l'historique |

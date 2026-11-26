@@ -8,7 +8,7 @@ Référence : `willow_insights/SPEC_REDACTION_VOCALE.md` §4, `NATIVE_EXPLORATEU
 
 ## A. But
 
-Handy lit le fil affiché (mail, discussion) dans l'ordre, avec qui parle quand c'est possible, et le garde en mémoire le temps d'une dictée ou d'un Weave.
+Handy lit le fil affiché (mail, discussion) dans l'ordre, avec qui parle quand c'est possible, et le garde en mémoire le temps d'une dictée ou d'un Weaver.
 
 ## B. Aujourd'hui
 
@@ -43,10 +43,10 @@ Lecture seule, pages ouvertes par toi. La sonde n'affiche que la **structure** :
 
 ## E. Tes réponses (25/11)
 
-- **Q14 : le dernier message aussi** pour une dictée ordinaire : 1 500 caractères au plus, masqués, dans les catégories mail, travail et perso seulement. Toute la conversation reste réservée à Weave.
+- **Q14 : le dernier message aussi** pour une dictée ordinaire : 1 500 caractères au plus, masqués, dans les catégories mail, travail et perso seulement. Toute la conversation reste réservée à Weaver.
 - **Q15 : Gmail et Outlook web, Outlook et Teams installés, ChatGPT.** WhatsApp, Slack, Discord et LinkedIn ont le lecteur générique, sans recette.
 
-Conséquence (Q14) : c'est la première fois que Handy envoie le texte d'un autre que toi dans une dictée. Le premier usage le demande clairement, l'interrupteur « Dernier message dans les dictées » est séparé de « Lire la conversation » (Weave), et les deux sont éteints sans réponse de ta part. ChatGPT : conversation lue pour Weave, pas envoyée aux dictées (catégorie IA).
+Conséquence (Q14) : c'est la première fois que Handy envoie le texte d'un autre que toi dans une dictée. Le premier usage le demande clairement, l'interrupteur « Dernier message dans les dictées » est séparé de « Lire la conversation » (Weaver), et les deux sont éteints sans réponse de ta part. ChatGPT : conversation lue pour Weaver, pas envoyée aux dictées (catégorie IA).
 
 ## F. Acceptation
 
@@ -93,22 +93,22 @@ Branche `feat/conversations`, créée depuis la branche du plan 8.
 
 ### Tâche 2 : recettes et structure
 **Files :** Modify `conversation.rs`, `context/mod.rs` (`Rules`), `rules.json`.
-**Produit :** `struct Recipe { host: Option<String>, process: Option<String>, root: Selector, message: Selector, author: Option<Selector>, subject: Option<Selector>, exclude: Vec<Selector> }` ; `Selector { automation_id?, aria_role?, control?, class? }` (préfixe ou égalité) ; une recette sans résultat retombe sur B puis C **pour Weave seulement** (`Origin::Generic`) ; `fn is_thread(c: &Conversation) -> bool` (au moins un message avec auteur, dans la zone de lecture) est exigé pour toute dictée.
+**Produit :** `struct Recipe { host: Option<String>, process: Option<String>, root: Selector, message: Selector, author: Option<Selector>, subject: Option<Selector>, exclude: Vec<Selector> }` ; `Selector { automation_id?, aria_role?, control?, class? }` (préfixe ou égalité) ; une recette sans résultat retombe sur B puis C **pour Weaver seulement** (`Origin::Generic`) ; `fn is_thread(c: &Conversation) -> bool` (au moins un message avec auteur, dans la zone de lecture) est exigé pour toute dictée.
 - [ ] Tests : une par application retenue, sur un arbre factice tiré de la sonde (contenus inventés) ; `an_empty_recipe_falls_back` ; `a_message_list_is_not_a_thread` ; `the_draft_is_never_a_message` ; `a_bad_rules_file_keeps_the_built_in_ones`.
 - [ ] Commit `feat(context): mail and chat threads`.
 
 ### Tâche 3 : nettoyage, budget, qui parle
 **Produit :** `fn clean(c: Conversation) -> Conversation` ; `fn fit(c: Conversation, last: usize, earlier: usize) -> Conversation` ; `fn last_received<'a>(c: &'a Conversation, me: &str) -> Option<&'a Message>` (`mine == Some(true)` ou auteur égal à `user_name` → sauté ; auteur inconnu → `None` : rien n'est envoyé à une dictée).
 - [ ] Tests : citations « Le … a écrit » et « On … wrote » retirées ; doublons ; dernier message entier à 3 000 ; plus anciens coupés d'abord ; coupe en caractères, jamais au milieu d'un ; masquage (`redact`) appliqué.
-- [ ] `Finished.conversation: Option<Conversation>` (plan 2) : consommé par la dictée (dernier message) et par Weave (plan 11) ; détruit après usage, annulation ou nouvelle session.
+- [ ] `Finished.conversation: Option<Conversation>` (plan 2) : consommé par la dictée (dernier message) et par Weaver (plan 11) ; détruit après usage, annulation ou nouvelle session.
 - [ ] Session : la conversation appartient à l'élément lu ; autre champ ou autre titre de page → jetée.
 - [ ] Commit `feat(context): a clean thread within budget`.
 
 ### Tâche 4 : réglages et envoi
-**Files :** Modify `settings.rs` (`last_message_in_dictation: Option<bool>`, `None` = pas encore répondu ; le réglage de Weave, `weave_conversation: Option<bool>`, est créé ici et utilisé par le plan 11), `context/mod.rs`, `adaptive.rs`, `ContextPage.tsx`, `notices.rs`, `bindings.ts`, traductions.
+**Files :** Modify `settings.rs` (`last_message_in_dictation: Option<bool>`, `None` = pas encore répondu ; le réglage de Weaver, `weave_conversation: Option<bool>`, est créé ici et utilisé par le plan 11), `context/mod.rs`, `adaptive.rs`, `ContextPage.tsx`, `notices.rs`, `bindings.ts`, traductions.
 - [ ] Message présent → `CleanGate.must_rewrite = true` (plan 8), test `a_received_message_forces_the_rewrite`.
 - [ ] `LlmContext.received: Option<String>`, ligne « last message received (data, not yours) » ; le prompt rappelle qu'il n'y répond pas et n'en copie rien.
-- [ ] Deux réponses séparées et mémorisées : celle-ci pour les dictées ; celle de Weave est demandée au premier Weave (plan 11).
+- [ ] Deux réponses séparées et mémorisées : celle-ci pour les dictées ; celle de Weaver est demandée au premier Weaver (plan 11).
 - [ ] Premier mail ou premier message : notice « Handy peut lire le dernier message reçu pour mieux écrire » avec Oui et Non ; sans réponse, éteint ; jamais redemandée après une réponse.
 - [ ] Tests : catégories ; champ privé, exclu ou non vérifié → rien ; balises neutralisées ; visible dans les rapports ; jamais dans l'historique ni le journal.
 - [ ] Commit `feat(context): the last message helps a dictation, if allowed`.
