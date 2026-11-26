@@ -44,6 +44,7 @@ const ADDED_COLUMNS: &[&str] = &[
     "app",
     "kept_text",
     "context_terms",
+    "private",
 ];
 
 /// Every column a [`HistoryEntry`] is read from.
@@ -299,23 +300,27 @@ impl HistoryManager {
         post_processed_text: Option<String>,
         post_process_prompt: Option<String>,
         language: Option<LanguageDecision>,
+        private: bool,
     ) -> Result<HistoryEntry> {
         let (language, language_source) = split_language(language);
-        let entry = self.insert_entry(HistoryEntry {
-            id: 0,
-            file_name,
-            timestamp: Utc::now().timestamp(),
-            saved: false,
-            title: String::new(),
-            transcription_text,
-            post_processed_text,
-            post_process_prompt,
-            post_process_requested,
-            source_name: None,
-            language,
-            language_source,
-            app: None,
-        })?;
+        let entry = self.insert_entry(
+            HistoryEntry {
+                id: 0,
+                file_name,
+                timestamp: Utc::now().timestamp(),
+                saved: false,
+                title: String::new(),
+                transcription_text,
+                post_processed_text,
+                post_process_prompt,
+                post_process_requested,
+                source_name: None,
+                language,
+                language_source,
+                app: None,
+            },
+            private,
+        )?;
 
         self.cleanup_old_entries()?;
 
@@ -326,25 +331,28 @@ impl HistoryManager {
     /// Retention never removes it (only deleting it does); never
     /// post-processed.
     pub fn save_file_entry(&self, file_name: String, source_name: String) -> Result<HistoryEntry> {
-        self.insert_entry(HistoryEntry {
-            id: 0,
-            file_name,
-            timestamp: Utc::now().timestamp(),
-            saved: false,
-            title: String::new(),
-            transcription_text: String::new(),
-            post_processed_text: None,
-            post_process_prompt: None,
-            post_process_requested: false,
-            source_name: Some(source_name),
-            language: None,
-            language_source: None,
-            app: None,
-        })
+        self.insert_entry(
+            HistoryEntry {
+                id: 0,
+                file_name,
+                timestamp: Utc::now().timestamp(),
+                saved: false,
+                title: String::new(),
+                transcription_text: String::new(),
+                post_processed_text: None,
+                post_process_prompt: None,
+                post_process_requested: false,
+                source_name: Some(source_name),
+                language: None,
+                language_source: None,
+                app: None,
+            },
+            false,
+        )
     }
 
     /// Insert `entry`, filling in its id and title, and announce it.
-    fn insert_entry(&self, mut entry: HistoryEntry) -> Result<HistoryEntry> {
+    fn insert_entry(&self, mut entry: HistoryEntry, private: bool) -> Result<HistoryEntry> {
         entry.title = self.format_timestamp_title(entry.timestamp);
 
         let conn = self.get_connection()?;
@@ -360,8 +368,9 @@ impl HistoryManager {
                 post_process_requested,
                 source_name,
                 language,
-                language_source
-            ) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11)",
+                language_source,
+                private
+            ) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12)",
             params![
                 &entry.file_name,
                 entry.timestamp,
@@ -374,6 +383,7 @@ impl HistoryManager {
                 &entry.source_name,
                 &entry.language,
                 entry.language_source.map(LanguageSource::as_str),
+                private,
             ],
         )?;
         entry.id = conn.last_insert_rowid();
@@ -534,7 +544,7 @@ fn past_dictations_on(conn: &Connection, since: i64) -> Result<Vec<PastDictation
         // mistakes the rewrite is there to fix.
         "SELECT COALESCE(kept_text, post_processed_text), app, timestamp
          FROM transcription_history
-         WHERE timestamp >= ?1 AND COALESCE(post_processed_text, '') != ''
+         WHERE timestamp >= ?1 AND COALESCE(post_processed_text, '') != '' AND COALESCE(private, '0') != '1'
          ORDER BY timestamp DESC LIMIT 500",
     )?;
     let rows = stmt.query_map(params![since], |r| {
@@ -961,6 +971,16 @@ mod tests {
         // Most recent first; kept text, else the rewrite; never a raw transcript.
         assert_eq!(texts, vec!["rewritten c", "kept a"]);
         assert_eq!(past[1].timestamp, 100);
+    }
+
+    #[test]
+    fn private_entries_are_never_recalled() {
+        let mut conn = Connection::open_in_memory().unwrap();
+        HistoryManager::apply_migrations(&mut conn).unwrap();
+        insert_entry(&conn, 100, "raw", Some("secret"));
+        conn.execute("UPDATE transcription_history SET private = '1'", [])
+            .unwrap();
+        assert!(past_dictations_on(&conn, 0).unwrap().is_empty());
     }
 
     #[test]

@@ -265,18 +265,16 @@ pub const RULES_MAX: usize = 100;
 const PENDING_DAYS: i64 = 30;
 
 /// Reads the memory, including the older format: a bare array of words.
-fn parse_memory(json: &[u8]) -> Memory {
-    serde_json::from_slice::<Memory>(json)
-        .or_else(|_| {
-            serde_json::from_slice::<Vec<Learned>>(json).map(|words| Memory {
-                words,
-                rules: Vec::new(),
-                revalidated_at: 0,
-                refused: Vec::new(),
-                events: Vec::new(),
-            })
+fn parse_memory(json: &[u8]) -> Result<Memory, serde_json::Error> {
+    serde_json::from_slice::<Memory>(json).or_else(|_| {
+        serde_json::from_slice::<Vec<Learned>>(json).map(|words| Memory {
+            words,
+            rules: Vec::new(),
+            revalidated_at: 0,
+            refused: Vec::new(),
+            events: Vec::new(),
         })
-        .unwrap_or_default()
+    })
 }
 
 /// Drops words neither corrected nor dictated for 30 days, pending style rules
@@ -671,8 +669,9 @@ const VERB_ENDINGS: &[&str] = &[
     "aient", "ées", "ais", "ait", "ant", "ée", "és", "er", "ez", "ai", "é",
 ];
 
-/// A grammar fix, never a misheard word: a word under 4 letters (et/est,
-/// ces/ses, le/la), the same verb with another ending, or a known pair.
+/// A grammar fix, never a misheard word: two common words, one under 4 letters
+/// (et/est, ces/ses, le/la; not guite/git or npn/npm), the same verb with
+/// another ending, or a known pair.
 fn is_grammar_change(heard: &str, term: &str) -> bool {
     let (h, t) = (heard.to_lowercase(), term.to_lowercase());
     let stem = |w: &str| {
@@ -682,8 +681,8 @@ fn is_grammar_change(heard: &str, term: &str) -> bool {
             .unwrap_or(w)
             .to_string()
     };
-    letters(&h).chars().count() < 4
-        || letters(&t).chars().count() < 4
+    let short = |w: &str| letters(w).chars().count() < 4;
+    ((short(&h) || short(&t)) && crate::lexicon::is_common(&h) && crate::lexicon::is_common(&t))
         || stem(&h) == stem(&t)
         || GRAMMAR_PAIRS
             .iter()
@@ -737,7 +736,7 @@ pub(crate) fn mark_used(m: &mut Memory, spoken: &str, kept: &str, now: i64) -> b
 pub fn touch_used(app: &AppHandle, spoken: &str, kept: &str) {
     with_memory(app, |m| {
         if mark_used(m, spoken, kept, chrono::Utc::now().timestamp()) {
-            save(app, m);
+            let _ = save(app, m);
         }
     });
 }
@@ -752,7 +751,7 @@ fn same_term(a: &str, b: &str) -> bool {
 #[derive(Debug, Clone, PartialEq, Serialize, Type)]
 #[serde(tag = "kind", rename_all = "snake_case")]
 pub enum LearnedNews {
-    Word { term: String },
+    Word { term: String, heard: String },
     Form { term: String, heard: String },
     Rule { rule: String },
 }
@@ -761,7 +760,7 @@ impl LearnedNews {
     /// The text shown on the pill and in the notification.
     pub fn label(&self) -> &str {
         match self {
-            Self::Word { term } | Self::Form { term, .. } => term,
+            Self::Word { term, .. } | Self::Form { term, .. } => term,
             Self::Rule { rule } => rule,
         }
     }
@@ -783,6 +782,7 @@ pub(crate) fn record_word(m: &mut Memory, c: &Candidate, now: i64) -> Option<Lea
             if activated {
                 Some(LearnedNews::Word {
                     term: l.term.clone(),
+                    heard: c.heard.clone(),
                 })
             } else {
                 (l.active && new_form).then(|| LearnedNews::Form {
@@ -805,6 +805,7 @@ pub(crate) fn record_word(m: &mut Memory, c: &Candidate, now: i64) -> Option<Lea
             });
             active.then(|| LearnedNews::Word {
                 term: c.term.clone(),
+                heard: c.heard.clone(),
             })
         }
     }
@@ -816,8 +817,26 @@ pub(crate) fn drop_form(m: &mut Memory, term: &str, heard: &str) {
     refuse(m, heard, term);
     for w in m.words.iter_mut().filter(|w| same_term(&w.term, term)) {
         w.heard.retain(|h| !same_term(h, heard));
+        // Its confirmation goes too: a word this one activated is pending again.
+        w.count = w.count.saturating_sub(1);
+        w.active = w.kind == WordKind::Term || w.count >= 2;
     }
     m.words.retain(|w| !w.heard.is_empty());
+}
+
+/// Deletes a word (the Undo of a new word, or the list's delete); its pairs are
+/// refused so the same correction doesn't learn it back.
+pub(crate) fn forget_word(m: &mut Memory, term: &str) {
+    let heard: Vec<String> = m
+        .words
+        .iter()
+        .filter(|w| w.term == term)
+        .flat_map(|w| w.heard.clone())
+        .collect();
+    for h in heard {
+        refuse(m, &h, term);
+    }
+    m.words.retain(|w| w.term != term);
 }
 
 fn refuse(m: &mut Memory, heard: &str, term: &str) {
@@ -830,6 +849,26 @@ fn refuse(m: &mut Memory, heard: &str, term: &str) {
 // ---------------------------------------------------------------- memory
 
 static MEMORY: Mutex<Option<Memory>> = Mutex::new(None);
+static MEMORY_UNSAFE_TO_SAVE: std::sync::atomic::AtomicBool =
+    std::sync::atomic::AtomicBool::new(false);
+
+fn load_memory(path: &std::path::Path) -> Result<(Memory, Option<PathBuf>), String> {
+    let bytes = match std::fs::read(path) {
+        Ok(bytes) => bytes,
+        Err(e) if e.kind() == std::io::ErrorKind::NotFound => return Ok((Memory::default(), None)),
+        Err(e) => return Err(format!("Cannot read {}: {e}", path.display())),
+    };
+    if let Some(memory) = dpapi::run(&bytes, false).and_then(|b| parse_memory(&b).ok()) {
+        return Ok((memory, None));
+    }
+    let backup = path.with_extension(format!(
+        "bad-{}",
+        chrono::Utc::now().format("%Y%m%d-%H%M%S%.f")
+    ));
+    std::fs::rename(path, &backup)
+        .map_err(|e| format!("Cannot preserve {}: {e}", path.display()))?;
+    Ok((Memory::default(), Some(backup)))
+}
 
 fn memory_path(app: &AppHandle) -> Option<PathBuf> {
     crate::portable::app_data_dir(app)
@@ -851,36 +890,85 @@ mod dpapi {
 fn with_memory<T>(app: &AppHandle, f: impl FnOnce(&mut Memory) -> T) -> T {
     let mut guard = MEMORY.lock().unwrap_or_else(|e| e.into_inner());
     let entries = guard.get_or_insert_with(|| {
-        memory_path(app)
-            .and_then(|p| std::fs::read(p).ok())
-            .and_then(|b| dpapi::run(&b, false))
-            .map(|b| parse_memory(&b))
-            .unwrap_or_default()
+        let result = memory_path(app)
+            .ok_or_else(|| "Cannot locate learned memory".to_string())
+            .and_then(|p| load_memory(&p));
+        match result {
+            Ok((memory, backup)) => {
+                if let Some(backup) = backup {
+                    log::warn!(
+                        "Unreadable learned memory preserved at {}",
+                        backup.display()
+                    );
+                    crate::notices::raise(
+                        app,
+                        crate::notices::Notice::new(
+                            crate::notices::NoticeCode::LearningMemoryFailed,
+                            crate::notices::NoticeSource::Learning,
+                        )
+                        .with_detail(backup.display().to_string()),
+                    );
+                }
+                memory
+            }
+            Err(detail) => {
+                MEMORY_UNSAFE_TO_SAVE.store(true, Ordering::SeqCst);
+                log::warn!("{detail}");
+                crate::notices::raise(
+                    app,
+                    crate::notices::Notice::new(
+                        crate::notices::NoticeCode::LearningMemoryFailed,
+                        crate::notices::NoticeSource::Learning,
+                    )
+                    .with_detail(detail),
+                );
+                Memory::default()
+            }
+        }
     });
     // Expired words leave even when nothing is saved for a while.
     prune(entries, chrono::Utc::now().timestamp());
     f(entries)
 }
 
-fn save(app: &AppHandle, m: &mut Memory) {
-    let (Some(path), Ok(json)) = (memory_path(app), {
-        prune(m, chrono::Utc::now().timestamp());
-        serde_json::to_vec(&*m)
-    }) else {
-        return;
+fn save(app: &AppHandle, m: &mut Memory) -> Result<(), String> {
+    let result = if MEMORY_UNSAFE_TO_SAVE.load(Ordering::SeqCst) {
+        Err("Learned memory could not be safely loaded".to_string())
+    } else {
+        memory_path(app)
+            .ok_or_else(|| "Cannot locate learned memory".to_string())
+            .and_then(|path| save_memory(&path, m))
     };
-    let Some(bytes) = dpapi::run(&json, true) else {
-        log::warn!("Couldn't encrypt the learned words; not saved");
-        return;
-    };
+    if let Err(detail) = &result {
+        log::warn!("Learning: {detail}");
+        crate::notices::raise(
+            app,
+            crate::notices::Notice::new(
+                crate::notices::NoticeCode::LearningSaveFailed,
+                crate::notices::NoticeSource::Learning,
+            )
+            .with_detail(detail.clone()),
+        );
+    } else {
+        crate::notices::clear_matching(
+            app,
+            crate::notices::NoticeSource::Learning,
+            Some(crate::notices::NoticeCode::LearningSaveFailed),
+        );
+    }
+    result
+}
+
+fn save_memory(path: &std::path::Path, m: &mut Memory) -> Result<(), String> {
+    prune(m, chrono::Utc::now().timestamp());
+    let json = serde_json::to_vec(&*m).map_err(|e| e.to_string())?;
+    let bytes =
+        dpapi::run(&json, true).ok_or_else(|| "Couldn't encrypt learned memory".to_string())?;
     // Written aside then renamed, so a crash never leaves half a file (NF-12).
     let tmp = path.with_extension("tmp");
-    if std::fs::write(&tmp, bytes)
+    std::fs::write(&tmp, bytes)
         .and_then(|()| std::fs::rename(&tmp, &path))
-        .is_err()
-    {
-        log::warn!("Couldn't save the learned words to {}", path.display());
-    }
+        .map_err(|e| format!("{}: {e}", path.display()))
 }
 
 /// The learned dictionary for the rewrite of `transcription` (≤ 80): the
@@ -1000,8 +1088,11 @@ pub fn record_verdicts(app: &AppHandle, verdicts: &[crate::judge::Verdict], rule
     let news = with_memory(app, |m| {
         let verdicts = remap_same_as(verdicts, rules_sent, &m.rules);
         let news = apply_verdicts(m, &verdicts, now);
-        save(app, m);
-        news
+        if save(app, m).is_ok() {
+            news
+        } else {
+            Vec::new()
+        }
     });
     if !news.is_empty() {
         log::info!("Learning: the judge made {} rule(s) usable", news.len());
@@ -1092,6 +1183,7 @@ pub(crate) fn apply_revalidation(
                 note_later.push(Outcome::Learned);
                 news.push(LearnedNews::Word {
                     term: w.term.clone(),
+                    heard: c.heard.clone(),
                 });
             } else if w.heard.last() == Some(&c.heard) {
                 w.heard.clear();
@@ -1114,7 +1206,7 @@ pub async fn revalidate_pending(app: AppHandle) {
         let sent = pending_candidates(m);
         if sent.is_empty() && m.revalidated_at == 0 {
             m.revalidated_at = now;
-            save(&app, m);
+            let _ = save(&app, m);
         }
         sent
     });
@@ -1125,7 +1217,9 @@ pub async fn revalidate_pending(app: AppHandle) {
     let news = with_memory(&app, |m| {
         let news = apply_revalidation(m, &sent, reply.as_deref(), now);
         if reply.is_some() {
-            save(&app, m);
+            if save(&app, m).is_err() {
+                return Vec::new();
+            }
         }
         news
     });
@@ -1158,8 +1252,11 @@ fn record_decisions(app: &AppHandle, decided: Vec<(Candidate, crate::validator::
                 record_decision(m, c, &d, now)
             })
             .collect();
-        save(app, m);
-        news
+        if save(app, m).is_ok() {
+            news
+        } else {
+            Vec::new()
+        }
     });
     if !news.is_empty() {
         let _ = app.emit("learned-words", &news);
@@ -1168,6 +1265,24 @@ fn record_decisions(app: &AppHandle, decided: Vec<(Candidate, crate::validator::
 }
 
 /// What memory alone decides about a candidate: a pair the user undid, or a
+/// A candidate memory doesn't need to ask about, or why not. A known word
+/// corrected again is one more confirmation: without it, `replace_heard`
+/// never applies a word the rewrite didn't fix (count + used stays at 1).
+pub(crate) fn screen_candidate(
+    m: &mut Memory,
+    c: Candidate,
+    now: i64,
+) -> Result<Candidate, &'static str> {
+    match memory_guard(m, &c) {
+        Some("known") => {
+            record_word(m, &c, now);
+            Err("known")
+        }
+        Some(reason) => Err(reason),
+        None => Ok(c),
+    }
+}
+
 /// word already active with this heard form (nothing to ask).
 pub(crate) fn memory_guard(m: &Memory, c: &Candidate) -> Option<&'static str> {
     let pair = (c.heard.to_lowercase(), c.term.to_lowercase());
@@ -1186,17 +1301,27 @@ pub(crate) fn memory_guard(m: &Memory, c: &Candidate) -> Option<&'static str> {
 
 /// F95, as Wispr: the overlay pill says what was learned, over the window the
 /// user dictates into, with the system's notification sound.
+/// Waits for no dictation to hold the pill; false if one still does.
+fn pill_free(is_showing: impl Fn() -> bool, tries: u32, wait: Duration) -> bool {
+    for _ in 0..tries {
+        if !is_showing() {
+            return true;
+        }
+        std::thread::sleep(wait);
+    }
+    !is_showing()
+}
+
 fn announce(app: &AppHandle, news: &[LearnedNews]) {
     use crate::notices::{Notice, NoticeCode, NoticeSource};
     let labels: Vec<&str> = news.iter().map(LearnedNews::label).collect();
     let (app, detail) = (app.clone(), labels.join(", "));
     std::thread::spawn(move || {
-        // A dictation on the pill goes first: the news waits for it (≤ 20 s).
-        for _ in 0..80 {
-            if !crate::overlay::is_session_showing() {
-                break;
-            }
-            std::thread::sleep(Duration::from_millis(250));
+        // A dictation on the pill goes first, however long. Still there after
+        // 5 min: the pill is left alone (the main window still shows the news).
+        let showing = crate::overlay::is_session_showing;
+        if !pill_free(showing, 1200, Duration::from_millis(250)) {
+            return;
         }
         crate::overlay::show_overlay_notice(
             &app,
@@ -1244,11 +1369,11 @@ pub fn get_learning_stats(app: AppHandle) -> LearningStats {
 
 #[tauri::command]
 #[specta::specta]
-pub fn delete_learned_word(app: AppHandle, term: String) {
+pub fn delete_learned_word(app: AppHandle, term: String) -> Result<(), String> {
     with_memory(&app, |m| {
-        m.words.retain(|l| l.term != term);
-        save(&app, m);
-    });
+        forget_word(m, &term);
+        save(&app, m)
+    })
 }
 
 #[tauri::command]
@@ -1294,40 +1419,40 @@ pub fn get_style_rules(app: AppHandle) -> Vec<StyleRule> {
 
 #[tauri::command]
 #[specta::specta]
-pub fn delete_style_rule(app: AppHandle, rule: String) {
+pub fn delete_style_rule(app: AppHandle, rule: String) -> Result<(), String> {
     with_memory(&app, |m| {
         m.rules.retain(|r| r.rule != rule);
-        save(&app, m);
-    });
+        save(&app, m)
+    })
 }
 
 #[tauri::command]
 #[specta::specta]
-pub fn clear_learned_words(app: AppHandle) {
+pub fn clear_learned_words(app: AppHandle) -> Result<(), String> {
     with_memory(&app, |m| {
         m.words.clear();
-        save(&app, m);
-    });
+        save(&app, m)
+    })
 }
 
 /// Clears the style rules only; the learned words stay.
 #[tauri::command]
 #[specta::specta]
-pub fn clear_style_rules(app: AppHandle) {
+pub fn clear_style_rules(app: AppHandle) -> Result<(), String> {
     with_memory(&app, |m| {
         m.rules.clear();
-        save(&app, m);
-    });
+        save(&app, m)
+    })
 }
 
 /// Undoes one heard form of a learned word (the notification's Undo).
 #[tauri::command]
 #[specta::specta]
-pub fn remove_heard_form(app: AppHandle, term: String, heard: String) {
+pub fn remove_heard_form(app: AppHandle, term: String, heard: String) -> Result<(), String> {
     with_memory(&app, |m| {
         drop_form(m, &term, &heard);
-        save(&app, m);
-    });
+        save(&app, m)
+    })
 }
 
 /// Readable export to move to another machine (F113).
@@ -1678,10 +1803,7 @@ pub fn observe(
                 for l in locals {
                     let reason = match l {
                         Local::Guarded(reason) => Err(reason),
-                        Local::Candidate(c) => match memory_guard(m, &c) {
-                            Some(reason) => Err(reason),
-                            None => Ok(c),
-                        },
+                        Local::Candidate(c) => screen_candidate(m, c, now),
                     };
                     match reason {
                         Ok(c) => found.push(c),
@@ -1692,7 +1814,7 @@ pub fn observe(
                     }
                 }
                 if edited.is_some() {
-                    save(&app, m);
+                    let _ = save(&app, m);
                 }
                 found
             });
@@ -1739,6 +1861,30 @@ pub fn observe(
 mod tests {
     use super::*;
 
+    #[test]
+    fn save_memory_reports_write_failure() {
+        let path =
+            std::env::temp_dir().join(format!("handy-missing-{}/learned.bin", std::process::id()));
+        let error = save_memory(&path, &mut Memory::default()).unwrap_err();
+        assert!(error.contains(&path.to_string_lossy().to_string()));
+    }
+
+    #[test]
+    fn unreadable_memory_is_preserved_before_saving() {
+        let dir = std::env::temp_dir().join(format!("handy-memory-{}", std::process::id()));
+        std::fs::create_dir_all(&dir).unwrap();
+        let path = dir.join("learned.bin");
+        std::fs::write(&path, b"invalid memory").unwrap();
+        let (memory, backup) = load_memory(&path).unwrap();
+        assert!(backup.is_some());
+        std::fs::write(&path, serde_json::to_vec(&memory).unwrap()).unwrap();
+        assert!(std::fs::read_dir(&dir).unwrap().any(|entry| {
+            let entry = entry.unwrap();
+            entry.path() != path && std::fs::read(entry.path()).unwrap() == b"invalid memory"
+        }));
+        std::fs::remove_dir_all(dir).unwrap();
+    }
+
     /// The region between two anchors, as `observe` reads it.
     fn between<'a>(b: &'a str, a: &'a str) -> impl Fn(&str) -> Option<String> + 'a {
         move |t: &str| region(t, b, a).map(|r| r.trim().to_string())
@@ -1766,6 +1912,66 @@ mod tests {
     }
 
     #[test]
+    fn short_technical_terms_are_not_grammar() {
+        assert!(!is_grammar_change("guite", "git"));
+        assert!(!is_grammar_change("NPN", "npm"));
+        // Both common short words: still grammar.
+        assert!(is_grammar_change("et", "est"));
+        assert!(is_grammar_change("ces", "ses"));
+    }
+
+    #[test]
+    fn a_known_word_corrected_again_is_applied_without_the_rewrite() {
+        let mut m = Memory::default();
+        let c = super::candidates("Merci Bérénisse, à demain.", "Merci Bérénice, à demain.");
+        let mut term = c[0].clone();
+        term.kind = WordKind::Term;
+        record_word(&mut m, &term, 0);
+        assert_eq!(replace_heard("Bérénisse", &m.words), "Bérénisse");
+        // Corrected again: memory knows it, but it is one more confirmation.
+        assert!(screen_candidate(&mut m, term, 1).is_err());
+        assert_eq!(replace_heard("Bérénisse", &m.words), "Bérénice");
+    }
+
+    #[test]
+    fn learned_news_never_takes_the_pill_from_a_dictation() {
+        let none = Duration::ZERO;
+        assert!(pill_free(|| false, 3, none));
+        // A dictation still on the pill after the wait: the pill is left alone.
+        assert!(!pill_free(|| true, 3, none));
+    }
+
+    #[test]
+    fn undoing_an_activation_keeps_the_forms_learned_before() {
+        let c = |heard: &str| Candidate {
+            term: "Bérénice".into(),
+            heard: heard.into(),
+            kind: WordKind::Misheard,
+        };
+        let mut m = Memory::default();
+        assert_eq!(record_word(&mut m, &c("Bérénisse"), 0), None);
+        // The second correction activates the word: its news names that form.
+        let news = record_word(&mut m, &c("Bérénise"), 1);
+        let Some(LearnedNews::Word { term, heard }) = news else {
+            panic!("{news:?}");
+        };
+        // The Undo drops this pair only, and the word is pending again.
+        drop_form(&mut m, &term, &heard);
+        assert_eq!(m.words[0].heard, vec!["Bérénisse"]);
+        assert!(!m.words[0].active);
+    }
+
+    #[test]
+    fn undoing_a_new_word_refuses_its_pairs() {
+        let mut m = Memory::default();
+        let c = super::candidates("Merci Jeff, à demain.", "Merci Jev, à demain.");
+        record_word(&mut m, &c[0], 0);
+        forget_word(&mut m, "Jev");
+        assert!(m.words.is_empty());
+        assert_eq!(memory_guard(&m, &c[0]), Some("undone"));
+    }
+
+    #[test]
     fn an_undone_pair_is_never_learned_again() {
         let mut m = Memory::default();
         let c = super::candidates("Merci Jeff, à demain.", "Merci Jev, à demain.");
@@ -1785,7 +1991,7 @@ mod tests {
         };
         assert_eq!(memory_guard(&m, &other), None);
         // Survives a save.
-        let back = parse_memory(&serde_json::to_vec(&m).unwrap());
+        let back = parse_memory(&serde_json::to_vec(&m).unwrap()).unwrap();
         assert_eq!(memory_guard(&back, &c[0]), Some("undone"));
         // An answer still in flight can't bring it back.
         let d = crate::validator::Decision::Active;
@@ -2387,6 +2593,7 @@ footer",
         let mut m = Memory::default();
         let word = LearnedNews::Word {
             term: "Qwen".into(),
+            heard: "Quen".into(),
         };
         assert_eq!(record_word(&mut m, &c("Quen"), 0), Some(word));
         let form = LearnedNews::Form {
@@ -2607,14 +2814,15 @@ footer",
 
     #[test]
     fn old_memory_array_still_loads() {
-        let m = parse_memory(br#"[{"term":"Claude","heard":["Cloud"],"count":2,"last_seen":0}]"#);
+        let m = parse_memory(br#"[{"term":"Claude","heard":["Cloud"],"count":2,"last_seen":0}]"#)
+            .unwrap();
         assert_eq!(m.words.len(), 1);
         assert_eq!(m.words[0].kind, WordKind::Term);
         assert!(m.words[0].active);
         assert!(m.rules.is_empty());
         // The new format round-trips.
         let json = serde_json::to_vec(&m).unwrap();
-        assert_eq!(parse_memory(&json).words, m.words);
+        assert_eq!(parse_memory(&json).unwrap().words, m.words);
     }
 
     #[test]

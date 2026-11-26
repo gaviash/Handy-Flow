@@ -123,7 +123,7 @@ pub fn similar_dictations(
     }
     chosen
         .into_iter()
-        .map(|p| cut(&p.text, PAST_CHARS))
+        .map(|p| cut(&crate::context::redact(&p.text), PAST_CHARS))
         .collect()
 }
 
@@ -292,6 +292,18 @@ mod tests {
         let out = similar_dictations(&past, "regarde le log du serveur", "Code", now);
         assert_eq!(out, vec!["le log du serveur est vide", "acheter du pain"]);
         assert!(similar_dictations(&[], "x", "Code", now).is_empty());
+    }
+
+    #[test]
+    fn past_dictations_hide_personal_details() {
+        let past = vec![PastDictation {
+            text: "Contact alice@example.com".into(),
+            app: Some("Mail".into()),
+            timestamp: 10,
+        }];
+        let result = similar_dictations(&past, "contact", "Mail", 20);
+        assert_eq!(result.len(), 1);
+        assert!(!result[0].contains("alice@example.com"));
     }
 
     #[test]

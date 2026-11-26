@@ -373,23 +373,43 @@ async getLearnedWords() : Promise<Learned[]> {
 async getLearningStats() : Promise<LearningStats> {
     return await TAURI_INVOKE("get_learning_stats");
 },
-async deleteLearnedWord(term: string) : Promise<void> {
-    await TAURI_INVOKE("delete_learned_word", { term });
+async deleteLearnedWord(term: string) : Promise<Result<null, string>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("delete_learned_word", { term }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
 },
-async clearLearnedWords() : Promise<void> {
-    await TAURI_INVOKE("clear_learned_words");
+async clearLearnedWords() : Promise<Result<null, string>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("clear_learned_words") };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
 },
 /**
  * Clears the style rules only; the learned words stay.
  */
-async clearStyleRules() : Promise<void> {
-    await TAURI_INVOKE("clear_style_rules");
+async clearStyleRules() : Promise<Result<null, string>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("clear_style_rules") };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
 },
 /**
  * Undoes one heard form of a learned word (the notification's Undo).
  */
-async removeHeardForm(term: string, heard: string) : Promise<void> {
-    await TAURI_INVOKE("remove_heard_form", { term, heard });
+async removeHeardForm(term: string, heard: string) : Promise<Result<null, string>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("remove_heard_form", { term, heard }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
 },
 /**
  * Readable export to move to another machine (F113).
@@ -405,8 +425,13 @@ async exportLearnedWords(path: string) : Promise<Result<null, string>> {
 async getStyleRules() : Promise<StyleRule[]> {
     return await TAURI_INVOKE("get_style_rules");
 },
-async deleteStyleRule(rule: string) : Promise<void> {
-    await TAURI_INVOKE("delete_style_rule", { rule });
+async deleteStyleRule(rule: string) : Promise<Result<null, string>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("delete_style_rule", { rule }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
 },
 async changeAsrContextSetting(value: AsrContextSettings) : Promise<Result<null, string>> {
     try {
@@ -1853,7 +1878,7 @@ used?: number; source?: Source }
  * the notification's Undo: a new word, a new heard form of a known word, or
  * a style rule.
  */
-export type LearnedNews = { kind: "word"; term: string } | { kind: "form"; term: string; heard: string } | { kind: "rule"; rule: string }
+export type LearnedNews = { kind: "word"; term: string; heard: string } | { kind: "form"; term: string; heard: string } | { kind: "rule"; rule: string }
 /**
  * The counters shown in Settings → Learning.
  */
@@ -1912,7 +1937,7 @@ detail: string | null }
 /**
  * The frontend maps each code to its text in `src/lib/notices.ts`.
  */
-export type NoticeCode = "TranscriptionFailed" | "PasteFailed" | "PasteBlockedElevated" | 
+export type NoticeCode = "PrivacyRewriteSkipped" | "LearningSaveFailed" | "LearningMemoryFailed" | "TranscriptionFailed" | "PasteFailed" | "PasteBlockedElevated" |
 /**
  * Handy Adaptive (F33): the destination is an excluded app or site.
  */
@@ -1924,7 +1949,7 @@ export type NoticeCode = "TranscriptionFailed" | "PasteFailed" | "PasteBlockedEl
 /**
  * Handy Flow (F95): words learned from the user's corrections.
  */
-"WordsLearned" | "NoMicrophone" | "MicrophoneSilent" | "MicPermissionDenied" | "RecordingFailed" | "ModelLoadFailed" | "NoModelSelected" | "PostProcessFailed" | "FileTranscriptionFailed" | "FilePostProcessFailed"
+"WordsLearned" | "NoMicrophone" | "MicrophoneSilent" | "MicrophoneLost" | "NothingRecognized" | "MicPermissionDenied" | "RecordingFailed" | "ModelLoadFailed" | "NoModelSelected" | "PostProcessFailed" | "FileTranscriptionFailed" | "FilePostProcessFailed"
 export type NoticeLevel = 
 /**
  * Nothing came out, or Handy can't do its job.
@@ -1943,7 +1968,7 @@ export type NoticeLevel =
  * overlay: a file job finishes while the user is doing something else, and
  * `Model` is a switch the user made in Settings or the tray.
  */
-export type NoticeSource = "dictation" | "file" | "model"
+export type NoticeSource = "dictation" | "file" | "model" | "learning"
 export type NoticesChanged = { 
 /**
  * Every active notice, newest first.

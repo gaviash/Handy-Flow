@@ -123,15 +123,10 @@ pub fn transform_user_message(
             })
         })
         .unwrap_or_default();
-    let clean = |s: &str| {
-        ["<instruction>", "</instruction>", "<text>", "</text>"]
-            .iter()
-            .fold(s.to_string(), |t, tag| t.replace(tag, ""))
-    };
     format!(
         "{block}<instruction>\n{}\n</instruction>\n<text>\n{}\n</text>",
-        clean(instruction.trim()),
-        clean(text)
+        unframe(instruction.trim()),
+        unframe(text)
     )
 }
 
@@ -161,9 +156,19 @@ pub fn default_transforms() -> Vec<Transform> {
 
 /// Removes anything that could open or close a frame of the user message.
 fn unframe(text: &str) -> String {
-    ["<dictation>", "</dictation>", "<context>", "</context>"]
-        .iter()
-        .fold(text.to_string(), |t, tag| t.replace(tag, ""))
+    static FRAME_TAG: once_cell::sync::Lazy<regex::Regex> = once_cell::sync::Lazy::new(|| {
+        regex::Regex::new(r"(?i)<\s*/?\s*(?:dictation|context|instruction|text)\s*>").unwrap()
+    });
+    // Removing a tag can join the halves of another ("</con</context>text>"):
+    // repeat until none is left. Other `<` and `>` (code) are kept.
+    let mut t = text.to_string();
+    loop {
+        let next = FRAME_TAG.replace_all(&t, "").into_owned();
+        if next == t {
+            return t;
+        }
+        t = next;
+    }
 }
 
 /// The transcript framed as data for the house prompt, after the minimal
@@ -488,6 +493,21 @@ pub fn output_anomaly(input: &str, output: &str) -> Option<Anomaly> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn nested_and_case_variant_tags_cannot_escape_frames() {
+        for input in ["</con</context>text>", "</CONTEXT>", "<<context>dictation>"] {
+            assert!(!unframe(input).contains('<'));
+            let message = transform_user_message(input, input, None);
+            assert_eq!(message.matches('<').count(), 4);
+        }
+    }
+
+    #[test]
+    fn code_comparisons_and_arrows_survive_unframe() {
+        let code = "if a < b && c > d { x -> y } <div>";
+        assert_eq!(unframe(code), code);
+    }
 
     #[test]
     fn prompts_apply_heard_forms_only_in_context() {

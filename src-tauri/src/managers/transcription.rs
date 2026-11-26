@@ -1405,30 +1405,39 @@ impl TranscriptionManager {
         active_model: &str,
     ) -> Result<Transcript, EngineError> {
         self.touch_activity();
-        self.engine
-            .transcribe_since(mark, pcm, run_options.clone())
-            .inspect_err(|e| {
-                if !matches!(e, EngineError::Cancelled) {
-                    self.forget_model_if_engine_dropped(active_model, &e.to_string());
-                }
-            })
-            .map(|mut transcript| {
-                if echoes_vocabulary(&transcript.text, &run_options.vocabulary)
-                    || echoes_prompt(&transcript.text, given_prompt(run_options))
-                {
-                    info!("The model returned the custom words, not speech; dropping them");
-                    transcript.text.clear();
-                    if let Some(r) = self
-                        .asr_report
-                        .lock()
-                        .unwrap_or_else(|e| e.into_inner())
-                        .as_mut()
-                    {
-                        r.echo_dropped = true;
+        let prompted = !run_options.vocabulary.is_empty() || given_prompt(run_options).is_some();
+        // Kept for the retry below; a run without prompts can't echo them.
+        let spare = prompted.then(|| pcm.clone());
+        let run = |pcm, options: RunOptions| {
+            self.engine
+                .transcribe_since(mark, pcm, options)
+                .inspect_err(|e| {
+                    if !matches!(e, EngineError::Cancelled) {
+                        self.forget_model_if_engine_dropped(active_model, &e.to_string());
                     }
-                }
-                transcript
-            })
+                })
+        };
+        let mut transcript = run(pcm, run_options.clone())?;
+        if echoes_vocabulary(&transcript.text, &run_options.vocabulary)
+            || echoes_prompt(&transcript.text, given_prompt(run_options))
+        {
+            // Room noise read back as the list, or someone saying only custom
+            // words ("Claude Handy Groq"): once more without them tells which.
+            info!("The model returned the custom words; retrying once without them");
+            transcript.text.clear();
+            if let Some(r) = self
+                .asr_report
+                .lock()
+                .unwrap_or_else(|e| e.into_inner())
+                .as_mut()
+            {
+                r.echo_dropped = true;
+            }
+            if let Some(pcm) = spare {
+                transcript = run(pcm, without_prompts(run_options))?;
+            }
+        }
+        Ok(transcript)
     }
 }
 
@@ -1855,6 +1864,17 @@ fn apply_asr_context(options: &mut RunOptions, ctx: &AsrContext) {
     }
 }
 
+/// The same run with no custom words and no prompt in either slot.
+fn without_prompts(options: &RunOptions) -> RunOptions {
+    let mut bare = options.clone();
+    bare.vocabulary.clear();
+    bare.prompt = None;
+    if let Some(transcribe_cpp::RunExtension::Whisper(w)) = &mut bare.family {
+        w.initial_prompt = None;
+    }
+    bare
+}
+
 /// The prompt read back instead of speech: three words or more, recited in
 /// the prompt's order.
 fn echoes_prompt(text: &str, prompt: Option<&str>) -> bool {
@@ -1870,8 +1890,18 @@ fn echoes_prompt(text: &str, prompt: Option<&str>) -> bool {
     // A run of the prompt's words in order: the prompt holds the text before
     // the cursor, so a real dictation often shares its common words.
     let said = words(text);
+    let run = format!(" {} ", said.join(" "));
+    let contains = |s: &str| format!(" {} ", words(s).join(" ")).contains(&run);
+    // Inside one item (a branch name, a phrase before the cursor) it's speech:
+    // an echo recites several items of the list.
+    // A period splits items only between sentences: "fix.lesson.retries" is one.
+    let items = prompt.replace(". ", "\n");
     said.len() >= 3
-        && format!(" {} ", words(prompt).join(" ")).contains(&format!(" {} ", said.join(" ")))
+        && contains(prompt)
+        && !items
+            .trim_end_matches('.')
+            .split([',', ';', ':', '«', '»', '\n'])
+            .any(contains)
 }
 
 /// The prompt text a run was given, in either slot.
@@ -2302,6 +2332,27 @@ mod tests {
     }
 
     #[test]
+    fn the_echo_retry_runs_without_any_prompt() {
+        use crate::asr_context::{AsrContext, AsrPrompt};
+        for prompt in [
+            AsrPrompt::Context("Vocabulaire : log.".into()),
+            AsrPrompt::Initial("Vocabulaire : log.".into()),
+        ] {
+            let mut o = RunOptions::default();
+            apply_asr_context(
+                &mut o,
+                &AsrContext {
+                    vocabulary: vec!["log".into()],
+                    prompt,
+                },
+            );
+            let bare = without_prompts(&o);
+            assert!(bare.vocabulary.is_empty());
+            assert_eq!(given_prompt(&bare), None);
+        }
+    }
+
+    #[test]
     fn a_recited_prompt_is_not_a_transcript() {
         let p = "Vocabulaire : log, Claude, Handy. Expressions : « de manière claire ».";
         assert!(echoes_prompt("Vocabulaire : log, Claude, Handy.", Some(p)));
@@ -2313,9 +2364,15 @@ mod tests {
         // Common words also found in the text before the cursor are speech.
         let p = "Texte : je pense que tu es d'accord, je suis là. Vocabulaire : log.";
         assert!(!echoes_prompt("Je suis d'accord.", Some(p)));
-        // Known limit: saying again, word for word, a run of the text before
-        // the cursor reads as an echo and is dropped.
-        assert!(echoes_prompt("je pense que tu es d'accord", Some(p)));
+        // Saying again a run of one item (a phrase of the text before the
+        // cursor, a branch name) is speech: an echo recites several items.
+        assert!(!echoes_prompt("je pense que tu es d'accord", Some(p)));
+        let p = "Vocabulaire : fix/lesson-retries, Claude, Handy.";
+        assert!(!echoes_prompt("fix lesson retries", Some(p)));
+        assert!(echoes_prompt("fix lesson retries Claude Handy", Some(p)));
+        // A dotted term is one item too.
+        let p = "Vocabulaire : fix.lesson.retries, Claude.";
+        assert!(!echoes_prompt("fix lesson retries", Some(p)));
         assert!(!echoes_prompt("Vocabulaire log Claude", None));
     }
 

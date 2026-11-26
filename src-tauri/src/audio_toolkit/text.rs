@@ -88,6 +88,9 @@ fn find_best_match<'a>(
 
     let mut best_match: Option<&String> = None;
     let mut best_score = f64::MAX;
+    // A real word ("Steven") only sounding like a custom one ("Stefan") is
+    // what was said: it gets no phonetic boost, only a close spelling.
+    let common = crate::lexicon::is_common(candidate);
 
     for custom_word_key in custom_word_match_keys {
         // Skip if lengths are too different (optimization + prevents over-matching)
@@ -112,7 +115,10 @@ fn find_best_match<'a>(
 
         // Soundex is an English/ASCII phonetic algorithm. Numeric terms can
         // still use edit distance, but must not receive a phonetic boost.
-        let phonetic_match = supports_soundex(candidate)
+        // The boost needs a close spelling too: "Stivon" isn't "Stefan".
+        let phonetic_match = !common
+            && levenshtein_score <= 1.0 / 3.0
+            && supports_soundex(candidate)
             && supports_soundex(&custom_word_key.key)
             && soundex(candidate, &custom_word_key.key);
 
@@ -347,8 +353,9 @@ fn collapse_stutters(text: &str) -> String {
                 count += 1;
             }
 
-            // If 3+ repetitions, collapse to single instance
-            if count >= 3 {
+            // 4+ repetitions: a stutter or a model loop. Three is emphasis
+            // ("non non non", "très très très bien").
+            if count >= 4 {
                 result.push(word);
                 i += count;
             } else {
@@ -391,6 +398,14 @@ fn push_restoring_capital(kept: &mut String, segment: &str, capital_owed: &mut b
 /// Deletes every match of one filler pattern. A capitalized filler that opened
 /// a sentence hands its capital to the word that takes its place, so
 /// "Um, so I think" becomes "So I think" rather than "so I think".
+/// What follows a period ends the text or opens a new sentence.
+fn ends_sentence(rest: &str) -> bool {
+    rest.trim_start()
+        .chars()
+        .next()
+        .map_or(true, char::is_uppercase)
+}
+
 fn remove_filler_matches(text: &str, pattern: &Regex) -> String {
     let mut kept = String::with_capacity(text.len());
     let mut resume = 0;
@@ -401,6 +416,17 @@ fn remove_filler_matches(text: &str, pattern: &Regex) -> String {
         let capitalized = filler.as_str().starts_with(char::is_uppercase);
         capital_owed |= capitalized && opens_sentence(&kept);
         resume = filler.end();
+        // "C'est prêt euh." keeps its period: it ended the sentence.
+        if filler.as_str().ends_with('.') && ends_sentence(&text[resume..]) {
+            let end = kept.trim_end().len();
+            kept.truncate(end);
+            if kept.ends_with([',', ';', ':']) {
+                kept.pop();
+            }
+            if !kept.is_empty() && !kept.ends_with(['.', '!', '?']) {
+                kept.push('.');
+            }
+        }
     }
     push_restoring_capital(&mut kept, &text[resume..], &mut capital_owed);
 
@@ -494,6 +520,25 @@ mod tests {
         let language = OutputLanguageEvidence::UserSelected(language.to_string());
         let filtered = remove_filler_words(text, &language, custom_filler_words, true);
         normalize_transcription_output(&filtered)
+    }
+
+    #[test]
+    fn a_common_word_is_not_bent_into_a_custom_word() {
+        let words = vec!["Stefan".to_string()];
+        assert_eq!(
+            apply_custom_words("merci Steven", &words, 0.18),
+            "merci Steven"
+        );
+        // A real mishearing still gets corrected.
+        assert_eq!(
+            apply_custom_words("merci Stefhan", &words, 0.18),
+            "merci Stefan"
+        );
+        // Same Soundex, half the letters wrong: not the same name.
+        assert_eq!(
+            apply_custom_words("merci Stivon", &words, 0.18),
+            "merci Stivon"
+        );
     }
 
     #[test]
@@ -629,6 +674,26 @@ mod tests {
         let text = "No NO no NO no";
         let result = filter_transcription_output(text, "en", &None);
         assert_eq!(result, "No");
+    }
+
+    #[test]
+    fn three_repetitions_are_emphasis_not_a_stutter() {
+        assert_eq!(
+            filter_transcription_output("non non non, très très très bien", "fr", &None),
+            "non non non, très très très bien"
+        );
+    }
+
+    #[test]
+    fn a_filler_keeps_the_final_period() {
+        assert_eq!(
+            filter_transcription_output("C'est prêt euh.", "fr", &None),
+            "C'est prêt."
+        );
+        assert_eq!(
+            filter_transcription_output("C'est prêt, euh.", "fr", &None),
+            "C'est prêt."
+        );
     }
 
     #[test]

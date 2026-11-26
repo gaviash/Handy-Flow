@@ -77,21 +77,49 @@ fn empty_outcome(input_silent: bool) -> TranscriptionOutcome {
     }
 }
 
-/// Ends a dictation that has nothing to type. A microphone that sent only
-/// digital silence (muted, or the wrong default device) gets a notice, so it
-/// doesn't look like the model missed the speech (#1899).
+/// Why a dictation typed nothing, when the user should be told: a microphone
+/// that failed or sent only digital silence (#1899), or at least a second of
+/// speech that came out empty. A short tap (padded to 1.25 s) stays quiet.
+fn empty_notice(
+    input_silent: bool,
+    recorder_failed: bool,
+    sample_count: usize,
+) -> Option<NoticeCode> {
+    if recorder_failed {
+        Some(NoticeCode::MicrophoneLost)
+    } else if input_silent {
+        Some(NoticeCode::MicrophoneSilent)
+    } else if sample_count > crate::audio_toolkit::constants::WHISPER_SAMPLE_RATE as usize * 5 / 4 {
+        // Over the 1.25 s a short take is padded to: real speech.
+        Some(NoticeCode::NothingRecognized)
+    } else {
+        None
+    }
+}
+
+/// The notice after a successful paste: a skipped rewrite, a microphone that
+/// failed mid-take (only the start was typed), or a failed rewrite.
+fn typed_notice(
+    rewrite_skipped: Option<NoticeCode>,
+    recorder_failed: bool,
+    post_process_failed: bool,
+) -> Option<NoticeCode> {
+    rewrite_skipped
+        .or(recorder_failed.then_some(NoticeCode::MicrophoneLost))
+        .or(post_process_failed.then_some(NoticeCode::PostProcessFailed))
+}
+
+/// Ends a dictation that has nothing to type, saying why when it isn't a tap.
 fn finish_without_text(
     app: &AppHandle,
     input_silent: bool,
+    recorder_failed: bool,
     sample_count: usize,
     stop_time: Instant,
 ) {
-    if input_silent {
-        warn!("The microphone sent only digital silence; nothing was transcribed");
-        notices::raise(
-            app,
-            Notice::new(NoticeCode::MicrophoneSilent, NoticeSource::Dictation),
-        );
+    if let Some(code) = empty_notice(input_silent, recorder_failed, sample_count) {
+        warn!("Nothing was typed: {code:?}");
+        notices::raise(app, Notice::new(code, NoticeSource::Dictation));
     } else {
         utils::hide_recording_overlay(app);
     }
@@ -105,6 +133,15 @@ const CANCELLATION_POLL_INTERVAL: Duration = Duration::from_millis(25);
 /// client only bounds connecting, so an endpoint that accepts the request and
 /// never answers would otherwise hold the dictation until a proxy gives up.
 const POST_PROCESS_TIMEOUT: Duration = Duration::from_secs(60);
+
+/// The rewrite's whole budget: the setting, or more for a long dictation
+/// (7 s + 60 ms a word), so a 45 s dictation isn't pasted raw at 8 s.
+fn rewrite_timeout(setting_secs: u64, transcription: &str) -> Duration {
+    let words = transcription.split_whitespace().count() as u64;
+    Duration::from_secs(setting_secs.max(1))
+        .max(Duration::from_millis(7_000 + 60 * words))
+        .min(POST_PROCESS_TIMEOUT)
+}
 
 /// Bumped per recording session, so a late paste from an earlier session
 /// doesn't reset the tray or hide the overlay of a newer one.
@@ -234,13 +271,16 @@ async fn ask_fallback(
     system: &str,
 ) -> Option<Result<Option<String>, String>> {
     let (provider, key, model, reasoning) = feature_target(settings, Feature::RewriteFallback)?;
+    // The same model as the main one (a common setup): one more try still
+    // beats pasting raw after an empty reply, a 5xx or a dropped connection.
     if provider.id == failed_id && model == failed_model {
-        return None;
+        warn!("Main provider '{failed_id}' failed; trying the same model once more");
+    } else {
+        warn!(
+            "Main provider '{failed_id}' failed; asking fallback '{}'",
+            provider.id
+        );
     }
-    warn!(
-        "Main provider '{failed_id}' failed; asking fallback '{}'",
-        provider.id
-    );
     Some(
         crate::llm_client::send_chat_completion_with_schema(
             &provider,
@@ -256,9 +296,28 @@ async fn ask_fallback(
 }
 
 /// The selection a transformation may replace, or the reason it can't (F121).
+fn selection_allowed(capture: &crate::context::Capture) -> bool {
+    !capture.sensitive && !capture.excluded && !capture.terminal
+}
+
+fn selection_notice(capture: &crate::context::Capture) -> NoticeCode {
+    if capture.sensitive || capture.excluded {
+        NoticeCode::PrivacyRewriteSkipped
+    } else {
+        NoticeCode::SelectionUnavailable
+    }
+}
+
+/// Ctrl+C is the fallback for fields UI Automation can't read. When it sees
+/// the caret and no selection, nothing is selected: Ctrl+C would interrupt a
+/// terminal's command or copy the whole line in an editor.
+fn may_copy_selection(field: Option<&crate::context::Field>) -> bool {
+    field.map_or(true, |f| !f.caret_known)
+}
+
 fn transformable_selection(app: &AppHandle, capture: &crate::context::Capture) -> Option<String> {
     // Ctrl+C would interrupt a terminal's running command.
-    if capture.sensitive || capture.excluded || capture.terminal {
+    if !selection_allowed(capture) {
         return None;
     }
     let selection = capture
@@ -266,8 +325,12 @@ fn transformable_selection(app: &AppHandle, capture: &crate::context::Capture) -
         .as_ref()
         .map(|f| f.selection.clone())
         .filter(|s| !s.trim().is_empty())
-        // Google Docs, Word, VS Code's editor: UI Automation sees no selection.
-        .or_else(|| crate::clipboard::copy_selection(app))?;
+        // Google Docs, Word: UI Automation can't see the selection.
+        .or_else(|| {
+            may_copy_selection(capture.field.as_ref())
+                .then(|| crate::clipboard::copy_selection(app))
+                .flatten()
+        })?;
     (selection.chars().count() <= crate::context::SELECTION_MAX).then_some(selection)
 }
 
@@ -297,7 +360,7 @@ impl ShortcutAction for TransformAction {
             let Some(selection) = transformable_selection(&app, &capture) else {
                 notices::raise(
                     &app,
-                    Notice::new(NoticeCode::SelectionUnavailable, NoticeSource::Dictation),
+                    Notice::new(selection_notice(&capture), NoticeSource::Dictation),
                 );
                 return;
             };
@@ -327,16 +390,18 @@ impl ShortcutAction for TransformAction {
             ));
             match result {
                 // Pasting over the selection replaces it; the app's undo reverts it.
-                Some(text) => match utils::paste(text, app.clone()) {
-                    Ok(_) => utils::hide_recording_overlay(&app),
-                    Err(e) => {
+                Some(text) => {
+                    let result = utils::paste(text, app.clone());
+                    if let Err(e) = &result {
                         error!("Failed to paste the transformation: {e}");
-                        notices::raise(
-                            &app,
-                            Notice::new(NoticeCode::PasteFailed, NoticeSource::Dictation),
-                        );
                     }
-                },
+                    match transform_paste_notice(&result) {
+                        Some(code) => {
+                            notices::raise(&app, Notice::new(code, NoticeSource::Dictation))
+                        }
+                        None => utils::hide_recording_overlay(&app),
+                    }
+                }
                 None => notices::raise(
                     &app,
                     Notice::new(NoticeCode::PostProcessFailed, NoticeSource::Dictation),
@@ -346,6 +411,16 @@ impl ShortcutAction for TransformAction {
     }
 
     fn stop(&self, _app: &AppHandle, _binding_id: &str, _shortcut_str: &str) {}
+}
+
+/// The notice for a transformation's paste: an admin window rejects the keys
+/// without an error, so `Blocked` is a failure too.
+fn transform_paste_notice(result: &Result<utils::PasteOutcome, String>) -> Option<NoticeCode> {
+    match result {
+        Ok(utils::PasteOutcome::Pasted) => None,
+        Ok(utils::PasteOutcome::Blocked) => Some(NoticeCode::PasteBlockedElevated),
+        Err(_) => Some(NoticeCode::PasteFailed),
+    }
 }
 
 /// Field name for structured output JSON schema
@@ -414,6 +489,31 @@ where
             return Some(result);
         }
     }
+}
+
+fn discard_cancelled_wav(path: &std::path::Path) {
+    if let Err(err) = std::fs::remove_file(path) {
+        if err.kind() != std::io::ErrorKind::NotFound {
+            error!(
+                "Failed to remove cancelled recording {}: {}",
+                path.display(),
+                err
+            );
+        }
+    }
+}
+
+async fn discard_cancelled_take(hm: &HistoryManager, id: Option<i64>, path: &std::path::Path) {
+    if let Some(id) = id {
+        if let Err(err) = hm.delete_entry(id).await {
+            error!("Failed to remove cancelled history entry: {}", err);
+        }
+    }
+    discard_cancelled_wav(path);
+}
+
+fn failed_instruction_for_history(sensitive: bool, text: &str) -> Option<String> {
+    (!sensitive).then(|| text.to_string())
 }
 
 fn should_use_streaming_overlay(style: OverlayStyle, is_streaming: bool) -> bool {
@@ -526,8 +626,9 @@ async fn post_process_transcription(
             reply
         };
         // Leave the fallback ~3 s of the overall post-processing timeout.
-        let budget =
-            Duration::from_secs(settings.post_process_timeout_secs.saturating_sub(3).max(2));
+        let budget = rewrite_timeout(settings.post_process_timeout_secs, transcription)
+            .saturating_sub(Duration::from_secs(3))
+            .max(Duration::from_secs(2));
         let mut reply = tokio::time::timeout(budget, primary)
             .await
             .unwrap_or_else(|_| Err("timed out".into()));
@@ -728,6 +829,17 @@ fn observable(sensitive: bool, excluded: bool, unchecked: bool) -> bool {
     !sensitive && !excluded && !unchecked
 }
 
+/// Only a known password field or an excluded app/site stops the rewrite:
+/// a check that couldn't be made (unknown site, unanswered password check)
+/// must not leave the dictation raw.
+fn rewrite_allowed(requested: bool, sensitive: bool, excluded: bool, snippet: bool) -> bool {
+    requested && !sensitive && !excluded && !snippet
+}
+
+fn rewrite_skip_notice(requested: bool, excluded: bool, snippet: bool) -> Option<NoticeCode> {
+    (requested && !snippet && excluded).then_some(NoticeCode::PrivacyRewriteSkipped)
+}
+
 fn learned_fallback(rewrote: bool, instruct: bool, snippet: bool, private: bool) -> bool {
     !rewrote && !instruct && !snippet && !private
 }
@@ -755,8 +867,7 @@ pub(crate) async fn process_transcription_output(
 
     if post_process {
         // A reply that's blank once cleaned is no better than none.
-        let timeout = Duration::from_secs(settings.post_process_timeout_secs.max(1))
-            .min(POST_PROCESS_TIMEOUT);
+        let timeout = rewrite_timeout(settings.post_process_timeout_secs, &final_text);
         let outcome = match tokio::time::timeout(
             timeout,
             post_process_transcription(&settings, &final_text, context, report),
@@ -1037,7 +1148,7 @@ impl ShortcutAction for TranscribeAction {
             );
             let _ = sensitive_tx.send(capture.sensitive);
             // Windows: a password check that didn't happen counts as private.
-            let unchecked = cfg!(target_os = "windows") && !capture.password_checked;
+            let unchecked = capture.unchecked();
             let _ = private_tx.send(capture.sensitive || capture.excluded || unchecked);
             let screen = (!capture.sensitive && !capture.excluded && !unchecked).then(|| {
                 let before = capture
@@ -1105,6 +1216,7 @@ impl ShortcutAction for TranscribeAction {
                 // Read now: by the time transcribing ends, another take may
                 // have replaced it.
                 let input_silent = rm.last_input_silent();
+                let recorder_failed = rm.last_recorder_failed();
                 debug!(
                     "Recording stopped and samples retrieved in {:?}, sample count: {}",
                     stop_recording_time.elapsed(),
@@ -1124,11 +1236,15 @@ impl ShortcutAction for TranscribeAction {
                     // Tear down any streaming worker so its channel doesn't leak
                     // and block the next start_stream.
                     tm.cancel_stream();
-                    finish_without_text(&ah, input_silent, 0, stop_time);
+                    finish_without_text(&ah, input_silent, recorder_failed, 0, stop_time);
                 } else {
                     // Save WAV concurrently with transcription
                     let sample_count = samples.len();
-                    let file_name = format!("handy-{}.wav", chrono::Utc::now().timestamp());
+                    let file_name = format!(
+                        "handy-{}-{}.wav",
+                        chrono::Utc::now().timestamp_micros(),
+                        RECORDING_SESSION.load(Ordering::SeqCst)
+                    );
                     let wav_path = hm.recordings_dir().join(&file_name);
                     let wav_path_for_verify = wav_path.clone();
                     let samples_for_wav = samples.clone();
@@ -1282,6 +1398,7 @@ impl ShortcutAction for TranscribeAction {
 
                     if rm.was_cancelled_since(cancel_generation) {
                         debug!("Transcription operation cancelled before output handling");
+                        discard_cancelled_wav(&wav_path_for_verify);
                         utils::hide_recording_overlay(&ah);
                         set_tray_state(&ah, TrayIconState::Idle);
                         return;
@@ -1299,11 +1416,17 @@ impl ShortcutAction for TranscribeAction {
                             );
 
                             let capture = capture_task.await.unwrap_or_default();
+                            if rm.was_cancelled_since(cancel_generation) {
+                                discard_cancelled_wav(&wav_path_for_verify);
+                                utils::hide_recording_overlay(&ah);
+                                set_tray_state(&ah, TrayIconState::Idle);
+                                return;
+                            }
                             // F79: a password field gets the raw transcript, nothing sent or kept.
                             let sensitive = capture.sensitive;
                             let excluded = capture.excluded;
                             // Windows: a password check that didn't happen counts as private.
-                            let unchecked = cfg!(windows) && !capture.password_checked;
+                            let unchecked = capture.unchecked();
                             let (field, terminal) = (capture.field.clone(), capture.terminal);
                             let (screen_names, content) = (capture.names.clone(), capture.content);
                             let ctx_settings = get_settings(&ah);
@@ -1316,7 +1439,14 @@ impl ShortcutAction for TranscribeAction {
                                     )
                                 })
                                 .flatten();
-                            let post_process = post_process && !sensitive && snippet.is_none();
+                            let rewrite_skipped =
+                                rewrite_skip_notice(post_process, excluded, snippet.is_some());
+                            let post_process = rewrite_allowed(
+                                post_process,
+                                sensitive,
+                                excluded,
+                                snippet.is_some(),
+                            );
                             // Handy Adaptive: the rewrite's context, as the user allows it.
                             let llm_context = crate::context::enriched_context(
                                 &ah,
@@ -1351,7 +1481,7 @@ impl ShortcutAction for TranscribeAction {
                                     } else {
                                         crate::context::ReportKind::Dictation
                                     },
-                                    capture: Some(capture),
+                                    capture: Some(capture.clone()),
                                     asr: asr_report,
                                     ..Default::default()
                                 });
@@ -1375,20 +1505,35 @@ impl ShortcutAction for TranscribeAction {
                             // F123: a spoken instruction transforms the selection; nothing
                             // else is pasted, and the result is not joined or observed.
                             let (field, instruct_result) = if instruct {
-                                let Some(selection) = transformable_selection(
-                                    &ah,
-                                    &crate::context::Capture {
-                                        sensitive,
-                                        excluded,
-                                        terminal,
-                                        field: field.clone(),
-                                        ..Default::default()
-                                    },
-                                ) else {
+                                let Some(selection) = transformable_selection(&ah, &capture) else {
+                                    if rm.was_cancelled_since(cancel_generation) {
+                                        discard_cancelled_wav(&wav_path_for_verify);
+                                        utils::hide_recording_overlay(&ah);
+                                        set_tray_state(&ah, TrayIconState::Idle);
+                                        return;
+                                    }
+                                    if let Some(text) =
+                                        failed_instruction_for_history(sensitive, &transcription)
+                                    {
+                                        if let Err(err) = hm.save_entry(
+                                            file_name,
+                                            text,
+                                            post_process,
+                                            None,
+                                            None,
+                                            language,
+                                            excluded || unchecked,
+                                        ) {
+                                            error!(
+                                                "Failed to save instruction to history: {}",
+                                                err
+                                            );
+                                        }
+                                    }
                                     notices::raise(
                                         &ah,
                                         Notice::new(
-                                            NoticeCode::SelectionUnavailable,
+                                            selection_notice(&capture),
                                             NoticeSource::Dictation,
                                         ),
                                     );
@@ -1396,21 +1541,48 @@ impl ShortcutAction for TranscribeAction {
                                     return;
                                 };
                                 show_processing_overlay(&ah);
+                                // Escape stops the wait at once, so the next
+                                // dictation isn't queued behind a slow model.
                                 (
                                     None,
-                                    transform_text(
-                                        &ctx_settings,
-                                        &transcription,
-                                        &selection,
-                                        transform_context.as_ref(),
-                                        Some(report_id),
+                                    complete_unless_cancelled(
+                                        transform_text(
+                                            &ctx_settings,
+                                            &transcription,
+                                            &selection,
+                                            transform_context.as_ref(),
+                                            Some(report_id),
+                                        ),
+                                        || rm.was_cancelled_since(cancel_generation),
                                     )
-                                    .await,
+                                    .await
+                                    .flatten(),
                                 )
                             } else {
                                 (field, None)
                             };
+                            if rm.was_cancelled_since(cancel_generation) {
+                                discard_cancelled_wav(&wav_path_for_verify);
+                                utils::hide_recording_overlay(&ah);
+                                set_tray_state(&ah, TrayIconState::Idle);
+                                return;
+                            }
                             if instruct && instruct_result.is_none() {
+                                if let Some(text) =
+                                    failed_instruction_for_history(sensitive, &transcription)
+                                {
+                                    if let Err(err) = hm.save_entry(
+                                        file_name,
+                                        text,
+                                        post_process,
+                                        None,
+                                        None,
+                                        language,
+                                        excluded || unchecked,
+                                    ) {
+                                        error!("Failed to save instruction to history: {}", err);
+                                    }
+                                }
                                 notices::raise(
                                     &ah,
                                     Notice::new(
@@ -1438,6 +1610,7 @@ impl ShortcutAction for TranscribeAction {
                             .await
                             else {
                                 debug!("Transcription operation cancelled during output handling");
+                                discard_cancelled_wav(&wav_path_for_verify);
                                 utils::hide_recording_overlay(&ah);
                                 set_tray_state(&ah, TrayIconState::Idle);
                                 return;
@@ -1445,6 +1618,7 @@ impl ShortcutAction for TranscribeAction {
 
                             if rm.was_cancelled_since(cancel_generation) {
                                 debug!("Transcription operation cancelled before paste");
+                                discard_cancelled_wav(&wav_path_for_verify);
                                 utils::hide_recording_overlay(&ah);
                                 set_tray_state(&ah, TrayIconState::Idle);
                                 return;
@@ -1486,6 +1660,7 @@ impl ShortcutAction for TranscribeAction {
                                     processed.post_processed_text.clone(),
                                     processed.post_process_prompt.clone(),
                                     language,
+                                    excluded || unchecked,
                                 ) {
                                     Ok(entry) if !app_label.is_empty() => {
                                         history_id = Some(entry.id);
@@ -1517,10 +1692,17 @@ impl ShortcutAction for TranscribeAction {
                             .await
                             else {
                                 debug!("Transcription operation cancelled during hook");
+                                discard_cancelled_take(&hm, history_id, &wav_path_for_verify).await;
                                 utils::hide_recording_overlay(&ah);
                                 set_tray_state(&ah, TrayIconState::Idle);
                                 return;
                             };
+                            if rm.was_cancelled_since(cancel_generation) {
+                                discard_cancelled_take(&hm, history_id, &wav_path_for_verify).await;
+                                utils::hide_recording_overlay(&ah);
+                                set_tray_state(&ah, TrayIconState::Idle);
+                                return;
+                            }
                             // EX-1: fit the text to the cursor it goes to; a private
                             // field gets it as produced.
                             let known_names: Vec<String> = screen_names
@@ -1547,12 +1729,20 @@ impl ShortcutAction for TranscribeAction {
                                 (joined.text, joined.spacing_decided);
 
                             if final_text.is_empty() {
-                                finish_without_text(&ah, input_silent, sample_count, stop_time);
+                                finish_without_text(
+                                    &ah,
+                                    input_silent,
+                                    recorder_failed,
+                                    sample_count,
+                                    stop_time,
+                                );
                             } else {
                                 let ah_clone = ah.clone();
                                 let paste_time = Instant::now();
                                 let post_process_failed = processed.post_process_failed;
                                 let rm_for_paste = Arc::clone(&rm);
+                                let hm_for_paste = Arc::clone(&hm);
+                                let wav_path_for_paste = wav_path_for_verify.clone();
                                 // F80: the pasted text is watched for the user's corrections.
                                 let observed = field
                                     .clone()
@@ -1572,6 +1762,11 @@ impl ShortcutAction for TranscribeAction {
                                             debug!(
                                                 "Transcription operation cancelled before paste"
                                             );
+                                            tauri::async_runtime::block_on(discard_cancelled_take(
+                                                &hm_for_paste,
+                                                history_id,
+                                                &wav_path_for_paste,
+                                            ));
                                             utils::hide_recording_overlay(&ah_clone);
                                             set_tray_state(&ah_clone, TrayIconState::Idle);
                                             return;
@@ -1595,6 +1790,16 @@ impl ShortcutAction for TranscribeAction {
                                             }
                                             .map_err(Some)
                                         };
+                                        if rm_for_paste.was_cancelled_since(cancel_generation) {
+                                            tauri::async_runtime::block_on(discard_cancelled_take(
+                                                &hm_for_paste,
+                                                history_id,
+                                                &wav_path_for_paste,
+                                            ));
+                                            utils::hide_recording_overlay(&ah_clone);
+                                            set_tray_state(&ah_clone, TrayIconState::Idle);
+                                            return;
+                                        }
                                         let (outcome, notice) = match pasted {
                                             Err(None) => (
                                                 TranscriptionOutcome::Failed,
@@ -1628,11 +1833,13 @@ impl ShortcutAction for TranscribeAction {
                                                         NoticeSource::Dictation,
                                                     );
                                                 }
-                                                let notice = post_process_failed.then(|| {
-                                                    Notice::new(
-                                                        NoticeCode::PostProcessFailed,
-                                                        NoticeSource::Dictation,
-                                                    )
+                                                let notice = typed_notice(
+                                                    rewrite_skipped,
+                                                    recorder_failed,
+                                                    post_process_failed,
+                                                )
+                                                .map(|code| {
+                                                    Notice::new(code, NoticeSource::Dictation)
                                                 });
                                                 (TranscriptionOutcome::Typed, notice)
                                             }
@@ -1701,6 +1908,7 @@ impl ShortcutAction for TranscribeAction {
                                 debug!(
                                     "Transcription operation cancelled after transcription error"
                                 );
+                                discard_cancelled_wav(&wav_path_for_verify);
                                 utils::hide_recording_overlay(&ah);
                                 set_tray_state(&ah, TrayIconState::Idle);
                                 return;
@@ -1724,6 +1932,7 @@ impl ShortcutAction for TranscribeAction {
                                     None,
                                     None,
                                     None,
+                                    true,
                                 ) {
                                     error!("Failed to save failed history entry: {}", save_err);
                                 }
@@ -1843,6 +2052,109 @@ pub static ACTION_MAP: Lazy<HashMap<String, Arc<dyn ShortcutAction>>> = Lazy::ne
 mod tests {
 
     #[test]
+    fn a_long_dictation_gets_a_longer_rewrite_budget() {
+        use std::time::Duration;
+        let words = |n: usize| vec!["mot"; n].join(" ");
+        // Short: the setting.
+        assert_eq!(
+            super::rewrite_timeout(8, &words(10)),
+            Duration::from_secs(8)
+        );
+        // 150 words (~45 s of speech): 7 s + 60 ms a word.
+        assert_eq!(
+            super::rewrite_timeout(8, &words(150)),
+            Duration::from_secs(16)
+        );
+        // A longer setting still wins; never past the hard cap.
+        assert_eq!(
+            super::rewrite_timeout(20, &words(150)),
+            Duration::from_secs(20)
+        );
+        assert_eq!(
+            super::rewrite_timeout(8, &words(5000)),
+            Duration::from_secs(60)
+        );
+    }
+
+    #[test]
+    fn ctrl_c_only_when_ui_automation_cannot_see_the_selection() {
+        use crate::context::Field;
+        let field = |caret_known| Field {
+            caret_known,
+            ..Default::default()
+        };
+        // No field, or a field without a known caret (Google Docs): copy.
+        assert!(super::may_copy_selection(None));
+        assert!(super::may_copy_selection(Some(&field(false))));
+        // UI Automation sees the caret and no selection: nothing is selected;
+        // Ctrl+C would interrupt a terminal or copy the whole line.
+        assert!(!super::may_copy_selection(Some(&field(true))));
+    }
+
+    #[test]
+    fn a_blocked_transformation_paste_is_reported() {
+        use crate::notices::NoticeCode;
+        use crate::utils::PasteOutcome;
+        assert_eq!(
+            super::transform_paste_notice(&Ok(PasteOutcome::Pasted)),
+            None
+        );
+        assert_eq!(
+            super::transform_paste_notice(&Ok(PasteOutcome::Blocked)),
+            Some(NoticeCode::PasteBlockedElevated)
+        );
+        assert_eq!(
+            super::transform_paste_notice(&Err("x".into())),
+            Some(NoticeCode::PasteFailed)
+        );
+    }
+
+    #[test]
+    fn a_partial_take_after_a_microphone_failure_says_so() {
+        use crate::notices::NoticeCode::*;
+        assert_eq!(super::typed_notice(None, true, false), Some(MicrophoneLost));
+        assert_eq!(super::typed_notice(None, true, true), Some(MicrophoneLost));
+        assert_eq!(
+            super::typed_notice(None, false, true),
+            Some(PostProcessFailed)
+        );
+        assert_eq!(super::typed_notice(None, false, false), None);
+    }
+
+    #[test]
+    fn an_empty_result_always_says_why() {
+        use crate::notices::NoticeCode::*;
+        let second = crate::audio_toolkit::constants::WHISPER_SAMPLE_RATE as usize;
+        assert_eq!(super::empty_notice(false, true, 0), Some(MicrophoneLost));
+        assert_eq!(super::empty_notice(true, true, 0), Some(MicrophoneLost));
+        assert_eq!(super::empty_notice(true, false, 0), Some(MicrophoneSilent));
+        assert_eq!(
+            super::empty_notice(false, false, 2 * second),
+            Some(NothingRecognized)
+        );
+        // A tap or a cough: no notice, even once padded to 1.25 s.
+        assert_eq!(super::empty_notice(false, false, second / 2), None);
+        assert_eq!(super::empty_notice(false, false, second * 5 / 4), None);
+    }
+
+    #[test]
+    fn lot_1_3_cancelled_wav_is_removed() {
+        let path = std::env::temp_dir().join(format!("handy-cancel-{}.wav", std::process::id()));
+        std::fs::write(&path, b"test").unwrap();
+        super::discard_cancelled_wav(&path);
+        assert!(!path.exists());
+    }
+
+    #[test]
+    fn lot_1_3_failed_instruction_is_kept_in_history() {
+        assert_eq!(
+            super::failed_instruction_for_history(false, "ma consigne"),
+            Some("ma consigne".to_string())
+        );
+        assert_eq!(super::failed_instruction_for_history(true, "secret"), None);
+    }
+
+    #[test]
     fn every_transformation_slot_has_an_action() {
         for i in 1..=crate::adaptive::MAX_TRANSFORMS {
             assert!(
@@ -1865,6 +2177,32 @@ mod tests {
         assert!(!observable(false, true, false));
         // The password check didn't answer: private too (spec R1).
         assert!(!observable(false, false, true));
+    }
+
+    #[test]
+    fn rewrite_is_skipped_only_for_password_or_excluded_targets() {
+        assert!(!super::rewrite_allowed(true, false, true, false));
+        assert!(!super::rewrite_allowed(true, true, false, false));
+        // Unknown site or unanswered password check: the rewrite still runs.
+        assert!(super::rewrite_allowed(true, false, false, false));
+        assert_eq!(
+            super::rewrite_skip_notice(true, true, false),
+            Some(super::NoticeCode::PrivacyRewriteSkipped)
+        );
+        assert_eq!(super::rewrite_skip_notice(true, false, false), None);
+        assert_eq!(super::rewrite_skip_notice(false, true, false), None);
+    }
+
+    #[test]
+    fn transformation_runs_when_checks_could_not_be_made() {
+        let mut capture = crate::context::Capture::default();
+        assert!(super::selection_allowed(&capture));
+        capture.excluded = true;
+        assert!(!super::selection_allowed(&capture));
+        assert_eq!(
+            super::selection_notice(&capture),
+            super::NoticeCode::PrivacyRewriteSkipped
+        );
     }
 
     #[test]
