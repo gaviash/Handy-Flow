@@ -36,6 +36,7 @@ pub enum NoticeSource {
     Dictation,
     File,
     Model,
+    Learning,
 }
 
 /// The frontend maps each code to its text in `src/lib/notices.ts`.
@@ -46,12 +47,19 @@ pub enum NoticeCode {
     PasteBlockedElevated,
     /// Handy Adaptive (F33): the destination is an excluded app or site.
     PasteSkippedExcluded,
+    PrivacyRewriteSkipped,
     /// Handy Adaptive (F121–F123): no editable selection to transform.
     SelectionUnavailable,
     /// Handy Flow (F95): words learned from the user's corrections.
     WordsLearned,
+    LearningMemoryFailed,
+    LearningSaveFailed,
     NoMicrophone,
     MicrophoneSilent,
+    /// The microphone failed during the recording (unplugged, driver stall).
+    MicrophoneLost,
+    /// Speech was recorded but no text came out.
+    NothingRecognized,
     MicPermissionDenied,
     RecordingFailed,
     ModelLoadFailed,
@@ -69,15 +77,19 @@ impl NoticeCode {
             | Self::PasteBlockedElevated
             | Self::NoMicrophone
             | Self::MicrophoneSilent
+            | Self::MicrophoneLost
             | Self::MicPermissionDenied
             | Self::RecordingFailed
             | Self::ModelLoadFailed
             | Self::NoModelSelected
             | Self::FileTranscriptionFailed => NoticeLevel::Error,
+            Self::LearningMemoryFailed | Self::LearningSaveFailed => NoticeLevel::Error,
             Self::PostProcessFailed
             | Self::FilePostProcessFailed
             | Self::PasteSkippedExcluded
-            | Self::SelectionUnavailable => NoticeLevel::Warning,
+            | Self::PrivacyRewriteSkipped
+            | Self::SelectionUnavailable
+            | Self::NothingRecognized => NoticeLevel::Warning,
             Self::WordsLearned => NoticeLevel::Info,
         }
     }
@@ -89,10 +101,15 @@ impl NoticeCode {
             Self::PasteFailed => &strings.paste_failed_title,
             Self::PasteBlockedElevated => &strings.paste_blocked_elevated_title,
             Self::PasteSkippedExcluded => &strings.paste_skipped_excluded_title,
+            Self::PrivacyRewriteSkipped => &strings.privacy_rewrite_skipped_title,
             Self::SelectionUnavailable => &strings.selection_unavailable_title,
             Self::WordsLearned => &strings.words_learned_title,
+            Self::LearningMemoryFailed => &strings.learning_memory_failed_title,
+            Self::LearningSaveFailed => &strings.learning_save_failed_title,
             Self::NoMicrophone => &strings.no_input_device_title,
             Self::MicrophoneSilent => &strings.microphone_silent_title,
+            Self::MicrophoneLost => &strings.microphone_lost_title,
+            Self::NothingRecognized => &strings.nothing_recognized_title,
             Self::MicPermissionDenied => &strings.mic_permission_denied_title,
             Self::RecordingFailed => &strings.recording_failed_title,
             Self::ModelLoadFailed => &strings.model_load_failed_title,
@@ -219,6 +236,13 @@ pub fn clear_matching(app: &AppHandle, source: NoticeSource, code: Option<Notice
     if cleared {
         tray::refresh_tray_icon(app);
     }
+}
+
+/// Whether `source` currently shows `code`.
+pub fn is_active(app: &AppHandle, source: NoticeSource, code: NoticeCode) -> bool {
+    let store = app.state::<NoticeStore>();
+    let active = store.lock();
+    active.iter().any(|n| n.source == source && n.code == code)
 }
 
 pub fn tray_headline(app: &AppHandle) -> Option<Notice> {

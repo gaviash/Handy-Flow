@@ -234,8 +234,19 @@ fn flush_pending() {
     }
     let sequence = *previous.sequence.lock().unwrap();
     let still_ours = unsafe { GetClipboardSequenceNumber() } == sequence;
+    let (report_failure, keep_transcript) =
+        super::settle_outcome(receipt, !still_ours, previous.preserve_transcript);
+    if report_failure {
+        crate::notices::raise_without_overlay(
+            &previous.app_handle,
+            crate::notices::Notice::new(
+                crate::notices::NoticeCode::PasteFailed,
+                crate::notices::NoticeSource::Dictation,
+            ),
+        );
+    }
     if still_ours {
-        unsafe { settle_clipboard(&previous) };
+        unsafe { settle_clipboard(&previous, keep_transcript) };
     }
 }
 
@@ -243,8 +254,8 @@ fn flush_pending() {
 /// restore the snapshot, or — for ClipboardHandling::CopyToClipboard — replace
 /// the concealed promise with plain transcript text, so clipboard history and
 /// managers record it and it survives this transaction's window going away.
-unsafe fn settle_clipboard(shared: &WinTxShared) {
-    if !shared.preserve_transcript {
+unsafe fn settle_clipboard(shared: &WinTxShared, keep_transcript: bool) {
+    if !keep_transcript {
         restore_snapshot(shared);
         return;
     }
@@ -471,9 +482,17 @@ fn on_timer(_hwnd: HWND, shared: &WinTxShared) {
         info!("[reliable-paste] settling: no read within timeout, restoring anyway");
     }
     // Handy Adaptive (F72/O5): the target never read the transcript, so the
-    // paste most likely failed; say so instead of failing silently. The text
-    // stays in history. Without overlay: a newer session may own it by now.
-    if !receipt && !ownership_lost {
+    // paste most likely failed; say so instead of failing silently, and leave
+    // the text on the clipboard. Without overlay: a newer session may own it.
+    // An admin-window notice already explains the failure better.
+    let (report_failure, keep_transcript) =
+        super::settle_outcome(receipt, ownership_lost, shared.preserve_transcript);
+    let elevated_explained = crate::notices::is_active(
+        &shared.app_handle,
+        crate::notices::NoticeSource::Dictation,
+        crate::notices::NoticeCode::PasteBlockedElevated,
+    );
+    if report_failure && !elevated_explained {
         crate::notices::raise_without_overlay(
             &shared.app_handle,
             crate::notices::Notice::new(
@@ -492,7 +511,7 @@ fn on_timer(_hwnd: HWND, shared: &WinTxShared) {
     let sequence = *shared.sequence.lock().unwrap();
     let still_ours = !ownership_lost && unsafe { GetClipboardSequenceNumber() } == sequence;
     if still_ours {
-        unsafe { settle_clipboard(shared) };
+        unsafe { settle_clipboard(shared, keep_transcript) };
     } else {
         info!("[reliable-paste] clipboard changed externally; leaving it untouched");
     }

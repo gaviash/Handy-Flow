@@ -24,6 +24,14 @@ const NOTICE_DISPLAY: Record<NoticeCode, NoticeDisplay> = {
   WordsLearned: {
     title: "errors.wordsLearnedTitle",
   },
+  LearningMemoryFailed: {
+    title: "errors.learningMemoryFailedTitle",
+    explanation: (t) => t("errors.learningMemoryFailed"),
+  },
+  LearningSaveFailed: {
+    title: "errors.learningSaveFailedTitle",
+    explanation: (t) => t("errors.learningSaveFailed"),
+  },
   SelectionUnavailable: {
     title: "errors.selectionUnavailableTitle",
     explanation: (t) => t("errors.selectionUnavailable"),
@@ -32,6 +40,10 @@ const NOTICE_DISPLAY: Record<NoticeCode, NoticeDisplay> = {
     title: "errors.pasteSkippedExcludedTitle",
     explanation: (t) => t("errors.pasteSkippedExcluded"),
   },
+  PrivacyRewriteSkipped: {
+    title: "errors.privacyRewriteSkippedTitle",
+    explanation: (t) => t("errors.privacyRewriteSkipped"),
+  },
   NoMicrophone: {
     title: "errors.noInputDeviceTitle",
     explanation: (t) => t("errors.noInputDevice"),
@@ -39,6 +51,14 @@ const NOTICE_DISPLAY: Record<NoticeCode, NoticeDisplay> = {
   MicrophoneSilent: {
     title: "errors.microphoneSilentTitle",
     explanation: (t) => t("errors.microphoneSilent"),
+  },
+  MicrophoneLost: {
+    title: "errors.microphoneLostTitle",
+    explanation: (t) => t("errors.microphoneLost"),
+  },
+  NothingRecognized: {
+    title: "errors.nothingRecognizedTitle",
+    explanation: (t) => t("errors.nothingRecognized"),
   },
   MicPermissionDenied: {
     title: "errors.micPermissionDeniedTitle",

@@ -252,6 +252,12 @@ pub struct Capture {
     pub page_chars: u32,
 }
 
+impl Capture {
+    pub fn unchecked(&self) -> bool {
+        cfg!(windows) && !self.password_checked
+    }
+}
+
 pub fn normalize_newlines(s: &str) -> String {
     s.replace("\r\n", "\n").replace('\r', "\n")
 }
@@ -1245,5 +1251,17 @@ mod tests {
         assert!(!ctx.window.contains("jean@exemple.fr"), "{}", ctx.window);
         assert!(ctx.window.contains("devis"));
         assert_eq!(ctx.site.as_deref(), Some("outlook.office.com"));
+    }
+
+    #[test]
+    fn browser_with_unreadable_host_keeps_its_llm_context() {
+        let capture = Capture {
+            process: "chrome".into(),
+            password_checked: true,
+            content: Some(Content::Other),
+            ..Default::default()
+        };
+        assert!(llm_context(&capture).is_some());
+        assert!(!capture.unchecked());
     }
 }

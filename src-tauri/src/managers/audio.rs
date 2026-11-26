@@ -513,6 +513,8 @@ pub struct AudioRecordingManager {
     cached_device: Arc<Mutex<Option<(String, String)>>>,
     /// The last recording was all-zero samples, not just audio without speech.
     last_input_silent: Arc<AtomicBool>,
+    /// Whether the microphone failed during the last recording.
+    last_recorder_failed: Arc<AtomicBool>,
 }
 
 impl AudioRecordingManager {
@@ -555,6 +557,7 @@ impl AudioRecordingManager {
             capture_generation: Arc::new(AtomicU64::new(0)),
             cached_device: Arc::new(Mutex::new(None)),
             last_input_silent: Arc::new(AtomicBool::new(false)),
+            last_recorder_failed: Arc::new(AtomicBool::new(false)),
         };
 
         // Always-on?  Open immediately.
@@ -959,6 +962,10 @@ impl AudioRecordingManager {
     fn collect_recording(&self, microphone: &OpenMicrophone) -> Vec<f32> {
         match microphone.recorder.stop() {
             Ok(stopped) => {
+                self.last_recorder_failed.store(
+                    matches!(stopped.end_reason, EndReason::RecorderFailed(_)),
+                    Ordering::Release,
+                );
                 match &stopped.end_reason {
                     EndReason::StopCalled => {}
                     EndReason::RecorderFailed(error) => {
@@ -985,6 +992,8 @@ impl AudioRecordingManager {
                 // The recording and its detector are lost with the sink.
                 error!("Failed to stop recording: {e}");
                 self.last_input_silent.store(false, Ordering::Release);
+                self.last_recorder_failed
+                    .store(e.kind() != ErrorKind::NotRecording, Ordering::Release);
                 if e.kind() != ErrorKind::NotRecording {
                     microphone.failed.store(true, Ordering::Release);
                 }
@@ -1237,6 +1246,10 @@ impl AudioRecordingManager {
         self.last_input_silent.load(Ordering::Acquire)
     }
 
+    pub fn last_recorder_failed(&self) -> bool {
+        self.last_recorder_failed.load(Ordering::Acquire)
+    }
+
     pub fn was_cancelled_since(&self, generation: u64) -> bool {
         self.cancel_generation.load(Ordering::Acquire) != generation
     }
@@ -1279,6 +1292,7 @@ impl AudioRecordingManager {
                     None => {
                         error!("Recorder not available");
                         self.last_input_silent.store(false, Ordering::Release);
+                        self.last_recorder_failed.store(true, Ordering::Release);
                         Vec::new()
                     }
                 };
@@ -1337,6 +1351,8 @@ impl AudioRecordingManager {
                 if let Some(microphone) = self.recorder.lock().unwrap().as_ref() {
                     let _ = self.collect_recording(microphone); // Discard the result
                 }
+                // An open stream (always-on or lazy close) wouldn't unmute.
+                self.remove_mute();
 
                 *self.is_recording.lock().unwrap() = false;
 

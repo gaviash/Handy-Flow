@@ -219,19 +219,38 @@ fn paste_via_clipboard(
         // Text takes priority so this path stays identical to the previous behavior;
         // an image is only restored when the clipboard held no text at all, which is
         // the case that used to silently wipe screenshots.
-        if let Some(clipboard_content) = saved_text {
-            let _ = write_text_to_clipboard(app_handle, &clipboard_content);
+        let restored = if let Some(clipboard_content) = saved_text {
+            with_retries(3, || {
+                write_text_to_clipboard(app_handle, &clipboard_content)
+            })
         } else if let Some(image) = saved_image {
             info!("Restoring image to clipboard");
-            let _ = clipboard.write_image(&image);
+            with_retries(3, || clipboard.write_image(&image))
         } else {
             // Nothing was there to begin with — don't leave the transcription behind.
-            let _ = clipboard.clear();
+            with_retries(3, || clipboard.clear())
+        };
+        // Never leave the dictated text (a password, maybe) behind.
+        if !restored {
+            log::error!("Couldn't restore the clipboard; clearing it instead");
+            if !with_retries(3, || clipboard.clear()) {
+                log::error!("Couldn't clear the clipboard either");
+            }
         }
         #[cfg(target_os = "linux")]
         if let Some(saved) = saved_primary {
             crate::primary_selection::restore(saved);
         }
+    })
+}
+
+/// Clipboard writes fail while another app holds it open: a few tries.
+fn with_retries<E>(tries: u32, mut f: impl FnMut() -> Result<(), E>) -> bool {
+    (0..tries).any(|i| {
+        if i > 0 {
+            std::thread::sleep(std::time::Duration::from_millis(50));
+        }
+        f().is_ok()
     })
 }
 
@@ -985,9 +1004,15 @@ pub fn paste_spaced(text: String, app_handle: AppHandle) -> Result<PasteOutcome,
 /// Handy Adaptive (F79): a password field's text never stays in the
 /// clipboard, whatever the clipboard setting.
 pub fn paste_secret(text: String, app_handle: AppHandle) -> Result<PasteOutcome, String> {
-    let mut settings = get_settings(&app_handle);
-    settings.clipboard_handling = ClipboardHandling::DontModify;
+    let settings = secret_settings(get_settings(&app_handle));
     paste_with(text, app_handle, settings)
+}
+
+fn secret_settings(mut settings: AppSettings) -> AppSettings {
+    settings.clipboard_handling = ClipboardHandling::DontModify;
+    // The receipt-based paste leaves an unread text on the clipboard.
+    settings.reliable_paste = false;
+    settings
 }
 
 fn paste_with(
@@ -1117,6 +1142,30 @@ fn paste_as_configured(
 
 #[cfg(test)]
 mod tests {
+    #[test]
+    fn a_busy_clipboard_is_retried_then_reported() {
+        let mut calls = 0;
+        assert!(super::with_retries(3, || {
+            calls += 1;
+            if calls < 3 {
+                Err(())
+            } else {
+                Ok(())
+            }
+        }));
+        assert!(!super::with_retries(3, || Err::<(), ()>(())));
+    }
+
+    #[test]
+    fn a_secret_never_takes_the_paste_that_can_leave_it_on_the_clipboard() {
+        let s = super::secret_settings(crate::settings::get_default_settings());
+        assert!(!s.reliable_paste);
+        assert_eq!(
+            s.clipboard_handling,
+            crate::settings::ClipboardHandling::DontModify
+        );
+    }
+
     use super::*;
     use std::cell::Cell;
 

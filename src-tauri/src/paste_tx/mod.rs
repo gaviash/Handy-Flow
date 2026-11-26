@@ -64,6 +64,18 @@ pub(crate) const RESTORE_TIMEOUT: Duration = Duration::from_secs(8);
 /// arrive, so restore quickly instead of waiting out the full timeout.
 pub(crate) const FAILED_INJECTION_TIMEOUT: Duration = Duration::from_millis(500);
 
+/// What a settling transaction does: (report the failed paste, leave the
+/// transcript on the clipboard). A paste the target never read leaves the
+/// text where Ctrl+V finds it instead of restoring the old clipboard.
+pub(crate) fn settle_outcome(
+    receipt: bool,
+    ownership_lost: bool,
+    preserve_transcript: bool,
+) -> (bool, bool) {
+    let unread = !receipt && !ownership_lost;
+    (unread, preserve_transcript || unread)
+}
+
 /// Shared, cross-thread record of one paste transaction.
 #[derive(Debug)]
 pub(crate) struct TxState {
@@ -215,6 +227,18 @@ pub(crate) fn try_reliable_paste(
 
 #[cfg(test)]
 mod tests {
+    use super::settle_outcome;
+
+    #[test]
+    fn an_unread_paste_leaves_the_transcript_and_says_so() {
+        // (report the failure, leave the transcript on the clipboard)
+        assert_eq!(settle_outcome(false, false, false), (true, true));
+        assert_eq!(settle_outcome(true, false, false), (false, false));
+        assert_eq!(settle_outcome(true, false, true), (false, true));
+        // Someone else took the clipboard: not ours to report or touch.
+        assert_eq!(settle_outcome(false, true, false), (false, false));
+    }
+
     use super::*;
 
     fn state_after_publish(published_ago: Duration) -> TxState {

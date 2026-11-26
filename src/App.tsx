@@ -183,11 +183,10 @@ function App() {
           // Undo exactly what was announced: a form, not its whole word.
           onClick: () =>
             payload.forEach((n) =>
-              n.kind === "word"
-                ? commands.deleteLearnedWord(n.term)
-                : n.kind === "form"
-                  ? commands.removeHeardForm(n.term, n.heard)
-                  : commands.deleteStyleRule(n.rule),
+              // A word activated by this correction keeps its older forms.
+              n.kind === "rule"
+                ? commands.deleteStyleRule(n.rule)
+                : commands.removeHeardForm(n.term, n.heard),
             ),
         },
       }),
