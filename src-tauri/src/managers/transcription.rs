@@ -242,8 +242,6 @@ impl Drop for StreamWorkerGuard {
     }
 }
 
-/// Frequent expressions and when they were computed.
-type ExpressionsCache = Arc<Mutex<Option<(Instant, Vec<String>)>>>;
 
 #[derive(Clone)]
 pub struct TranscriptionManager {
@@ -285,8 +283,6 @@ pub struct TranscriptionManager {
     /// Handy Adaptive (spec §7): the app and text before the cursor for the
     /// next run's ASR context, set by the dictation when the user allows it.
     asr_screen: Arc<Mutex<Option<AsrScreen>>>,
-    /// Frequent expressions, recomputed at most every 5 minutes.
-    asr_expressions: ExpressionsCache,
     /// The last run's model took ASR context and the setting allowed it.
     asr_capable: Arc<AtomicBool>,
     /// F114: what the speech model was given for the last transcription.
@@ -313,7 +309,6 @@ impl TranscriptionManager {
             job_active: Arc::new(AtomicBool::new(false)),
             language_detector: Arc::new(LanguageDetector::default()),
             asr_screen: Arc::new(Mutex::new(None)),
-            asr_expressions: Arc::new(Mutex::new(None)),
             asr_capable: Arc::new(AtomicBool::new(false)),
             asr_report: Arc::new(Mutex::new(None)),
         };
@@ -1182,9 +1177,6 @@ impl TranscriptionManager {
                 enabled: settings.asr_context.enabled,
                 vocabulary: setup.run_options.vocabulary.clone(),
                 prompt: given_prompt(&setup.run_options).map(str::to_string),
-                expressions: asr.expressions.clone(),
-                app: asr.app.clone(),
-                before: asr.before.clone(),
                 ..Default::default()
             });
         setup
@@ -1219,9 +1211,6 @@ impl TranscriptionManager {
             enabled: settings.asr_context.enabled,
             vocabulary: Vec::new(),
             prompt: prompt.clone(),
-            expressions: src.expressions,
-            app: src.app,
-            before: src.before,
             ..Default::default()
         };
         (prompt, report)
@@ -1299,7 +1288,10 @@ impl TranscriptionManager {
             .unwrap_or_else(|e| e.into_inner())
             .take();
         let mut src = AsrSources {
-            custom_words: settings.custom_words.clone(),
+            custom_words: crate::asr_context::user_words(
+                &settings.user_name,
+                &settings.custom_words,
+            ),
             language,
             ..Default::default()
         };
@@ -1307,34 +1299,10 @@ impl TranscriptionManager {
             return src;
         }
         src.learned = crate::learning::plain_terms(&self.app_handle);
-        src.expressions = self.frequent_expressions();
         if let Some(screen) = screen {
-            src.app = Some(screen.app);
-            src.before = Some(screen.before);
             src.screen_terms = screen.terms;
         }
         src
-    }
-
-    fn frequent_expressions(&self) -> Vec<String> {
-        let mut cache = self
-            .asr_expressions
-            .lock()
-            .unwrap_or_else(|e| e.into_inner());
-        if let Some((at, list)) = cache.as_ref() {
-            if at.elapsed() < Duration::from_secs(300) {
-                return list.clone();
-            }
-        }
-        let now = chrono::Utc::now().timestamp();
-        let list = self
-            .app_handle
-            .try_state::<Arc<crate::managers::history::HistoryManager>>()
-            .and_then(|hm| hm.past_dictations(now - 30 * 86_400).ok())
-            .map(|past| crate::recall::frequent_expressions(&past, now, 3, 20))
-            .unwrap_or_default();
-        *cache = Some((Instant::now(), list.clone()));
-        list
     }
 
     /// The first window of speech in `audio`: silence is always cut out by
@@ -1593,8 +1561,8 @@ fn run_setup(
         target_language: run_plan.target_language,
         ..Default::default()
     };
-    // Handy Adaptive (spec §7): custom and learned words, frequent
-    // expressions, per what the model accepts. Models that take none get
+    // Handy Adaptive (spec §7): custom, screen and learned words, per what
+    // the model accepts. Models that take none get
     // nothing (and rely on fuzzy correction, as before).
     let asr_context = crate::asr_context::build(asr_caps(info), asr, &settings.asr_context);
     apply_asr_context(&mut run_options, &asr_context);

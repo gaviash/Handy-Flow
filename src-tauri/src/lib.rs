@@ -784,7 +784,6 @@ pub fn run(cli_args: CliArgs) {
             learning::delete_style_rule,
             learning::change_asr_context_setting,
             learning::get_asr_support,
-            learning::get_frequent_expressions,
             cloud_asr::change_cloud_asr_setting,
             vscode::change_vscode_screen_reader_setting,
             shortcut::change_language_detection_setting,

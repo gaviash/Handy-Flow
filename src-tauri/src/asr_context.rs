@@ -6,6 +6,9 @@ use specta::Type;
 
 /// Whisper's prompt holds about 224 tokens; this stays well under it.
 pub const PROMPT_MAX_CHARS: usize = 600;
+/// Whisper keeps only the last ~223 prompt tokens: past them the label and the
+/// first (most wanted) terms would be dropped. Estimated, with margin.
+const PROMPT_MAX_TOKENS: usize = 200;
 
 /// What the loaded model accepts (transcribe-cpp features).
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
@@ -21,31 +24,26 @@ pub struct AsrSources {
     pub custom_words: Vec<String>,
     /// Learned terms alone (no "heard as"), most relevant first.
     pub learned: Vec<String>,
-    pub expressions: Vec<String>,
     /// Names and terms seen around the cursor (spec R10, Wispr E140).
     pub screen_terms: Vec<String>,
-    pub app: Option<String>,
-    pub before: Option<String>,
     pub language: Option<String>,
 }
 
-/// What the screen gives the ASR: the app, the text before the cursor and
-/// the names and terms around it. Never from a private capture.
+/// What the screen gives the ASR: the names and terms around the cursor.
+/// Never from a private capture.
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct AsrScreen {
-    pub app: String,
-    pub before: String,
     pub terms: Vec<String>,
 }
 
-/// User settings (Settings → Learning → Transcription context).
+/// User settings (Settings → Learning → Transcription context). An old
+/// `expressions` key is ignored.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Type)]
 #[serde(default)]
 pub struct AsrContextSettings {
     pub enabled: bool,
     pub learned_words: bool,
-    pub expressions: bool,
-    /// The app and the text before the cursor; makes the ASR wait for the capture.
+    /// The names read on screen; makes the ASR wait for the capture.
     pub screen: bool,
     pub max_terms: usize,
     pub capture_wait_ms: u64,
@@ -56,7 +54,6 @@ impl Default for AsrContextSettings {
         Self {
             enabled: true,
             learned_words: true,
-            expressions: true,
             // Wispr uses the screen by default (E140).
             screen: true,
             max_terms: 50,
@@ -118,12 +115,7 @@ pub fn build(caps: AsrCaps, src: &AsrSources, cfg: &AsrContextSettings) -> AsrCo
         }
     }
     terms.truncate(cfg.max_terms);
-    let expressions: &[String] = if cfg.expressions {
-        &src.expressions
-    } else {
-        &[]
-    };
-    let prompt_text = || prompt(&terms, expressions, src, cfg.screen);
+    let prompt_text = || prompt(&terms, src.language.as_deref());
     if caps.initial_prompt {
         return AsrContext {
             vocabulary: Vec::new(),
@@ -144,71 +136,58 @@ pub fn build(caps: AsrCaps, src: &AsrSources, cfg: &AsrContextSettings) -> AsrCo
     }
 }
 
-/// One short conditioning text in the dictation's language, `None` if empty.
-fn prompt(
-    terms: &[String],
-    expressions: &[String],
-    src: &AsrSources,
-    screen: bool,
-) -> Option<String> {
-    let fr = src.language.as_deref().is_none_or(|l| l.starts_with("fr"));
-    let (vocab, expr, app, before) = if fr {
-        (
-            "Vocabulaire",
-            "Expressions",
-            "Application",
-            "Texte précédent",
+/// The user's own words: their name first (the rewrite gets it, the speech
+/// model didn't), then their custom words.
+pub fn user_words(user_name: &str, custom_words: &[String]) -> Vec<String> {
+    let name = user_name.trim();
+    std::iter::once(name.to_string())
+        .filter(|n| !n.is_empty())
+        .chain(
+            custom_words
+                .iter()
+                .filter(|w| !w.trim().eq_ignore_ascii_case(name))
+                .cloned(),
         )
-    } else {
-        ("Vocabulary", "Expressions", "App", "Previous text")
-    };
-    let mut parts = Vec::new();
-    if !terms.is_empty() {
-        // Whole terms only: a cut name ("Kasimir Zbig") would bias wrong.
-        let mut list = String::new();
-        for t in terms {
-            let next = if list.is_empty() {
-                t.clone()
-            } else {
-                format!("{list}, {t}")
-            };
-            if next.chars().count() + vocab.chars().count() + 4 > PROMPT_MAX_CHARS {
-                break;
-            }
-            list = next;
-        }
-        parts.push(format!("{vocab} : {list}."));
-    }
-    if !expressions.is_empty() {
-        let quoted: Vec<String> = expressions.iter().map(|e| format!("« {e} »")).collect();
-        parts.push(format!("{expr} : {}.", quoted.join(", ")));
-    }
-    if screen {
-        if let Some(a) = src.app.as_deref().filter(|a| !a.trim().is_empty()) {
-            parts.push(format!("{app} : {a}."));
-        }
-        if let Some(b) = src.before.as_deref().filter(|b| !b.trim().is_empty()) {
-            parts.push(format!("{before} : {}", b.trim()));
-        }
-    }
-    if !fr {
-        for p in parts.iter_mut() {
-            *p = p.replacen(" : ", ": ", 1);
-        }
-    }
-    let text = parts.join(" ");
-    (!text.is_empty()).then(|| cut(&text, PROMPT_MAX_CHARS))
+        .collect()
 }
 
-/// At most `max` chars, cut at a word.
-fn cut(text: &str, max: usize) -> String {
-    if text.chars().count() <= max {
-        return text.to_string();
+/// The vocabulary alone, in the dictation's language, `None` if empty. Anything
+/// else (quoted phrases, previous text) gets read back as speech (plan 1, A).
+fn prompt(terms: &[String], language: Option<&str>) -> Option<String> {
+    let label = if language.is_none_or(|l| l.starts_with("fr")) {
+        "Vocabulaire : "
+    } else {
+        "Vocabulary: "
+    };
+    // Whole terms only: a cut name ("Kasimir Zbig") would bias wrong.
+    let mut list = String::new();
+    let mut tokens = 0;
+    for t in terms {
+        let next = if list.is_empty() {
+            t.clone()
+        } else {
+            format!("{list}, {t}")
+        };
+        tokens += estimated_tokens(t) + 1;
+        if label.chars().count() + next.chars().count() + 1 > PROMPT_MAX_CHARS
+            || tokens > PROMPT_MAX_TOKENS
+        {
+            break;
+        }
+        list = next;
     }
-    let head: String = text.chars().take(max).collect();
-    head.rsplit_once(' ').map_or(head.clone(), |(h, _)| {
-        h.trim_end_matches([',', ' ']).to_string()
-    })
+    (!list.is_empty()).then(|| format!("{label}{list}."))
+}
+
+/// shortcut: about 3 chars per token, 2 for code-like words (digits, `_`);
+/// count real tokens if prompts still lose their head.
+fn estimated_tokens(term: &str) -> usize {
+    let per = if term.chars().any(|c| c.is_ascii_digit() || c == '_') {
+        2
+    } else {
+        3
+    };
+    term.chars().count().div_ceil(per).max(1)
 }
 
 #[cfg(test)]
@@ -219,10 +198,7 @@ mod tests {
         AsrSources {
             custom_words: vec!["Handy".into()],
             learned: vec!["log".into(), "Claude".into()],
-            expressions: vec!["de manière claire et concise".into()],
             screen_terms: Vec::new(),
-            app: Some("slack.exe".into()),
-            before: Some("on regarde le serveur".into()),
             language: Some("fr".into()),
         }
     }
@@ -314,7 +290,9 @@ mod tests {
     }
 
     #[test]
-    fn context_prompt_cites_terms_and_expressions_but_not_the_screen_when_off() {
+    fn context_prompt_cites_screen_terms_only_when_screen_is_on() {
+        let mut s = src();
+        s.screen_terms = vec!["Kasimir".into()];
         let caps = AsrCaps {
             context_prompt: true,
             ..Default::default()
@@ -323,28 +301,36 @@ mod tests {
             screen: false,
             ..Default::default()
         };
-        let c = build(caps, &src(), &off);
-        let AsrPrompt::Context(p) = c.prompt else {
+        let AsrPrompt::Context(p) = build(caps, &s, &off).prompt else {
             panic!("context prompt expected")
         };
-        assert!(
-            p.contains("Claude") && p.contains("de manière claire et concise"),
-            "{p}"
-        );
-        assert!(!p.contains("slack") && !p.contains("serveur"), "{p}");
-        assert!(p.chars().count() <= PROMPT_MAX_CHARS);
-        // With the screen option, the app and the text before the cursor too.
-        let cfg = AsrContextSettings {
-            screen: true,
-            ..Default::default()
-        };
-        let AsrPrompt::Context(p) = build(caps, &src(), &cfg).prompt else {
+        assert_eq!(p, "Vocabulaire : Handy, log, Claude.");
+        let AsrPrompt::Context(p) = build(caps, &s, &AsrContextSettings::default()).prompt
+        else {
             panic!()
         };
-        assert!(
-            p.contains("slack.exe") && p.contains("on regarde le serveur"),
-            "{p}"
-        );
+        assert_eq!(p, "Vocabulaire : Handy, Kasimir, log, Claude.");
+    }
+
+    #[test]
+    fn the_prompt_fits_whispers_token_window() {
+        let mut s = src();
+        s.learned = (0..200).map(|i| format!("req_{i}_ab12")).collect();
+        let cfg = AsrContextSettings {
+            max_terms: 200,
+            ..Default::default()
+        };
+        let caps = AsrCaps {
+            initial_prompt: true,
+            ..Default::default()
+        };
+        let AsrPrompt::Initial(p) = build(caps, &s, &cfg).prompt else {
+            panic!()
+        };
+        // The user's word stays first, and code-like terms stop early.
+        assert!(p.starts_with("Vocabulaire : Handy, req_0_ab12"), "{p}");
+        let n = p.matches("req_").count();
+        assert!((10..40).contains(&n), "{n} terms: {p}");
     }
 
     #[test]
@@ -373,7 +359,6 @@ mod tests {
         assert_eq!(build(caps, &src(), &off), AsrContext::default());
         let cfg = AsrContextSettings {
             learned_words: false,
-            expressions: false,
             ..Default::default()
         };
         let c = build(caps, &src(), &cfg);
@@ -397,6 +382,78 @@ mod tests {
         assert!(bad(|s| s.max_terms = 0));
         assert!(bad(|s| s.max_terms = 201));
         assert!(bad(|s| s.capture_wait_ms = 1001));
+    }
+
+    #[test]
+    fn the_prompt_holds_only_vocabulary() {
+        let caps = AsrCaps {
+            initial_prompt: true,
+            ..Default::default()
+        };
+        let AsrPrompt::Initial(p) = build(caps, &src(), &AsrContextSettings::default()).prompt
+        else {
+            panic!()
+        };
+        assert_eq!(p, "Vocabulaire : Handy, log, Claude.");
+        assert!(!p.contains('«'));
+    }
+
+    #[test]
+    fn an_english_dictation_gets_an_english_label() {
+        let mut s = src();
+        s.language = Some("en".into());
+        let caps = AsrCaps {
+            initial_prompt: true,
+            ..Default::default()
+        };
+        let AsrPrompt::Initial(p) = build(caps, &s, &AsrContextSettings::default()).prompt else {
+            panic!()
+        };
+        assert_eq!(p, "Vocabulary: Handy, log, Claude.");
+    }
+
+    #[test]
+    fn no_term_means_no_prompt() {
+        let caps = AsrCaps {
+            initial_prompt: true,
+            ..Default::default()
+        };
+        assert_eq!(
+            build(caps, &AsrSources::default(), &AsrContextSettings::default()),
+            AsrContext::default()
+        );
+    }
+
+    #[test]
+    fn a_term_too_long_alone_makes_no_prompt() {
+        let s = AsrSources {
+            custom_words: vec!["x".repeat(700)],
+            ..Default::default()
+        };
+        let caps = AsrCaps {
+            initial_prompt: true,
+            ..Default::default()
+        };
+        assert_eq!(
+            build(caps, &s, &AsrContextSettings::default()).prompt,
+            AsrPrompt::None
+        );
+    }
+
+    #[test]
+    fn the_users_name_is_in_the_vocabulary() {
+        let custom = vec!["Handy".to_string(), "Gavriel".to_string()];
+        assert_eq!(user_words("Gavriel", &custom), vec!["Gavriel", "Handy"]);
+        assert_eq!(user_words("  ", &custom), custom);
+        assert_eq!(user_words("Ana", &[]), vec!["Ana"]);
+    }
+
+    #[test]
+    fn old_settings_with_expressions_still_load() {
+        let s: AsrContextSettings =
+            serde_json::from_str(r#"{"expressions":true,"max_terms":12}"#).unwrap();
+        assert_eq!(s.max_terms, 12);
+        assert!(s.enabled && s.screen);
     }
 
     #[test]

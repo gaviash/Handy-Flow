@@ -1389,19 +1389,6 @@ pub fn change_asr_context_setting(
     Ok(())
 }
 
-/// The phrases the user says often (30 days, ≥ 3 dictations), as the speech
-/// model gets them.
-#[tauri::command]
-#[specta::specta]
-pub fn get_frequent_expressions(app: AppHandle) -> Vec<String> {
-    use tauri::Manager;
-    let now = chrono::Utc::now().timestamp();
-    app.state::<std::sync::Arc<crate::managers::history::HistoryManager>>()
-        .past_dictations(now - 30 * 86_400)
-        .map(|past| crate::recall::frequent_expressions(&past, now, 3, 20))
-        .unwrap_or_default()
-}
-
 /// What the loaded ASR model accepts; `None` when no model is loaded.
 #[tauri::command]
 #[specta::specta]

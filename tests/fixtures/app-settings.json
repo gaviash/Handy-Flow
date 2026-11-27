@@ -7,7 +7,6 @@
   "asr_context": {
     "capture_wait_ms": 150,
     "enabled": true,
-    "expressions": true,
     "learned_words": true,
     "max_terms": 50,
     "screen": true

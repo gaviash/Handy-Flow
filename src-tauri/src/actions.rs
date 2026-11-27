@@ -1132,9 +1132,9 @@ impl ShortcutAction for TranscribeAction {
         // destination. Read it now, alongside the transcription. The WAV save
         // waits only for the password check (F79: nothing kept).
         let (sensitive_tx, sensitive_rx) = std::sync::mpsc::channel::<bool>();
-        // Handy Adaptive (spec §7): the app, the text before the cursor and the
-        // names around it, for an ASR model that takes context. Never from a
-        // password, an excluded field or an unchecked one.
+        // Handy Adaptive (spec §7): the names around the cursor, for an ASR
+        // model that takes context. Never from a password, an excluded field
+        // or an unchecked one.
         let (screen_tx, screen_rx) =
             std::sync::mpsc::channel::<Option<crate::asr_context::AsrScreen>>();
         // The speech API never hears a password or an excluded app's field.
@@ -1151,15 +1151,7 @@ impl ShortcutAction for TranscribeAction {
             let unchecked = capture.unchecked();
             let _ = private_tx.send(capture.sensitive || capture.excluded || unchecked);
             let screen = (!capture.sensitive && !capture.excluded && !unchecked).then(|| {
-                let before = capture
-                    .field
-                    .as_ref()
-                    .filter(|f| f.caret_known)
-                    .map(|f| crate::context::redact(&crate::context::tail(&f.before, 200)))
-                    .unwrap_or_default();
                 crate::asr_context::AsrScreen {
-                    app: capture.process.clone(),
-                    before,
                     // Spec R10 / Wispr E140: the window's names bias the ASR.
                     terms: capture
                         .names
