@@ -7,7 +7,6 @@
   "asr_context": {
     "capture_wait_ms": 150,
     "enabled": true,
-    "expressions": true,
     "learned_words": true,
     "max_terms": 50,
     "screen": true
@@ -399,6 +398,6 @@
   "vad_backend": "silero",
   "vad_enabled": true,
   "vscode_screen_reader": true,
-  "whats_new_last_seen_version": "0.2.9",
+  "whats_new_last_seen_version": "0.3.0",
   "word_correction_threshold": 0.18
 }

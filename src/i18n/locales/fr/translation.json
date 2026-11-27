@@ -908,12 +908,9 @@
             "disabled": "Le contexte du modèle de reconnaissance est coupé : rien n'a été envoyé.",
             "model": "Modèle :",
             "vocabulary": "Vocabulaire :",
-            "expressions": "Expressions :",
-            "app": "Application :",
-            "before": "Texte avant le curseur :",
             "prompt": "Prompt envoyé",
-            "screenLate": "L'écran est arrivé trop tard : envoyé sans l'application ni le texte.",
-            "echo": "Le modèle a relu son contexte au lieu de la parole : le texte a été jeté.",
+            "screenLate": "L'écran est arrivé trop tard : envoyé sans les noms lus.",
+            "echo": "Le modèle a recopié son vocabulaire : la copie a été retirée.",
             "cloudError": "L'API de transcription a échoué, le modèle local a transcrit : {{error}}"
           },
           "llm": {
@@ -978,21 +975,15 @@
         },
         "asr": {
           "label": "Contexte de transcription",
-          "description": "Ce que le modèle de reconnaissance reçoit avant d'écouter : vos mots et expressions fréquentes. Seuls les modèles qui acceptent du contexte s'en servent.",
+          "description": "Les mots que le modèle de reconnaissance reçoit avant d'écouter. Seuls les modèles qui acceptent du contexte s'en servent.",
           "enabled": "Envoyer du contexte au modèle de reconnaissance",
           "learnedWords": "Mots appris",
-          "expressions": "Expressions fréquentes",
-          "screen": "App et texte avant le curseur (plus lent)",
+          "screen": "Noms lus à l'écran",
           "maxTerms": "Nombre max de mots",
           "captureWait": "Attente max de l'écran (ms)",
           "noModel": "Aucun modèle chargé.",
           "supported": "Le modèle actuel accepte du contexte.",
-          "unsupported": "Le modèle actuel n'accepte pas de contexte : rien n'est envoyé et rien n'attend.",
-          "expressionsList": {
-            "label": "Vos expressions fréquentes",
-            "description": "Les tournures de 2 à 4 mots dites dans au moins 3 dictées sur 30 jours : ce que reçoit le modèle de reconnaissance.",
-            "count": "{{count}} expressions"
-          }
+          "unsupported": "Le modèle actuel n'accepte pas de contexte : rien n'est envoyé et rien n'attend."
         },
         "judge": {
           "label": "Validateur d’apprentissage",

@@ -226,9 +226,154 @@ pub fn change_cloud_asr_setting(
     Ok(())
 }
 
+/// One transcription that never returns its own prompt: a copied head is cut
+/// off; an answer that is all prompt is asked again once without it (said
+/// alone, known words then come back as speech). Both calls share `budget`,
+/// counted from the first call. `Err` only when the first call fails; the
+/// second call failing gives no text.
+pub async fn without_echo<F, Fut>(
+    prompt: Option<&str>,
+    budget: Duration,
+    mut call: F,
+) -> Result<(String, crate::asr_context::Echo), String>
+where
+    F: FnMut(Option<String>) -> Fut,
+    Fut: std::future::Future<Output = Result<String, String>>,
+{
+    use crate::asr_context::{strip_echo, Echo};
+    let started = std::time::Instant::now();
+    let timed_out = || format!("timed out after {budget:?}");
+    let first = tokio::time::timeout(budget, call(prompt.map(str::to_string)))
+        .await
+        .map_err(|_| timed_out())??;
+    let (text, echo) = strip_echo(&first, prompt);
+    if echo != Echo::All {
+        return Ok((text, echo));
+    }
+    let left = budget.saturating_sub(started.elapsed());
+    let again = tokio::time::timeout(left, call(None)).await;
+    Ok((
+        again.ok().and_then(Result::ok).unwrap_or_default(),
+        Echo::All,
+    ))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::asr_context::Echo;
+
+    /// Runs `without_echo` with canned replies; returns its result and the
+    /// prompts the calls saw.
+    fn run(
+        prompt: Option<&str>,
+        replies: Vec<Result<&str, &str>>,
+    ) -> (Result<(String, Echo), String>, Vec<Option<String>>) {
+        let seen = std::cell::RefCell::new(Vec::new());
+        let replies = std::cell::RefCell::new(replies.into_iter());
+        let budget = std::time::Duration::from_secs(5);
+        let out = tauri::async_runtime::block_on(without_echo(prompt, budget, |p| {
+            seen.borrow_mut().push(p);
+            let r = replies.borrow_mut().next().expect("one call too many");
+            std::future::ready(r.map(str::to_string).map_err(str::to_string))
+        }));
+        (out, seen.into_inner())
+    }
+
+    #[test]
+    fn a_fully_copied_prompt_is_asked_again_without_it() {
+        let p = Some("Vocabulaire : GitHub, Claude.");
+        let (out, seen) = run(p, vec![Ok("Vocabulaire : GitHub, Claude."), Ok("Bonjour.")]);
+        assert_eq!(out, Ok(("Bonjour.".into(), Echo::All)));
+        assert_eq!(seen, vec![p.map(str::to_string), None]);
+
+        let (out, seen) = run(p, vec![Ok("Bonjour.")]);
+        assert_eq!(out, Ok(("Bonjour.".into(), Echo::None)));
+        assert_eq!(seen.len(), 1);
+
+        // Said alone, the words come back from the call without a prompt.
+        let p = Some("Vocabulaire : Claude, Handy, Groq.");
+        let (out, seen) = run(
+            p,
+            vec![Ok("Claude, Handy, Groq."), Ok("Claude, Handy, Groq.")],
+        );
+        assert_eq!(out, Ok(("Claude, Handy, Groq.".into(), Echo::All)));
+        assert_eq!(seen.len(), 2);
+
+        let full = "Vocabulaire : Claude, Handy, Groq.";
+        assert_eq!(
+            run(p, vec![Ok(full), Ok("")]).0,
+            Ok((String::new(), Echo::All))
+        );
+        assert_eq!(
+            run(p, vec![Ok(full), Err("timed out")]).0,
+            Ok((String::new(), Echo::All))
+        );
+        let (out, seen) = run(p, vec![Err("HTTP 500")]);
+        assert_eq!(out, Err("HTTP 500".into()));
+        assert_eq!(seen.len(), 1);
+    }
+
+    #[test]
+    fn a_copied_head_is_cut_without_a_second_call() {
+        let p = Some("Vocabulaire : GitHub, Claude, Handy.");
+        let (out, seen) = run(p, vec![Ok("Vocabulaire : GitHub, Claude. On y va.")]);
+        assert_eq!(out, Ok(("On y va.".into(), Echo::Lead)));
+        assert_eq!(seen.len(), 1);
+    }
+
+    #[test]
+    fn escape_stops_the_second_call() {
+        let p = Some("Vocabulaire : GitHub, Claude.");
+        let calls = std::cell::Cell::new(0);
+        let call = without_echo(p, std::time::Duration::from_secs(5), |_| {
+            calls.set(calls.get() + 1);
+            let first = calls.get() == 1;
+            async move {
+                if first {
+                    Ok("Vocabulaire : GitHub, Claude.".to_string())
+                } else {
+                    std::future::pending().await
+                }
+            }
+        });
+        // Escape once the second call is under way.
+        let out =
+            tauri::async_runtime::block_on(crate::actions::complete_unless_cancelled(call, || {
+                calls.get() == 2
+            }));
+        assert_eq!(out, None);
+        assert_eq!(calls.get(), 2);
+    }
+
+    #[test]
+    fn the_second_call_gets_only_the_time_the_first_left() {
+        use std::time::{Duration, Instant};
+        let p = Some("Vocabulaire : GitHub, Claude.");
+        let calls = std::cell::Cell::new(0);
+        let started = Instant::now();
+        let out = tauri::async_runtime::block_on(async {
+            // Time spent before the first call is not the calls' budget.
+            tokio::time::sleep(Duration::from_millis(150)).await;
+            without_echo(p, Duration::from_millis(300), |_| {
+                calls.set(calls.get() + 1);
+                let first = calls.get() == 1;
+                async move {
+                    if first {
+                        tokio::time::sleep(Duration::from_millis(250)).await;
+                        Ok("Vocabulaire : GitHub, Claude.".to_string())
+                    } else {
+                        tokio::time::sleep(Duration::from_millis(1000)).await;
+                        Ok("Bonjour.".to_string())
+                    }
+                }
+            })
+            .await
+        });
+        assert_eq!(out, Ok((String::new(), Echo::All)));
+        let took = started.elapsed();
+        assert!(took < Duration::from_millis(700), "{took:?}");
+    }
 
     #[test]
     fn the_wav_is_16_khz_mono_16_bit() {

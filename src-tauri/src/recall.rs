@@ -127,70 +127,6 @@ pub fn similar_dictations(
         .collect()
 }
 
-/// Function words: a phrase made only of them is no expression (fr/en).
-const FUNCTION_WORDS: &[&str] = &[
-    "le", "la", "les", "l", "de", "du", "des", "d", "un", "une", "et", "à", "a", "au", "aux", "en",
-    "y", "il", "elle", "on", "je", "j", "tu", "nous", "vous", "ils", "que", "qu", "qui", "ce", "c",
-    "est", "pas", "ne", "n", "se", "s", "sa", "son", "ça", "the", "an", "of", "to", "and", "is",
-    "it", "in", "i",
-];
-
-/// Phrases of 2 to 4 words the user said in at least `min_count` dictations
-/// of the last 30 days, longest kept when a shorter one only repeats it.
-pub fn frequent_expressions(
-    past: &[PastDictation],
-    now: i64,
-    min_count: usize,
-    max: usize,
-) -> Vec<String> {
-    use std::collections::{HashMap, HashSet};
-    let mut counts: HashMap<String, usize> = HashMap::new();
-    for p in past.iter().filter(|p| p.timestamp >= now - PAST_DAYS * DAY) {
-        let words: Vec<String> = p
-            .text
-            .split(|c: char| c.is_whitespace() || c == '\'' || c == '’' || c == '-')
-            .map(key)
-            .filter(|w| !w.is_empty())
-            .collect();
-        // Once per dictation: "il y a il y a" is one sighting.
-        let mut seen = HashSet::new();
-        for n in 2..=4 {
-            for w in words.windows(n) {
-                if w.iter().all(|x| FUNCTION_WORDS.contains(&x.as_str())) {
-                    continue;
-                }
-                let phrase = w.join(" ");
-                if seen.insert(phrase.clone()) {
-                    *counts.entry(phrase).or_default() += 1;
-                }
-            }
-        }
-    }
-    let mut found: Vec<(String, usize)> = counts
-        .into_iter()
-        .filter(|(_, c)| *c >= min_count)
-        .collect();
-    // Longest first, so a shorter phrase it contains is dropped below.
-    found.sort_by(|a, b| {
-        b.0.split(' ')
-            .count()
-            .cmp(&a.0.split(' ').count())
-            .then(b.1.cmp(&a.1))
-            .then(a.0.cmp(&b.0))
-    });
-    let mut kept: Vec<(String, usize)> = Vec::new();
-    for (phrase, count) in found {
-        let inside = kept
-            .iter()
-            .any(|(k, c)| *c >= count && format!(" {k} ").contains(&format!(" {phrase} ")));
-        if !inside {
-            kept.push((phrase, count));
-        }
-    }
-    kept.sort_by(|a, b| b.1.cmp(&a.1).then(a.0.cmp(&b.0)));
-    kept.into_iter().take(max).map(|(p, _)| p).collect()
-}
-
 /// At most `max` chars, cut at a word, "…" when cut.
 fn cut(text: &str, max: usize) -> String {
     let text = text.trim();
@@ -304,25 +240,6 @@ mod tests {
         let result = similar_dictations(&past, "contact", "Mail", 20);
         assert_eq!(result.len(), 1);
         assert!(!result[0].contains("alice@example.com"));
-    }
-
-    #[test]
-    fn frequent_expressions_are_repeated_phrases_of_the_month() {
-        let d = |t: &str, ts| PastDictation {
-            text: t.into(),
-            app: None,
-            timestamp: ts,
-        };
-        let now = 40 * 86_400;
-        let past = vec![
-            d("Il faut le dire de manière claire, merci.", now - 1),
-            d("Explique-le de manière claire et simple.", now - 2),
-            d("Bref, de manière claire pour tout le monde.", now - 3),
-            d("de manière claire de manière claire", 0), // older than 30 days
-            d("il y a il y a il y a", now - 4),
-        ];
-        let out = frequent_expressions(&past, now, 3, 20);
-        assert_eq!(out, vec!["de manière claire"]);
     }
 
     #[test]

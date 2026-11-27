@@ -447,13 +447,6 @@ async changeAsrContextSetting(value: AsrContextSettings) : Promise<Result<null, 
 async getAsrSupport() : Promise<AsrSupport | null> {
     return await TAURI_INVOKE("get_asr_support");
 },
-/**
- * The phrases the user says often (30 days, ≥ 3 dictations), as the speech
- * model gets them.
- */
-async getFrequentExpressions() : Promise<string[]> {
-    return await TAURI_INVOKE("get_frequent_expressions");
-},
 async changeCloudAsrSetting(value: CloudAsrSettings) : Promise<Result<null, string>> {
     try {
     return { status: "ok", data: await TAURI_INVOKE("change_cloud_asr_setting", { value }) };
@@ -1583,11 +1576,12 @@ language_detection_window_secs?: number;
  */
 overlay_style?: OverlayStyle }
 /**
- * User settings (Settings → Learning → Transcription context).
+ * User settings (Settings → Learning → Transcription context). An old
+ * `expressions` key is ignored.
  */
-export type AsrContextSettings = { enabled: boolean; learned_words: boolean; expressions: boolean; 
+export type AsrContextSettings = { enabled: boolean; learned_words: boolean; 
 /**
- * The app and the text before the cursor; makes the ASR wait for the capture.
+ * The names read on screen; makes the ASR wait for the capture.
  */
 screen: boolean; max_terms: number; capture_wait_ms: number }
 /**
@@ -1609,7 +1603,7 @@ vocabulary: string[];
 /**
  * Exactly what went in the prompt slot (context or Whisper initial prompt).
  */
-prompt: string | null; expressions: string[]; app: string | null; before: string | null; 
+prompt: string | null; 
 /**
  * `None`: the screen wasn't waited for; `Some(false)`: it came too late.
  */

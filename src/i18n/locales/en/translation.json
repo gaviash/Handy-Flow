@@ -908,12 +908,9 @@
             "disabled": "Context for the speech model is turned off: nothing was sent.",
             "model": "Model:",
             "vocabulary": "Vocabulary:",
-            "expressions": "Expressions:",
-            "app": "App:",
-            "before": "Text before the cursor:",
             "prompt": "Prompt sent",
-            "screenLate": "The screen came too late: sent without the app and text.",
-            "echo": "The model read its context back instead of speech: the text was dropped.",
+            "screenLate": "The screen came too late: sent without the names read.",
+            "echo": "The model copied its vocabulary: the copy was removed.",
             "cloudError": "The speech API failed, the local model transcribed: {{error}}"
           },
           "llm": {
@@ -978,21 +975,15 @@
         },
         "asr": {
           "label": "Transcription Context",
-          "description": "What the speech model is told before it listens: your words and frequent expressions. Only models that accept context use it.",
+          "description": "The words the speech model gets before it listens. Only models that accept context use them.",
           "enabled": "Send Context to the Speech Model",
           "learnedWords": "Learned Words",
-          "expressions": "Frequent Expressions",
-          "screen": "App and Text Before the Cursor (slower)",
+          "screen": "Names read on screen",
           "maxTerms": "Max Words",
           "captureWait": "Max Wait for the Screen (ms)",
           "noModel": "No model loaded.",
           "supported": "The current model accepts context.",
-          "unsupported": "The current model doesn't accept context: nothing is sent and nothing waits.",
-          "expressionsList": {
-            "label": "Your Frequent Expressions",
-            "description": "Phrases of 2 to 4 words said in at least 3 dictations over 30 days: what the speech model gets.",
-            "count": "{{count}} expressions"
-          }
+          "unsupported": "The current model doesn't accept context: nothing is sent and nothing waits."
         },
         "judge": {
           "label": "Learning Validator",

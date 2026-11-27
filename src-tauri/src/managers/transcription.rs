@@ -242,9 +242,6 @@ impl Drop for StreamWorkerGuard {
     }
 }
 
-/// Frequent expressions and when they were computed.
-type ExpressionsCache = Arc<Mutex<Option<(Instant, Vec<String>)>>>;
-
 #[derive(Clone)]
 pub struct TranscriptionManager {
     /// The transcribe-cpp engine: owns the worker process, its model, and
@@ -285,8 +282,6 @@ pub struct TranscriptionManager {
     /// Handy Adaptive (spec §7): the app and text before the cursor for the
     /// next run's ASR context, set by the dictation when the user allows it.
     asr_screen: Arc<Mutex<Option<AsrScreen>>>,
-    /// Frequent expressions, recomputed at most every 5 minutes.
-    asr_expressions: ExpressionsCache,
     /// The last run's model took ASR context and the setting allowed it.
     asr_capable: Arc<AtomicBool>,
     /// F114: what the speech model was given for the last transcription.
@@ -313,7 +308,6 @@ impl TranscriptionManager {
             job_active: Arc::new(AtomicBool::new(false)),
             language_detector: Arc::new(LanguageDetector::default()),
             asr_screen: Arc::new(Mutex::new(None)),
-            asr_expressions: Arc::new(Mutex::new(None)),
             asr_capable: Arc::new(AtomicBool::new(false)),
             asr_report: Arc::new(Mutex::new(None)),
         };
@@ -1182,9 +1176,6 @@ impl TranscriptionManager {
                 enabled: settings.asr_context.enabled,
                 vocabulary: setup.run_options.vocabulary.clone(),
                 prompt: given_prompt(&setup.run_options).map(str::to_string),
-                expressions: asr.expressions.clone(),
-                app: asr.app.clone(),
-                before: asr.before.clone(),
                 ..Default::default()
             });
         setup
@@ -1219,44 +1210,47 @@ impl TranscriptionManager {
             enabled: settings.asr_context.enabled,
             vocabulary: Vec::new(),
             prompt: prompt.clone(),
-            expressions: src.expressions,
-            app: src.app,
-            before: src.before,
             ..Default::default()
         };
         (prompt, report)
     }
 
-    /// Handy Adaptive: a speech API's text, finished like a local one (script,
-    /// custom words already prompted, filler words), or empty when it only
-    /// read its prompt back.
+    /// Handy Adaptive: a speech API's text, already without its prompt,
+    /// finished like a local one (script, custom words the `given` prompt
+    /// lacked, filler words).
     pub fn finish_cloud_text(
         &self,
         raw: String,
         language: Option<String>,
-        prompt: Option<&str>,
-    ) -> (Transcription, bool) {
+        given: Option<&str>,
+    ) -> Transcription {
         let settings = get_settings(&self.app_handle);
-        let echo = echoes_prompt(&raw, prompt);
-        let raw = if echo { String::new() } else { raw };
         let evidence = match &language {
             Some(l) => OutputLanguageEvidence::UserSelected(l.clone()),
             None => OutputLanguageEvidence::Unknown,
         };
-        let text =
-            post_process_transcription_text(raw, &settings, prompt.is_some(), &evidence, &[]);
+        let prompted = crate::asr_context::gave_all(&settings.custom_words, &[], given);
+        let text = post_process_transcription_text(raw, &settings, prompted, &evidence, &[]);
         let source = if language.is_some() {
             crate::language_detection::LanguageSource::Selected
         } else {
             crate::language_detection::LanguageSource::Model
         };
-        (
-            Transcription {
-                text,
-                language: Some(LanguageDecision { language, source }),
-            },
-            echo,
-        )
+        Transcription {
+            text,
+            language: Some(LanguageDecision { language, source }),
+        }
+    }
+
+    fn mark_echo_dropped(&self) {
+        if let Some(r) = self
+            .asr_report
+            .lock()
+            .unwrap_or_else(|e| e.into_inner())
+            .as_mut()
+        {
+            r.echo_dropped = true;
+        }
     }
 
     /// What the speech model was given for the last transcription (F114).
@@ -1299,7 +1293,10 @@ impl TranscriptionManager {
             .unwrap_or_else(|e| e.into_inner())
             .take();
         let mut src = AsrSources {
-            custom_words: settings.custom_words.clone(),
+            custom_words: crate::asr_context::user_words(
+                &settings.user_name,
+                &settings.custom_words,
+            ),
             language,
             ..Default::default()
         };
@@ -1307,34 +1304,10 @@ impl TranscriptionManager {
             return src;
         }
         src.learned = crate::learning::plain_terms(&self.app_handle);
-        src.expressions = self.frequent_expressions();
         if let Some(screen) = screen {
-            src.app = Some(screen.app);
-            src.before = Some(screen.before);
             src.screen_terms = screen.terms;
         }
         src
-    }
-
-    fn frequent_expressions(&self) -> Vec<String> {
-        let mut cache = self
-            .asr_expressions
-            .lock()
-            .unwrap_or_else(|e| e.into_inner());
-        if let Some((at, list)) = cache.as_ref() {
-            if at.elapsed() < Duration::from_secs(300) {
-                return list.clone();
-            }
-        }
-        let now = chrono::Utc::now().timestamp();
-        let list = self
-            .app_handle
-            .try_state::<Arc<crate::managers::history::HistoryManager>>()
-            .and_then(|hm| hm.past_dictations(now - 30 * 86_400).ok())
-            .map(|past| crate::recall::frequent_expressions(&past, now, 3, 20))
-            .unwrap_or_default();
-        *cache = Some((Instant::now(), list.clone()));
-        list
     }
 
     /// The first window of speech in `audio`: silence is always cut out by
@@ -1418,21 +1391,20 @@ impl TranscriptionManager {
                 })
         };
         let mut transcript = run(pcm, run_options.clone())?;
-        if echoes_vocabulary(&transcript.text, &run_options.vocabulary)
-            || echoes_prompt(&transcript.text, given_prompt(run_options))
+        let (text, echo) =
+            crate::asr_context::strip_echo(&transcript.text, given_prompt(run_options));
+        if echo == crate::asr_context::Echo::Lead {
+            info!("The model read its prompt back before the speech; the copy was cut off");
+            transcript.text = text;
+            self.mark_echo_dropped();
+        } else if echo == crate::asr_context::Echo::All
+            || echoes_vocabulary(&transcript.text, &run_options.vocabulary)
         {
             // Room noise read back as the list, or someone saying only custom
             // words ("Claude Handy Groq"): once more without them tells which.
             info!("The model returned the custom words; retrying once without them");
             transcript.text.clear();
-            if let Some(r) = self
-                .asr_report
-                .lock()
-                .unwrap_or_else(|e| e.into_inner())
-                .as_mut()
-            {
-                r.echo_dropped = true;
-            }
+            self.mark_echo_dropped();
             if let Some(pcm) = spare {
                 transcript = run(pcm, without_prompts(run_options))?;
             }
@@ -1480,7 +1452,7 @@ fn finish_text(outcome: RunOutcome, settings: &AppSettings) -> String {
     post_process_transcription_text(
         text,
         settings,
-        setup.custom_words_prompted(),
+        setup.custom_words_prompted(&settings.custom_words),
         &output_language,
         &setup.languages,
     )
@@ -1498,9 +1470,13 @@ struct RunSetup {
 }
 
 impl RunSetup {
-    /// Custom words went to the model as vocabulary; skip fuzzy correction.
-    fn custom_words_prompted(&self) -> bool {
-        !self.run_options.vocabulary.is_empty() || given_prompt(&self.run_options).is_some()
+    /// Every custom word went to the model; skip their fuzzy correction.
+    fn custom_words_prompted(&self, custom_words: &[String]) -> bool {
+        crate::asr_context::gave_all(
+            custom_words,
+            &self.run_options.vocabulary,
+            given_prompt(&self.run_options),
+        )
     }
 
     /// The language the runs were in. When the model decided, the language
@@ -1593,8 +1569,8 @@ fn run_setup(
         target_language: run_plan.target_language,
         ..Default::default()
     };
-    // Handy Adaptive (spec §7): custom and learned words, frequent
-    // expressions, per what the model accepts. Models that take none get
+    // Handy Adaptive (spec §7): custom, screen and learned words, per what
+    // the model accepts. Models that take none get
     // nothing (and rely on fuzzy correction, as before).
     let asr_context = crate::asr_context::build(asr_caps(info), asr, &settings.asr_context);
     apply_asr_context(&mut run_options, &asr_context);
@@ -1873,35 +1849,6 @@ fn without_prompts(options: &RunOptions) -> RunOptions {
         w.initial_prompt = None;
     }
     bare
-}
-
-/// The prompt read back instead of speech: three words or more, recited in
-/// the prompt's order.
-fn echoes_prompt(text: &str, prompt: Option<&str>) -> bool {
-    let Some(prompt) = prompt else {
-        return false;
-    };
-    let words = |s: &str| -> Vec<String> {
-        s.split(|c: char| !c.is_alphanumeric())
-            .filter(|w| !w.is_empty())
-            .map(str::to_lowercase)
-            .collect()
-    };
-    // A run of the prompt's words in order: the prompt holds the text before
-    // the cursor, so a real dictation often shares its common words.
-    let said = words(text);
-    let run = format!(" {} ", said.join(" "));
-    let contains = |s: &str| format!(" {} ", words(s).join(" ")).contains(&run);
-    // Inside one item (a branch name, a phrase before the cursor) it's speech:
-    // an echo recites several items of the list.
-    // A period splits items only between sentences: "fix.lesson.retries" is one.
-    let items = prompt.replace(". ", "\n");
-    said.len() >= 3
-        && contains(prompt)
-        && !items
-            .trim_end_matches('.')
-            .split([',', ';', ':', '«', '»', '\n'])
-            .any(contains)
 }
 
 /// The prompt text a run was given, in either slot.
@@ -2350,30 +2297,6 @@ mod tests {
             assert!(bare.vocabulary.is_empty());
             assert_eq!(given_prompt(&bare), None);
         }
-    }
-
-    #[test]
-    fn a_recited_prompt_is_not_a_transcript() {
-        let p = "Vocabulaire : log, Claude, Handy. Expressions : « de manière claire ».";
-        assert!(echoes_prompt("Vocabulaire : log, Claude, Handy.", Some(p)));
-        assert!(!echoes_prompt(
-            "regarde le log de Claude dans le terminal",
-            Some(p)
-        ));
-        assert!(!echoes_prompt("log Claude", Some(p)), "too short to tell");
-        // Common words also found in the text before the cursor are speech.
-        let p = "Texte : je pense que tu es d'accord, je suis là. Vocabulaire : log.";
-        assert!(!echoes_prompt("Je suis d'accord.", Some(p)));
-        // Saying again a run of one item (a phrase of the text before the
-        // cursor, a branch name) is speech: an echo recites several items.
-        assert!(!echoes_prompt("je pense que tu es d'accord", Some(p)));
-        let p = "Vocabulaire : fix/lesson-retries, Claude, Handy.";
-        assert!(!echoes_prompt("fix lesson retries", Some(p)));
-        assert!(echoes_prompt("fix lesson retries Claude Handy", Some(p)));
-        // A dotted term is one item too.
-        let p = "Vocabulaire : fix.lesson.retries, Claude.";
-        assert!(!echoes_prompt("fix lesson retries", Some(p)));
-        assert!(!echoes_prompt("Vocabulaire log Claude", None));
     }
 
     fn languages(codes: &[&str]) -> Vec<String> {

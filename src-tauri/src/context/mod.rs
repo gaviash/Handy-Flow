@@ -715,9 +715,6 @@ pub struct AsrReport {
     pub vocabulary: Vec<String>,
     /// Exactly what went in the prompt slot (context or Whisper initial prompt).
     pub prompt: Option<String>,
-    pub expressions: Vec<String>,
-    pub app: Option<String>,
-    pub before: Option<String>,
     /// `None`: the screen wasn't waited for; `Some(false)`: it came too late.
     pub screen_waited: Option<bool>,
     /// The model read its context back instead of speech; nothing was kept.

@@ -471,7 +471,10 @@ fn non_blank_post_processed_text(text: String) -> Option<String> {
     }
 }
 
-async fn complete_unless_cancelled<F, C>(operation: F, is_cancelled: C) -> Option<F::Output>
+pub(crate) async fn complete_unless_cancelled<F, C>(
+    operation: F,
+    is_cancelled: C,
+) -> Option<F::Output>
 where
     F: Future,
     C: Fn() -> bool,
@@ -1132,9 +1135,9 @@ impl ShortcutAction for TranscribeAction {
         // destination. Read it now, alongside the transcription. The WAV save
         // waits only for the password check (F79: nothing kept).
         let (sensitive_tx, sensitive_rx) = std::sync::mpsc::channel::<bool>();
-        // Handy Adaptive (spec §7): the app, the text before the cursor and the
-        // names around it, for an ASR model that takes context. Never from a
-        // password, an excluded field or an unchecked one.
+        // Handy Adaptive (spec §7): the names around the cursor, for an ASR
+        // model that takes context. Never from a password, an excluded field
+        // or an unchecked one.
         let (screen_tx, screen_rx) =
             std::sync::mpsc::channel::<Option<crate::asr_context::AsrScreen>>();
         // The speech API never hears a password or an excluded app's field.
@@ -1151,15 +1154,7 @@ impl ShortcutAction for TranscribeAction {
             let unchecked = capture.unchecked();
             let _ = private_tx.send(capture.sensitive || capture.excluded || unchecked);
             let screen = (!capture.sensitive && !capture.excluded && !unchecked).then(|| {
-                let before = capture
-                    .field
-                    .as_ref()
-                    .filter(|f| f.caret_known)
-                    .map(|f| crate::context::redact(&crate::context::tail(&f.before, 200)))
-                    .unwrap_or_default();
                 crate::asr_context::AsrScreen {
-                    app: capture.process.clone(),
-                    before,
                     // Spec R10 / Wispr E140: the window's names bias the ASR.
                     terms: capture
                         .names
@@ -1300,29 +1295,39 @@ impl ShortcutAction for TranscribeAction {
                         let language = crate::cloud_asr::language(&get_settings(&ah));
                         let label = format!("{} {}", c.provider.id, c.model);
                         let (prompt, mut report) = tm.cloud_context(&label, language.clone());
-                        // Escape stops the call at once, without a local run.
+                        let translate = get_settings(&ah).translate_to_english;
+                        let lang = language.as_deref();
+                        let samples = &samples;
+                        let call = |p: Option<String>| async move {
+                            crate::cloud_asr::transcribe(c, samples, lang, p.as_deref(), translate)
+                                .await
+                        };
+                        // Escape stops both calls at once, without a local run;
+                        // they share one time budget.
                         match complete_unless_cancelled(
-                            crate::cloud_asr::transcribe(
-                                c,
-                                &samples,
-                                language.as_deref(),
-                                prompt.as_deref(),
-                                get_settings(&ah).translate_to_english,
-                            ),
+                            crate::cloud_asr::without_echo(prompt.as_deref(), c.timeout, call),
                             || rm.was_cancelled_since(cancel_generation),
                         )
                         .await
                         {
                             None => cloud_cancelled = true,
-                            Some(Ok(raw)) => {
+                            Some(Ok((raw, echo))) => {
                                 log::info!(
                                     "Speech API '{label}' transcribed {:.1}s of audio in {:?}",
                                     samples.len() as f64 / 16_000.0,
                                     transcription_time.elapsed()
                                 );
-                                let (t, echo) =
-                                    tm.finish_cloud_text(raw, language, prompt.as_deref());
-                                report.echo_dropped = echo;
+                                if echo != crate::asr_context::Echo::None {
+                                    log::info!(
+                                        "Speech API '{label}' read its prompt back ({echo:?})"
+                                    );
+                                }
+                                // A second call ran without the prompt.
+                                let given = prompt
+                                    .as_deref()
+                                    .filter(|_| echo != crate::asr_context::Echo::All);
+                                let t = tm.finish_cloud_text(raw, language, given);
+                                report.echo_dropped = echo != crate::asr_context::Echo::None;
                                 if t.text.trim().is_empty() {
                                     // Speech may still be there: the local model decides.
                                     warn!("Speech API '{label}' returned no text; using the local model");
@@ -1360,6 +1365,7 @@ impl ShortcutAction for TranscribeAction {
                             .take_asr_report()
                             .map(|mut l| {
                                 l.cloud_error = r.cloud_error.clone();
+                                l.echo_dropped |= r.echo_dropped;
                                 l
                             })
                             .or(Some(r)),

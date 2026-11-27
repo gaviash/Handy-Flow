@@ -908,12 +908,9 @@
             "disabled": "Context for the speech model is turned off: nothing was sent.",
             "model": "Model:",
             "vocabulary": "Vocabulary:",
-            "expressions": "Expressions:",
-            "app": "App:",
-            "before": "Text before the cursor:",
             "prompt": "Prompt sent",
-            "screenLate": "The screen came too late: sent without the app and text.",
-            "echo": "The model read its context back instead of speech: the text was dropped.",
+            "screenLate": "The screen came too late: sent without the names read.",
+            "echo": "The model copied its vocabulary: the copy was removed.",
             "cloudError": "The speech API failed, the local model transcribed: {{error}}"
           },
           "llm": {
@@ -978,21 +975,15 @@
         },
         "asr": {
           "label": "Transkripsiyon bağlamı",
-          "description": "Konuşma tanıma modelinin dinlemeden önce aldığı bilgi: kelimeleriniz ve sık ifadeleriniz. Yalnızca bağlam kabul eden modeller kullanır.",
+          "description": "The words the speech model gets before it listens. Only models that accept context use them.",
           "enabled": "Konuşma tanıma modeline bağlam gönder",
           "learnedWords": "Öğrenilen kelimeler",
-          "expressions": "Sık ifadeler",
-          "screen": "Uygulama ve imleçten önceki metin (daha yavaş)",
+          "screen": "Names read on screen",
           "maxTerms": "En fazla kelime",
           "captureWait": "Ekran için en fazla bekleme (ms)",
           "noModel": "Yüklü model yok.",
           "supported": "Geçerli model bağlam kabul ediyor.",
-          "unsupported": "Geçerli model bağlam kabul etmiyor: hiçbir şey gönderilmez, hiçbir şey beklemez.",
-          "expressionsList": {
-            "label": "Your Frequent Expressions",
-            "description": "Phrases of 2 to 4 words said in at least 3 dictations over 30 days: what the speech model gets.",
-            "count": "{{count}} expressions"
-          }
+          "unsupported": "Geçerli model bağlam kabul etmiyor: hiçbir şey gönderilmez, hiçbir şey beklemez."
         },
         "judge": {
           "label": "Learning Validator",
