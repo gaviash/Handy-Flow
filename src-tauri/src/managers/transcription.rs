@@ -1216,19 +1216,20 @@ impl TranscriptionManager {
     }
 
     /// Handy Adaptive: a speech API's text, already without its prompt,
-    /// finished like a local one (script, custom words unless `prompted`,
-    /// filler words).
+    /// finished like a local one (script, custom words the `given` prompt
+    /// lacked, filler words).
     pub fn finish_cloud_text(
         &self,
         raw: String,
         language: Option<String>,
-        prompted: bool,
+        given: Option<&str>,
     ) -> Transcription {
         let settings = get_settings(&self.app_handle);
         let evidence = match &language {
             Some(l) => OutputLanguageEvidence::UserSelected(l.clone()),
             None => OutputLanguageEvidence::Unknown,
         };
+        let prompted = crate::asr_context::gave_all(&settings.custom_words, &[], given);
         let text = post_process_transcription_text(raw, &settings, prompted, &evidence, &[]);
         let source = if language.is_some() {
             crate::language_detection::LanguageSource::Selected
@@ -1451,7 +1452,7 @@ fn finish_text(outcome: RunOutcome, settings: &AppSettings) -> String {
     post_process_transcription_text(
         text,
         settings,
-        setup.custom_words_prompted(),
+        setup.custom_words_prompted(&settings.custom_words),
         &output_language,
         &setup.languages,
     )
@@ -1469,9 +1470,13 @@ struct RunSetup {
 }
 
 impl RunSetup {
-    /// Custom words went to the model as vocabulary; skip fuzzy correction.
-    fn custom_words_prompted(&self) -> bool {
-        !self.run_options.vocabulary.is_empty() || given_prompt(&self.run_options).is_some()
+    /// Every custom word went to the model; skip their fuzzy correction.
+    fn custom_words_prompted(&self, custom_words: &[String]) -> bool {
+        crate::asr_context::gave_all(
+            custom_words,
+            &self.run_options.vocabulary,
+            given_prompt(&self.run_options),
+        )
     }
 
     /// The language the runs were in. When the model decided, the language

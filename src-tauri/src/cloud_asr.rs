@@ -228,10 +228,12 @@ pub fn change_cloud_asr_setting(
 
 /// One transcription that never returns its own prompt: a copied head is cut
 /// off; an answer that is all prompt is asked again once without it (said
-/// alone, known words then come back as speech). `Err` only when the first
-/// call fails; the second call failing gives no text.
+/// alone, known words then come back as speech). Both calls share `budget`,
+/// counted from the first call. `Err` only when the first call fails; the
+/// second call failing gives no text.
 pub async fn without_echo<F, Fut>(
     prompt: Option<&str>,
+    budget: Duration,
     mut call: F,
 ) -> Result<(String, crate::asr_context::Echo), String>
 where
@@ -239,12 +241,21 @@ where
     Fut: std::future::Future<Output = Result<String, String>>,
 {
     use crate::asr_context::{strip_echo, Echo};
-    let first = call(prompt.map(str::to_string)).await?;
+    let started = std::time::Instant::now();
+    let timed_out = || format!("timed out after {budget:?}");
+    let first = tokio::time::timeout(budget, call(prompt.map(str::to_string)))
+        .await
+        .map_err(|_| timed_out())??;
     let (text, echo) = strip_echo(&first, prompt);
     if echo != Echo::All {
         return Ok((text, echo));
     }
-    Ok((call(None).await.unwrap_or_default(), Echo::All))
+    let left = budget.saturating_sub(started.elapsed());
+    let again = tokio::time::timeout(left, call(None)).await;
+    Ok((
+        again.ok().and_then(Result::ok).unwrap_or_default(),
+        Echo::All,
+    ))
 }
 
 #[cfg(test)]
@@ -260,7 +271,8 @@ mod tests {
     ) -> (Result<(String, Echo), String>, Vec<Option<String>>) {
         let seen = std::cell::RefCell::new(Vec::new());
         let replies = std::cell::RefCell::new(replies.into_iter());
-        let out = tauri::async_runtime::block_on(without_echo(prompt, |p| {
+        let budget = std::time::Duration::from_secs(5);
+        let out = tauri::async_runtime::block_on(without_echo(prompt, budget, |p| {
             seen.borrow_mut().push(p);
             let r = replies.borrow_mut().next().expect("one call too many");
             std::future::ready(r.map(str::to_string).map_err(str::to_string))
@@ -313,22 +325,54 @@ mod tests {
     #[test]
     fn escape_stops_the_second_call() {
         let p = Some("Vocabulaire : GitHub, Claude.");
-        let mut first = true;
-        let call = without_echo(p, |_| {
-            let reply =
-                std::mem::take(&mut first).then(|| "Vocabulaire : GitHub, Claude.".to_string());
+        let calls = std::cell::Cell::new(0);
+        let call = without_echo(p, std::time::Duration::from_secs(5), |_| {
+            calls.set(calls.get() + 1);
+            let first = calls.get() == 1;
             async move {
-                match reply {
-                    Some(r) => Ok(r),
-                    None => std::future::pending().await,
+                if first {
+                    Ok("Vocabulaire : GitHub, Claude.".to_string())
+                } else {
+                    std::future::pending().await
                 }
             }
         });
+        // Escape once the second call is under way.
         let out =
             tauri::async_runtime::block_on(crate::actions::complete_unless_cancelled(call, || {
-                true
+                calls.get() == 2
             }));
         assert_eq!(out, None);
+        assert_eq!(calls.get(), 2);
+    }
+
+    #[test]
+    fn the_second_call_gets_only_the_time_the_first_left() {
+        use std::time::{Duration, Instant};
+        let p = Some("Vocabulaire : GitHub, Claude.");
+        let calls = std::cell::Cell::new(0);
+        let started = Instant::now();
+        let out = tauri::async_runtime::block_on(async {
+            // Time spent before the first call is not the calls' budget.
+            tokio::time::sleep(Duration::from_millis(150)).await;
+            without_echo(p, Duration::from_millis(300), |_| {
+                calls.set(calls.get() + 1);
+                let first = calls.get() == 1;
+                async move {
+                    if first {
+                        tokio::time::sleep(Duration::from_millis(250)).await;
+                        Ok("Vocabulaire : GitHub, Claude.".to_string())
+                    } else {
+                        tokio::time::sleep(Duration::from_millis(1000)).await;
+                        Ok("Bonjour.".to_string())
+                    }
+                }
+            })
+            .await
+        });
+        assert_eq!(out, Ok((String::new(), Echo::All)));
+        let took = started.elapsed();
+        assert!(took < Duration::from_millis(700), "{took:?}");
     }
 
     #[test]

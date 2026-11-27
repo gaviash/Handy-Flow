@@ -190,6 +190,20 @@ fn estimated_tokens(term: &str) -> usize {
     term.chars().count().div_ceil(per).max(1)
 }
 
+/// Whether the model got every custom word (in its vocabulary or prompt):
+/// only then may their fuzzy correction be skipped. A word cut off by the
+/// prompt's budget still gets corrected.
+pub fn gave_all(custom_words: &[String], vocabulary: &[String], prompt: Option<&str>) -> bool {
+    let prompt = prompt.map(str::to_lowercase);
+    (!vocabulary.is_empty() || prompt.is_some())
+        && custom_words.iter().all(|w| {
+            let w = w.trim().to_lowercase();
+            w.is_empty()
+                || vocabulary.iter().any(|v| v.trim().to_lowercase() == w)
+                || prompt.as_deref().is_some_and(|p| p.contains(&w))
+        })
+}
+
 /// How much of a transcript was the prompt read back.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Echo {
@@ -218,7 +232,7 @@ pub fn strip_echo(text: &str, prompt: Option<&str>) -> (String, Echo) {
         return (String::new(), Echo::All);
     }
     let in_prompt = format!(" {} ", words(prompt).join(" "));
-    // Each word of the text with the byte where it ends.
+    // Each word of the text with the bytes where it starts and ends.
     let mut spans = Vec::new();
     let mut start = None;
     for (i, c) in text
@@ -228,7 +242,7 @@ pub fn strip_echo(text: &str, prompt: Option<&str>) -> (String, Echo) {
         match (c.is_alphanumeric(), start) {
             (true, None) => start = Some(i),
             (false, Some(s)) => {
-                spans.push((text[s..i].to_lowercase(), i));
+                spans.push((text[s..i].to_lowercase(), s, i));
                 start = None;
             }
             _ => {}
@@ -236,7 +250,11 @@ pub fn strip_echo(text: &str, prompt: Option<&str>) -> (String, Echo) {
     }
     let mut lead = 0;
     while lead < spans.len() {
-        let run: Vec<&str> = spans[..=lead].iter().map(|(w, _)| w.as_str()).collect();
+        // The copy ends with its sentence: "Rust" after "Handy." is speech.
+        if lead > 0 && text[spans[lead - 1].2..spans[lead].1].contains(['.', '!', '?']) {
+            break;
+        }
+        let run: Vec<&str> = spans[..=lead].iter().map(|(w, ..)| w.as_str()).collect();
         if !in_prompt.contains(&format!(" {} ", run.join(" "))) {
             break;
         }
@@ -244,11 +262,13 @@ pub fn strip_echo(text: &str, prompt: Option<&str>) -> (String, Echo) {
     }
     let labelled = spans
         .first()
-        .is_some_and(|(w, _)| w == "vocabulaire" || w == "vocabulary");
-    if lead < 3 || !labelled {
+        .is_some_and(|(w, ..)| w == "vocabulaire" || w == "vocabulary");
+    // A short prompt copied whole ("Vocabulaire : Gavriel.") is an echo too.
+    let whole = lead == spans.len() && format!(" {} ", words(text).join(" ")) == in_prompt;
+    if !labelled || (lead < 3 && !whole) {
         return (text.to_string(), Echo::None);
     }
-    let rest = text[spans[lead - 1].1..]
+    let rest = text[spans[lead - 1].2..]
         .trim_start_matches(|c: char| c.is_whitespace() || ",;:.»«".contains(c));
     if rest.is_empty() {
         (String::new(), Echo::All)
@@ -591,6 +611,44 @@ mod tests {
         // A dotted term is one item too.
         let p = "Vocabulaire : fix.lesson.retries, Claude.";
         assert!(!all("fix lesson retries", p));
+    }
+
+    #[test]
+    fn the_copy_stops_at_the_end_of_its_sentence() {
+        let p = Some("Vocabulary: Claude, Handy, Rust, Tokio.");
+        assert_eq!(
+            strip_echo("Vocabulary: Claude, Handy. Rust works.", p),
+            ("Rust works.".into(), Echo::Lead)
+        );
+    }
+
+    #[test]
+    fn a_short_prompt_copied_whole_is_an_echo() {
+        let p = Some("Vocabulaire : Gavriel.");
+        assert_eq!(
+            strip_echo("Vocabulaire : Gavriel.", p),
+            (String::new(), Echo::All)
+        );
+        assert_eq!(strip_echo("Gavriel.", p).1, Echo::None);
+    }
+
+    #[test]
+    fn custom_words_count_as_given_only_when_all_were_sent() {
+        let words = vec!["Handy".to_string(), "ticket_29".to_string()];
+        let p = Some("Vocabulaire : Gavriel, Handy, ticket_29.");
+        assert!(gave_all(&words, &[], p));
+        assert!(!gave_all(
+            &words,
+            &[],
+            Some("Vocabulaire : Gavriel, Handy.")
+        ));
+        assert!(!gave_all(&words, &[], None));
+        assert!(gave_all(
+            &words,
+            &["handy".into(), "Ticket_29".into()],
+            None
+        ));
+        assert!(!gave_all(&[], &[], None), "nothing sent: nothing given");
     }
 
     #[test]

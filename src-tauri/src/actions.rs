@@ -1298,24 +1298,14 @@ impl ShortcutAction for TranscribeAction {
                         let translate = get_settings(&ah).translate_to_english;
                         let lang = language.as_deref();
                         let samples = &samples;
-                        // One time budget for both calls: a second call gets
-                        // only what the first one left.
                         let call = |p: Option<String>| async move {
-                            let left = c.timeout.saturating_sub(transcription_time.elapsed());
-                            let once = crate::cloud_asr::transcribe(
-                                c,
-                                samples,
-                                lang,
-                                p.as_deref(),
-                                translate,
-                            );
-                            tokio::time::timeout(left, once)
+                            crate::cloud_asr::transcribe(c, samples, lang, p.as_deref(), translate)
                                 .await
-                                .unwrap_or_else(|_| Err(format!("timed out after {:?}", c.timeout)))
                         };
-                        // Escape stops both calls at once, without a local run.
+                        // Escape stops both calls at once, without a local run;
+                        // they share one time budget.
                         match complete_unless_cancelled(
-                            crate::cloud_asr::without_echo(prompt.as_deref(), call),
+                            crate::cloud_asr::without_echo(prompt.as_deref(), c.timeout, call),
                             || rm.was_cancelled_since(cancel_generation),
                         )
                         .await
@@ -1332,9 +1322,11 @@ impl ShortcutAction for TranscribeAction {
                                         "Speech API '{label}' read its prompt back ({echo:?})"
                                     );
                                 }
-                                let prompted =
-                                    prompt.is_some() && echo != crate::asr_context::Echo::All;
-                                let t = tm.finish_cloud_text(raw, language, prompted);
+                                // A second call ran without the prompt.
+                                let given = prompt
+                                    .as_deref()
+                                    .filter(|_| echo != crate::asr_context::Echo::All);
+                                let t = tm.finish_cloud_text(raw, language, given);
                                 report.echo_dropped = echo != crate::asr_context::Echo::None;
                                 if t.text.trim().is_empty() {
                                     // Speech may still be there: the local model decides.
