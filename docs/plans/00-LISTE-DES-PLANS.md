@@ -9,7 +9,7 @@ Ordre d'implémentation. Les 15 plans sont rédigés et relus par Terra ; aucun 
 | N° | Plan | Idées regroupées | Dépend de | Estimation |
 |---|---|---|---|---|
 | 0 | **Corrections de bugs** (`00-CORRECTIONS-BUGS.md`) — **fait le 27/11, voir `00-SUIVI.md`** | 24 corrections en 5 lots : données, confidentialité, pannes muettes, mots, réactivité | — | 20–22 h |
-| 1 | Transcription propre (plan rédigé) | K1, T1 à T6 | — | 3–4 h |
+| 1 | Transcription propre — **fait le 27/11, release 0.3.0, voir `00-SUIVI.md`** | K1, T1 à T6 | — | 3–4 h |
 | 2 | Capture dès l'appui et icône (plan rédigé) | K5, A1, C1 (boutons), C3 à C5, C7, C8, W1 à W3, W40, V9 | 1 | 2 j |
 | 3 | Suivi des corrections (plan rédigé) | K0 (reste), K2, D1 à D8, W4, W5, H7, V10 | 2 | 1,5–2 j |
 | 4 | Mots et dictionnaire (plan rédigé ; section K du 27/11 : clef-omni, vocabulaire hybride, apprentissage sans correction, modèles de décision) | K3, M1 à M5, W7, W8, W33, H8, V8 | 3 | 3–3,5 j |

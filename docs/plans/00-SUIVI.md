@@ -14,10 +14,11 @@
 
 | Plan | État |
 |---|---|
-| **0 — Corrections de bugs** | **Fait.** Codé, testé (562 tests Rust réussis), relu par Codex, fusionné dans `main`. |
-| 1 à 15 | **À faire.** Aucun n'est codé. Chaque plan a une section **J** (mise à jour du 26/11) à lire avant de coder. |
+| **0 — Corrections de bugs** | **Fait.** Codé, testé (562 tests Rust réussis), relu par Codex, fusionné dans `main`. Publié dans la 0.3.0. |
+| **1 — Transcription propre** | **Fait, sauf ton essai réel** (tâche 6). Codé, 577 tests Rust, relu par Codex, fusionné dans `main`, publié en **0.3.0** et installé le 27/11. |
+| 2 à 15 | **À faire.** Chaque plan a une section **J** (26/11), et les plans 2 à 5 une section **K** (27/11), à lire avant de coder. |
 
-Prochain : **plan 1 (transcription propre)**. Le plan 5 est à revoir avant de coder (apprentissage circulaire, voir sa section J).
+Prochain : **plan 2 (capture dès l'appui et icône)**, après ton essai du plan 1 (voir plus bas). Le plan 5 est à revoir avant de coder (apprentissage circulaire, voir sa section J).
 
 **27/11 : analyse de l'apprentissage (logs du 26–27/11).** Plans 2, 3, 4 et 5 : nouvelle section **K** à lire aussi. Résumé : 0 mot appris en 32 suivis, car tu corriges rarement. Décisions validées :
 - validateur `clef-omni` (modèle de décision) ;
@@ -30,7 +31,36 @@ Le plan 4 passe à 3–3,5 j. Banc d'essai : 40 corrections, script hors dépôt
 
 **Incident du 27/11** : le banc d'essai a épuisé le quota gratuit Cloudflare du jour (10 000 neurons), donc la reformulation Cloudflare était coupée jusqu'à 01 h.
 
-**Aucune release n'a été faite.** Le code est dans `main` du fork, mais aucune version n'a été publiée ni installée dans `Desktop\Handy Flow` (à ta demande).
+**Release 0.3.0 (27/11)** : plans 0 et 1. Tag `flow-v0.3.0` sur gaviash/Handy-Flow, ZIP portable signé avec `%USERPROFILE%\.handy-flow\updater.key` (procédure : `docs/release-portable.md`). Installée dans `Desktop\Handy Flow` le 27/11 à 16 h 54 ; sauvegarde complète avant installation : `backups/handy-flow-20261127-165412/`.
+
+## Plan 1 : ce qui a été fait (27/11)
+
+Branche `feat/plan-1-transcription` (poussée), fusionnée dans `main` (`6eee6be3`). Commits : prompt vocabulaire seul, retrait de la copie en tête, second appel sans prompt, interface, corrections de revue, version 0.3.0.
+
+- **Prompt Whisper = vocabulaire seul** (`asr_context.rs`) : `Vocabulaire : a, b.` (`Vocabulary:` en anglais), ton nom (`user_name`) en tête, plafond estimé de 200 jetons en plus des 600 caractères. Plus d'expressions fréquentes, d'application ni de texte avant le curseur (code, réglage, commande `get_frequent_expressions` et lignes du rapport supprimés).
+- **Copie en tête retirée** (`strip_echo`) : une copie étiquetée « Vocabulaire » de 3 mots ou plus, ou le prompt entier, est retirée. La coupe s'arrête à la fin de la phrase copiée. Sans l'étiquette, rien n'est retiré.
+- **Prompt entièrement recopié** (`cloud_asr::without_echo`) : le même audio est redemandé une fois sans prompt. Un seul budget de temps pour les deux appels, compté depuis le premier appel. Échap coupe les deux.
+- **Mots personnalisés** (`gave_all`) : leur correction locale n'est sautée que si **tous** sont arrivés au modèle.
+- **Historique réparé** : n° 301, 306 et 313 remplacés par les résultats de l'essai du 24/11 ; n° 286 et 291 supprimés. Les 25 autres lignes polluées par « « » n'ont pas de version propre : laissées telles quelles.
+- **Contrôle « aucune régression »** : le prompt exact sur tes 20 enregistrements du 24/11 donne 0 début pollué (10 sur 20 avec l'ancien), 964 mots contre 963 pour « vocabulaire seul », et chaque texte est identique à au moins 90 %.
+
+**Décisions prises en codant (à connaître)**
+- Prises de moins de 500 ms **non** ignorées (J A2) : l'historique contient de vraies dictées d'un mot (« Codex. », « Bonjour. »).
+- Balises `[BLANK_AUDIO]` non traitées (J B7) : aucune dans 352 dictées.
+- Tri du vocabulaire (J B4) reporté au plan 4 (N4) : l'écran y passera en dernier.
+- Modèles locaux qui acceptent un prompt de contexte : ils perdent aussi l'application et le texte précédent. Ton modèle local (Parakeet) n'en prend pas. À rétablir pour ce seul cas après un essai A/B, si un tel modèle sert un jour.
+- Non corrigé, mineur : `strip_echo` copie le texte même sans écho (coût négligeable).
+
+**À faire par toi (tâche 6)**
+1. Réglages → Contexte, rapport de la dernière dictée : le prompt commence par « Vocabulaire : » et finit par un point.
+2. Une vingtaine de dictées normales. Attendu : aucun début pollué, aucune phrase perdue. L'agent suivant contrôle dans l'historique.
+3. Ensuite : cocher K1 dans `PLAN_LOTS.md`.
+
+**Retour arrière** : fermer Handy Flow, recopier l'exe, les DLL et `resources\` depuis `backups/handy-flow-20261127-165412/`. `history.db` seulement en cas de besoin, car les dictées faites depuis seraient perdues.
+
+**Piège pour le prochain agent : tests Rust après un changement de version.** Depuis le passage en 0.3.0, un `cargo test` recompilé s'arrête au chargement (`STATUS_ENTRYPOINT_NOT_FOUND`, 0xC0000139). Ce n'est pas le code : les mêmes 577 tests passent en 0.2.9, et l'exe release 0.3.0 démarre normalement. Pas résolu. Pistes déjà écartées : runtime MSVC (`HANDY_VC_REDIST_DIRS`), `STATIC_VCRUNTIME`, DLL copiées à côté du binaire de test. Le `cargo clean -p handy` a échoué (fichier verrouillé) : à retenter, Handy Flow fermé. Pour une release, définir `HANDY_VC_REDIST_DIRS` (redist de VS Build Tools 14.44, CRT et OpenMP) : sans lui, `transcribe-libs` est recréé sans les DLL `msvcp140`/`vcruntime140` que le ZIP doit contenir.
+
+**Connu, sans effet** : au démarrage, 9 erreurs « Hotkey cannot be empty » pour les transformations sans raccourci. Code inchangé, déjà présent avant.
 
 ## Plan 0 : ce qui a été corrigé
 
