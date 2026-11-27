@@ -60,6 +60,8 @@ Branche `feat/plan-1-transcription` (poussée), fusionnée dans `main` (`6eee6be
 
 ## Tests Rust qui ne démarrent plus (à corriger en premier)
 
+**Contexte.** Le 27/11, en préparant la release 0.3.0 (plans 0 et 1), la version est passée de 0.2.9 à 0.3.0 dans `Cargo.toml`, `tauri.conf.json` et `package.json`. Ce changement relance `build.rs` et recompile le binaire de test, qui ne démarre plus depuis. Le code du plan 1 avait été testé juste avant, en 0.2.9 : 577 tests réussis. La release a été publiée parce que seule la version avait changé et que l'exe 0.3.0 démarre (`--help` répond avec le code 0). **Pourquoi c'est bloquant** : sans tests qui tournent, impossible de travailler en TDD ni de vérifier la règle « aucune régression » sur le plan 2. Ça ne touche ni l'utilisateur ni l'app installée.
+
 **Symptôme.** Depuis le passage en 0.3.0, `cargo test --release --lib` compile, puis le binaire de test s'arrête au chargement : `STATUS_ENTRYPOINT_NOT_FOUND` (0xC0000139), avant tout test. Le code n'est pas en cause : les mêmes 577 tests passaient en 0.2.9, et l'app 0.3.0 démarre normalement.
 
 **Diagnostic (vérifié le 27/11).**
