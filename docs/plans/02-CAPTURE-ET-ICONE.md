@@ -179,3 +179,9 @@ Détail : `willow/02-v2.md`. Bugs du code actuel déplacés au plan 0 : 2.2, 2.3
 - Ne rien lire ni apprendre quand le champ est dans Handy (passe 1).
 - Icône des applications empaquetées (MSIX) (B5).
 **Non vérifié** : focus hors processus (WebView2/Outlook) (A7), connexion tiède (A8).
+
+## K. Mise à jour du 27/11 (logs du 26–27/11)
+**Filtre des termes lus à l'écran (validé).** Les termes envoyés à Whisper et au LLM sont surtout du bruit : libellés d'interface (« Outils », « Moyen », « Idées », « Réinitialisation », « Connecté », « Hors », « Click »), jours et mois (« Thu », « Nov »), fuseaux (« Europe/Paris »), identifiants opaques (`1sb1cJS…`, `req_011…`, `UCqPVd…`), titres coupés par « … », libellés de sélecteur de modèle (« GPT-6.1 Terra Élevé »). Ils viennent de textes et de liens, pas de boutons : la décision 5 (type de contrôle) ne suffit pas.
+- Filtre dans `extract_terms` (`context/mod.rs:615`), **avant** comptage et classement : mot courant isolé (`lexicon::is_common`, jamais appelé ici), jours et mois abrégés, fuseaux horaires, texte qui finit par « … », identifiant opaque (longue suite de lettres et chiffres mêlés, sans voyelles régulières).
+- Un test par exemple réel ci-dessus ; un vrai nom propre (« Cartoon Shorts », « Hyperframe ») doit passer.
+- Durée : + 2 h.

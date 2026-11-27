@@ -2,7 +2,7 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-Idées : K3, M1 à M5, W7, W8, W33, H8, V8. Dépend du plan 3. Durée : 1,5 à 2 j (« dit → écrit » ajouté). Rien n'est codé.
+Idées : K3, M1 à M5, W7, W8, W33, H8, V8. Dépend du plan 3. Durée : 3 à 3,5 j (« dit → écrit » ajouté ; section K du 27/11). Rien n'est codé.
 **Goal :** des mots appris une fois, gardés, utilisés à bon escient. **Architecture :** une seule liste `Learned` avec trois sortes (mot, mal entendu, dit → écrit). **Tech Stack :** Rust, DPAPI, React.
 
 ## A. But
@@ -133,3 +133,46 @@ Détail : `willow/04-v2.md`. Bugs du code actuel déplacés au plan 0 : 1.1, 4.1
 - Ne pas perdre le suivi d'un mot juste avant la dictée suivante (B1).
 - Cas glossaire et noms propres de Willow comme tests (passe 1).
 **Question pour toi** : la règle 1 (candidats dans une réécriture) est plus audacieuse que Willow et Wispr (C5) : on la garde ?
+
+## K. Mise à jour du 27/11 (logs du 26–27/11, banc d'essai, décisions)
+
+Source : journal de Handy Flow (26/11 21 h 23 → 27/11 14 h 07), historique (352 dictées), banc d'essai sur 40 corrections. Ces décisions **remplacent** les règles C2, C3, C7 et C13 là où elles se contredisent.
+
+**Constats**
+- 32 suivis, 1 candidat envoyé au validateur, **0 mot appris**. Tu corriges rarement dans le champ (tu dictes à une IA puis tu envoies) : l'apprentissage par correction seul plafonne.
+- « de me → dummy » (n° 393), vraie correction, rejetée par la garde `meaning_word` (`learning.rs:468`).
+- Toute validation devient `Term` (`record_decision`), d'où « mods » mal classé.
+- Le LLM reçoit aujourd'hui les mots dont une forme entendue ressemble à la dictée, **puis tous les autres noms sans indice** (`recall.rs:31`).
+
+**Décisions validées (27/11)**
+
+| # | Décision |
+|---|---|
+| N1 | **Validateur = `@cf/cloudflare/clef-omni`** (modèle de décision, « System One »). Une seule question : apprendre ou refuser. Seuil sur la probabilité : ≥ 0,8 actif, 0,5–0,8 en attente, < 0,5 refusé. Banc d'essai : 37–38/40 en 0,16 s (Gemma avec réflexion : 35–36/40 en 8,5 s médian, 36 s max). Consigne avec exemples **hors** des cas testés |
+| N2 | **Apprendre = vocabulaire par défaut.** Un mot accepté va dans la liste ; il n'est pas encore une paire |
+| N3 | **2 corrections vers le même mot juste, quelle que soit la forme entendue, = mot appris (paire)**, avec toutes ses formes (« Quen », « Gwen », « Coen » → « Qwen ») |
+| N4 | **Whisper reçoit le vocabulaire seul, trié** : tes ajouts d'abord, puis les plus récents, puis les plus utilisés ; budget en jetons (voir plan 1 J) |
+| N5 | **Le LLM reçoit tout le contexte** (page, conversation, mail) **plus le vocabulaire et les paires**, et choisit selon le contexte ce qu'il remplace. Consigne adaptée : « ces mots sont le vocabulaire de l'utilisateur ; ne les modifie pas ; corrige un mot proche seulement si le contexte le justifie ». Une forme entendue courante (« modes ») est marquée « seulement si le contexte en parle » |
+| N6 | `relevant_terms` compare aussi la dictée au **mot juste** (pas seulement aux formes entendues) ; plus d'envoi de la liste entière sans indice : seulement les mots utiles à cette dictée, en plus du contexte |
+| N7 | **Aucun remplacement local** des paires : la reformulation est considérée toujours disponible (base du logiciel) ; un remplacement sans intelligence casse des phrases. La règle C13 (« sans reformulation, remplacement local ») est abandonnée pour les paires ; pour « dit → écrit », à trancher au moment de coder |
+| N8 | **Plusieurs petits mots → un seul mot proche** (« de me » → « dummy ») : avant la garde `meaning_word`, si la fusion sans espaces est proche (distance orthographique), le candidat va au validateur. Tests : « de me → dummy » accepté, « de la → della » non accepté seul |
+| N9 | **Corriger un mot depuis l'historique** (avancé du plan 5) : sélectionner le mot, taper le bon ; même chemin qu'une correction (validateur, puis N2/N3) |
+| N10 | **Apprentissage sans correction, signal A** : la reformulation a remplacé un mot de la transcription par un terme **présent dans le contexte**, et tu l'as gardé → candidat (« Clause → Claude », « Conex → Codex » : 7 cas sur 175 dictées). Comparaison locale, 0 jeton ; puis `clef-omni` et N3 |
+| N11 | **Signal B (comme Wispr `app_context`)** : un terme lu à l'écran et présent dans le texte final → candidat, **vocabulaire seulement**, après `clef-omni` et N3. Bruit mesuré (« Feux », « Faire », « LES ») : jamais sans le validateur |
+| N12 | Étiquette **« appris du contexte »** dans la liste des mots, pour supprimer facilement une erreur des signaux A et B |
+| N13 | **Pas de nettoyage** de la liste actuelle : « mon fork », « Band », « mods », « cache » sont de vrais mots à toi (l'ancien point 4 est abandonné) |
+
+**Risque accepté** : les signaux A et B apprennent de sorties du LLM (défaut « circulaire » du plan 5). Garde-fous : terme venu du contexte (source extérieure), texte gardé par toi, 2 occurrences, validateur. Ça réduit le risque sans l'annuler.
+
+**Écarté** : demander à un LLM à chaque dictée « y a-t-il un terme technique ? ». Ça apprend surtout ce que Whisper avait déjà juste, remplit le budget du prompt et coûte un appel par dictée.
+
+**Limite** : la ressemblance est orthographique, pas phonétique (« à l'élève → LLM » n'est rattrapé que par une paire apprise).
+
+### Support des modèles de décision (« SOM », System One)
+
+- **Ajout d'un modèle** (`ProvidersCard.tsx`) : nouvelle case **« Modèle de décision »** à côté de « Parole » et « Réflexion ». Détectée automatiquement pour `@cf/cloudflare/clef*`, `@cf/cloudflare/clairic*` et `amos-*` (même mécanisme que `guessed_model`, `features.rs:102`) ; à cocher à la main sinon. Exclusive avec « Parole » ; « Réflexion » désactivée.
+- **Code** : champ `decision: bool` dans `ModelEntry` (`#[serde(default)]`). Appel propre : `POST {compte}/ai/run/@cf/cloudflare/<modèle>` avec `{model, state, questions}` ; réponse `result.answers.<id>.probabilities`. Pas de chat, pas de JSON à parser.
+- **Où** : sélectionnable **dans le validateur d'apprentissage** (`FeatureModelsCard`) ; masqué pour la reformulation, le secours et la transcription, qui doivent écrire du texte. Le juge de style reste un modèle de chat (il rédige des leçons).
+- **Amos (Scira)** : API hébergée fermée ; auto-hébergement seulement (pas de carte graphique dédiée sur ta machine). Support par la même case si un serveur compatible est ajouté (URL personnalisée) ; non testé.
+
+**Durée** : + 1,5 j (plan 4 : 3 à 3,5 j).

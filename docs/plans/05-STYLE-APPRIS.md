@@ -139,3 +139,9 @@ Colonne `category` ajoutée à l'historique (écrite à la dictée ; anciennes e
 - Fermer l'observation au collage suivant, pas à l'appui (A11).
 - Rétention 30 jours : les règles rares de mail se désactivent (C3).
 - Taille 6 mots à 4 000 caractères ; doublon Dice ≥ 0,40 = simple filet (B3).
+
+## K. Mise à jour du 27/11 (logs du 26–27/11)
+- **Juge trop lent** : 9 appels, 7 délais dépassés (45 s) avec Cloudflare Gemma réflexion activée. Pour Cloudflare, « High » envoie seulement `enable_thinking: true` (`llm_client.rs:117`) : c'est la réflexion sans limite qui coûte. Le juge rédige des leçons, il reste un modèle de chat : **réflexion désactivée** par défaut, ou un modèle rapide.
+- Les essais du juge ne vivent qu'en mémoire (5 s, 30 s, 2 min, 10 min, 1 h, 4 h, `judge.rs:136`) : quitter l'app perd la leçon. La file persistante du plan 3 (leçons stockées) doit couvrir aussi les leçons de style.
+- « Corriger un mot depuis l'historique » est **avancé au plan 4** (N9). Le bouton « apprendre de ça » pour le style reste ici.
+- Les signaux A et B du plan 4 (N10, N11) apprennent aussi de sorties du LLM : mêmes garde-fous contre l'apprentissage circulaire que ceux de la section J.

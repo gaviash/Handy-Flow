@@ -1,5 +1,15 @@
 # Suivi des plans (mis à jour le 2026-11-27)
 
+## Règles pour tous les plans (à lire avant de coder)
+
+1. **Aucune régression.** Les dictées actuelles sont bonnes ; l'apprentissage et le contexte marchent plutôt bien. Chaque plan doit **améliorer** sans rien dégrader. Avant de changer un comportement de dictée, de contexte ou d'apprentissage :
+   - les tests existants restent verts ;
+   - un test fige le comportement actuel s'il n'y en a pas ;
+   - on compare avant et après sur des cas réels (historique, labo de prompt) ;
+   - en cas de doute, l'ancien comportement reste.
+2. **Méthode** : Superpowers (TDD, vérifier avant d'affirmer), Ponytail (le plus petit changement complet), Impeccable pour toute interface.
+3. **Codex** pour l'aide et les revues : `gpt-6.2-sol`, raisonnement moyen, lecture seule. Chaque demande lui donne le contexte du plan et lui rappelle Ponytail, Superpowers et la règle 1. Jamais les données personnelles de `Desktop\Handy Flow\Data`.
+
 ## Où on en est
 
 | Plan | État |
@@ -8,6 +18,17 @@
 | 1 à 15 | **À faire.** Aucun n'est codé. Chaque plan a une section **J** (mise à jour du 26/11) à lire avant de coder. |
 
 Prochain : **plan 1 (transcription propre)**. Le plan 5 est à revoir avant de coder (apprentissage circulaire, voir sa section J).
+
+**27/11 : analyse de l'apprentissage (logs du 26–27/11).** Plans 2, 3, 4 et 5 : nouvelle section **K** à lire aussi. Résumé : 0 mot appris en 32 suivis, car tu corriges rarement. Décisions validées :
+- validateur `clef-omni` (modèle de décision) ;
+- vocabulaire par défaut, paire après 2 corrections vers le même mot ;
+- Whisper reçoit le vocabulaire trié, le LLM le contexte plus le vocabulaire ;
+- apprentissage sans correction (signaux A et B) ;
+- support des modèles de décision à l'ajout d'un modèle.
+
+Le plan 4 passe à 3–3,5 j. Banc d'essai : 40 corrections, script hors dépôt.
+
+**Incident du 27/11** : le banc d'essai a épuisé le quota gratuit Cloudflare du jour (10 000 neurons), donc la reformulation Cloudflare était coupée jusqu'à 01 h.
 
 **Aucune release n'a été faite.** Le code est dans `main` du fork, mais aucune version n'a été publiée ni installée dans `Desktop\Handy Flow` (à ta demande).
 

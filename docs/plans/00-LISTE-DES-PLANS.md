@@ -12,7 +12,7 @@ Ordre d'implémentation. Les 15 plans sont rédigés et relus par Terra ; aucun 
 | 1 | Transcription propre (plan rédigé) | K1, T1 à T6 | — | 3–4 h |
 | 2 | Capture dès l'appui et icône (plan rédigé) | K5, A1, C1 (boutons), C3 à C5, C7, C8, W1 à W3, W40, V9 | 1 | 2 j |
 | 3 | Suivi des corrections (plan rédigé) | K0 (reste), K2, D1 à D8, W4, W5, H7, V10 | 2 | 1,5–2 j |
-| 4 | Mots et dictionnaire (plan rédigé) | K3, M1 à M5, W7, W8, W33, H8, V8 | 3 | 1,5–2 j |
+| 4 | Mots et dictionnaire (plan rédigé ; section K du 27/11 : clef-omni, vocabulaire hybride, apprentissage sans correction, modèles de décision) | K3, M1 à M5, W7, W8, W33, H8, V8 | 3 | 3–3,5 j |
 | 5 | Style appris et apprentissage depuis l'historique (plan rédigé) | K4, S1 à S6, W6, H5, H4, W23 | 3, 4 | 2 j |
 | 6 | Préférences et À propos de moi (plan rédigé) | A4, W9, W10, W39, V21 (H3 abandonné) | 5 | 1 j |
 | 7 | Retouche vocale (plan rédigé) | H1, V6 | 3, 5 | 1 j |

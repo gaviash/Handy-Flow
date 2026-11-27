@@ -157,3 +157,12 @@ Détail : `willow/03-v2.md`.
 - Différence d'espaces seule = pas une correction (A7) ; plafond de taille vers le juge (A8).
 - Échec de lecture mesuré en durée (B1) ; dernière lecture stable (B4) ; recherche tolérante aux blancs partout (B3).
 - Cas T01–T07 de Willow comme tests ; lecture bloquée = un des 3 échecs (passe 1).
+
+## K. Mise à jour du 27/11 (logs du 26–27/11)
+**Ce que le journal corrige dans la section J**
+- « Champ vidé » (16 suivis sur 32) **n'est pas une panne dans claude.ai** : c'est l'envoi du message. Le texte gardé y est bien enregistré (n° 392 à 396). L'hypothèse A1 (« collage pas encore arrivé ») ne vaut pas pour les applis de chat ; la garder seulement pour les champs qui se vident sans envoi.
+- « Introuvable » (n° 411) : claude.ai retire les retours à la ligne du texte collé (`pasted U+000A vs field U+0045`). La recherche tolérante aux blancs (B3) règle ce cas : confirmé.
+
+**À ajouter**
+- **Journal** : un numéro de candidat sur les lignes « garde-fou » et « verdict », sans le mot, pour relier un rejet à sa raison (`learning.rs:511`, `learning.rs:1811`, `validator.rs:120`). 30 min.
+- Le validateur passe à `clef-omni` (plan 4, N1) : délai 15 s suffit ; le juge de style reste un modèle de chat.
