@@ -190,6 +190,90 @@ fn estimated_tokens(term: &str) -> usize {
     term.chars().count().div_ceil(per).max(1)
 }
 
+/// How much of a transcript was the prompt read back.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Echo {
+    None,
+    /// The prompt's head, then speech: the copy was cut off.
+    Lead,
+    /// Nothing but the prompt.
+    All,
+}
+
+fn words(s: &str) -> Vec<String> {
+    s.split(|c: char| !c.is_alphanumeric())
+        .filter(|w| !w.is_empty())
+        .map(str::to_lowercase)
+        .collect()
+}
+
+/// `text` without a copy of `prompt` at its head. A copy counts only when it
+/// starts with the label ("Vocabulaire") and runs 3 words or more: without
+/// the label, known words may really have been said.
+pub fn strip_echo(text: &str, prompt: Option<&str>) -> (String, Echo) {
+    let Some(prompt) = prompt else {
+        return (text.to_string(), Echo::None);
+    };
+    if recites(text, prompt) {
+        return (String::new(), Echo::All);
+    }
+    let in_prompt = format!(" {} ", words(prompt).join(" "));
+    // Each word of the text with the byte where it ends.
+    let mut spans = Vec::new();
+    let mut start = None;
+    for (i, c) in text.char_indices().chain(std::iter::once((text.len(), ' '))) {
+        match (c.is_alphanumeric(), start) {
+            (true, None) => start = Some(i),
+            (false, Some(s)) => {
+                spans.push((text[s..i].to_lowercase(), i));
+                start = None;
+            }
+            _ => {}
+        }
+    }
+    let mut lead = 0;
+    while lead < spans.len() {
+        let run: Vec<&str> = spans[..=lead].iter().map(|(w, _)| w.as_str()).collect();
+        if !in_prompt.contains(&format!(" {} ", run.join(" "))) {
+            break;
+        }
+        lead += 1;
+    }
+    let labelled = spans
+        .first()
+        .is_some_and(|(w, _)| w == "vocabulaire" || w == "vocabulary");
+    if lead < 3 || !labelled {
+        return (text.to_string(), Echo::None);
+    }
+    let rest = text[spans[lead - 1].1..]
+        .trim_start_matches(|c: char| c.is_whitespace() || ",;:.»«".contains(c));
+    if rest.is_empty() {
+        (String::new(), Echo::All)
+    } else {
+        (rest.to_string(), Echo::Lead)
+    }
+}
+
+/// The prompt read back instead of speech: three words or more, recited in
+/// the prompt's order.
+fn recites(text: &str, prompt: &str) -> bool {
+    // A run of the prompt's words in order: a real dictation often shares
+    // the prompt's common words.
+    let said = words(text);
+    let run = format!(" {} ", said.join(" "));
+    let contains = |s: &str| format!(" {} ", words(s).join(" ")).contains(&run);
+    // Inside one item (a branch name, a phrase) it's speech: an echo recites
+    // several items of the list.
+    // A period splits items only between sentences: "fix.lesson.retries" is one.
+    let items = prompt.replace(". ", "\n");
+    said.len() >= 3
+        && contains(prompt)
+        && !items
+            .trim_end_matches('.')
+            .split([',', ';', ':', '«', '»', '\n'])
+            .any(contains)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -446,6 +530,62 @@ mod tests {
         assert_eq!(user_words("Gavriel", &custom), vec!["Gavriel", "Handy"]);
         assert_eq!(user_words("  ", &custom), custom);
         assert_eq!(user_words("Ana", &[]), vec!["Ana"]);
+    }
+
+    #[test]
+    fn a_copied_lead_is_removed_and_the_speech_stays() {
+        let p = Some("Vocabulaire : GitHub, Claude, Handy, Groq, Qwen, ADHD, Cloudflare.");
+        assert_eq!(
+            strip_echo("Vocabulaire : GitHub, Claude. Je suis prêt.", p),
+            ("Je suis prêt.".into(), Echo::Lead)
+        );
+        // Without the label it may be speech: kept whole.
+        let said = "Claude, Handy, Groq, Qwen, ADHD, Cloudflare. On commence.";
+        assert_eq!(strip_echo(said, p), (said.to_string(), Echo::None));
+        assert_eq!(
+            strip_echo("Vocabulaire : GitHub, Claude, Handy.", p),
+            (String::new(), Echo::All)
+        );
+        let p = Some("Vocabulary: GitHub, Claude, Handy.");
+        assert_eq!(
+            strip_echo("Vocabulary: GitHub, Claude, so let's start.", p),
+            ("so let's start.".into(), Echo::Lead)
+        );
+    }
+
+    #[test]
+    fn speech_that_opens_with_known_words_is_kept() {
+        let p = Some("Vocabulaire : GitHub, Claude, Handy, Groq, Qwen.");
+        for t in [
+            "Claude, Handy et Groq sont prêts.",
+            "Claude, Handy, Groq, Qwen : lequel ?",
+            "Vocabulaire à revoir demain.",
+            "log Claude",
+        ] {
+            assert_eq!(strip_echo(t, p), (t.to_string(), Echo::None));
+        }
+        assert_eq!(strip_echo("Vocabulaire : GitHub, Claude.", None).1, Echo::None);
+    }
+
+    #[test]
+    fn a_recited_prompt_is_not_a_transcript() {
+        let all = |t: &str, p: &str| strip_echo(t, Some(p)).1 == Echo::All;
+        let p = "Vocabulaire : log, Claude, Handy. Expressions : « de manière claire ».";
+        assert!(all("Vocabulaire : log, Claude, Handy.", p));
+        assert!(!all("regarde le log de Claude dans le terminal", p));
+        assert!(!all("log Claude", p), "too short to tell");
+        // Common words also found in the text before the cursor are speech.
+        let p = "Texte : je pense que tu es d'accord, je suis là. Vocabulaire : log.";
+        assert!(!all("Je suis d'accord.", p));
+        // Saying again a run of one item (a phrase of the text before the
+        // cursor, a branch name) is speech: an echo recites several items.
+        assert!(!all("je pense que tu es d'accord", p));
+        let p = "Vocabulaire : fix/lesson-retries, Claude, Handy.";
+        assert!(!all("fix lesson retries", p));
+        assert!(all("fix lesson retries Claude Handy", p));
+        // A dotted term is one item too.
+        let p = "Vocabulaire : fix.lesson.retries, Claude.";
+        assert!(!all("fix lesson retries", p));
     }
 
     #[test]
