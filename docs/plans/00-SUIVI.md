@@ -18,7 +18,7 @@
 | **1 — Transcription propre** | **Fait, sauf ton essai réel** (tâche 6). Codé, 577 tests Rust, relu par Codex, fusionné dans `main`, publié en **0.3.0** et installé le 27/11. |
 | 2 à 15 | **À faire.** Chaque plan a une section **J** (26/11), et les plans 2 à 5 une section **K** (27/11), à lire avant de coder. |
 
-Prochain : **plan 2 (capture dès l'appui et icône)**, après ton essai du plan 1 (voir plus bas). Le plan 5 est à revoir avant de coder (apprentissage circulaire, voir sa section J).
+Prochain : **d'abord réparer les tests Rust** (section « Tests Rust qui ne démarrent plus », plus bas, environ 20 min), puis **plan 2 (capture dès l'appui et icône)**, après ton essai du plan 1 (voir plus bas). Le plan 5 est à revoir avant de coder (apprentissage circulaire, voir sa section J).
 
 **27/11 : analyse de l'apprentissage (logs du 26–27/11).** Plans 2, 3, 4 et 5 : nouvelle section **K** à lire aussi. Résumé : 0 mot appris en 32 suivis, car tu corriges rarement. Décisions validées :
 - validateur `clef-omni` (modèle de décision) ;
@@ -58,7 +58,41 @@ Branche `feat/plan-1-transcription` (poussée), fusionnée dans `main` (`6eee6be
 
 **Retour arrière** : fermer Handy Flow, recopier l'exe, les DLL et `resources\` depuis `backups/handy-flow-20261127-165412/`. `history.db` seulement en cas de besoin, car les dictées faites depuis seraient perdues.
 
-**Piège pour le prochain agent : tests Rust après un changement de version.** Depuis le passage en 0.3.0, un `cargo test` recompilé s'arrête au chargement (`STATUS_ENTRYPOINT_NOT_FOUND`, 0xC0000139). Ce n'est pas le code : les mêmes 577 tests passent en 0.2.9, et l'exe release 0.3.0 démarre normalement. Pas résolu. Pistes déjà écartées : runtime MSVC (`HANDY_VC_REDIST_DIRS`), `STATIC_VCRUNTIME`, DLL copiées à côté du binaire de test. Le `cargo clean -p handy` a échoué (fichier verrouillé) : à retenter, Handy Flow fermé. Pour une release, définir `HANDY_VC_REDIST_DIRS` (redist de VS Build Tools 14.44, CRT et OpenMP) : sans lui, `transcribe-libs` est recréé sans les DLL `msvcp140`/`vcruntime140` que le ZIP doit contenir.
+## Tests Rust qui ne démarrent plus (à corriger en premier)
+
+**Symptôme.** Depuis le passage en 0.3.0, `cargo test --release --lib` compile, puis le binaire de test s'arrête au chargement : `STATUS_ENTRYPOINT_NOT_FOUND` (0xC0000139), avant tout test. Le code n'est pas en cause : les mêmes 577 tests passaient en 0.2.9, et l'app 0.3.0 démarre normalement.
+
+**Diagnostic (vérifié le 27/11).**
+1. Le binaire de test importe `TaskDialogIndirect` de `comctl32.dll` (via Tauri). Vérifié avec `dumpbin /imports`.
+2. Cette fonction n'existe que dans `comctl32` **version 6**. Windows ne charge la version 6 que si l'exe a un manifeste qui la demande (« Microsoft.Windows.Common-Controls » 6.0.0.0). Sinon il charge la version 5, d'où l'arrêt.
+3. Le binaire de test **n'a aucun manifeste** (`mt.exe` : « ne contenait pas de section ressource »). L'app en a un (Common-Controls présent).
+4. Pourquoi : `tauri-build` 2.6.3 → `tauri-winres` 0.3.5 → `embed-resource` 3.0.6 `compile()` joint `resource.lib` (manifeste compris) avec `cargo:rustc-link-arg-bins` (`embed-resource-3.0.6/src/lib.rs:444`), donc **aux exécutables de l'app seulement, jamais aux tests**.
+5. Non expliqué, et sans effet sur la correction : pourquoi le binaire de test 0.2.9 démarrait. Il a été effacé par un `cargo clean -p handy` resté à moitié (fichier verrouillé). Ne pas chercher davantage.
+
+**Pistes déjà écartées, ne pas refaire.** Runtime MSVC (`HANDY_VC_REDIST_DIRS`), `STATIC_VCRUNTIME=true`, DLL de runtime copiées à côté du binaire de test : aucune ne change rien.
+
+**Correction à faire.** Dans `src-tauri/build.rs`, joindre aux seuls binaires de test un manifeste qui demande Common-Controls v6, sans toucher à celui de l'app. Uniquement pour une cible Windows MSVC (tester `CARGO_CFG_TARGET_OS` et `CARGO_CFG_TARGET_ENV`, pas `cfg!(windows)`, qui décrit la machine de build) :
+
+```rust
+println!("cargo:rustc-link-arg-tests=/MANIFEST:EMBED");
+println!("cargo:rustc-link-arg-tests=/MANIFESTDEPENDENCY:type='win32' name='Microsoft.Windows.Common-Controls' version='6.0.0.0' processorArchitecture='*' publicKeyToken='6595b64144ccf1df' language='*'");
+```
+
+- **À vérifier d'abord** : `rustc-link-arg-tests` doit bien s'appliquer au binaire de tests unitaires de la bibliothèque (`cargo test --lib`), et pas seulement aux tests du dossier `tests/`. Contrôle : `mt.exe -inputresource:"<binaire de test>;#1" -out:m.xml`, puis chercher « Common-Controls » dans `m.xml`.
+- **Si ce n'est pas le cas** : ne pas utiliser `cargo:rustc-link-arg` (sans suffixe), qui s'appliquerait aussi à l'app et ferait un manifeste en double avec `resource.lib`. Solution de repli : `cargo:rustc-link-arg-tests=/DELAYLOAD:comctl32.dll` avec `delayimp.lib`, pour que la DLL ne soit chargée qu'au premier appel. Les tests n'appellent jamais de boîte de dialogue.
+- Après `build.rs` modifié, `cargo` relance le script de build tout seul. Sinon, `touch build.rs`.
+
+**Vérification attendue avant de commit.**
+1. `cd src-tauri && PATH="$PWD/transcribe-libs:$PATH" cargo test --release --lib` : 577 réussis, 0 échec, en 0.3.0.
+2. L'app garde **un seul** manifeste : `bun run tauri build --no-bundle -- --profile fast`, puis `mt.exe` sur `target/fast/Handy Flow.exe` (Common-Controls présent, pas d'erreur de ressource en double), et `"Handy Flow.exe" --help` répond avec le code de sortie 0.
+3. Commit `fix(build): embed the Common-Controls manifest in test binaries`. Pas besoin de release : rien ne change pour l'utilisateur.
+
+**Outils.**
+- `dumpbin` : `C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Tools\MSVC\14.44.35207\bin\Hostx64\x64\dumpbin.exe`.
+- `mt.exe` : `C:\Program Files (x86)\Windows Kits\10\bin\10.0.26100.0\x64\mt.exe`.
+- Binaire de test : `src-tauri\target\release\build\handy\<empreinte>\out\handy_app_lib-<empreinte>.exe` (chemin affiché par `cargo test` sur la ligne « Running unittests »).
+
+**Pour une release (sans rapport avec ce problème).** Définir `HANDY_VC_REDIST_DIRS` sur les dossiers redist de VS Build Tools 14.44 (`...\VC\Redist\MSVC\14.44.35112\x64\Microsoft.VC143.CRT` et `...\Microsoft.VC143.OpenMP`, séparés par `;`). Sans lui, `build.rs` recrée `transcribe-libs` sans les DLL `msvcp140`/`vcruntime140`/`vcomp140`, que le ZIP portable doit contenir.
 
 **Connu, sans effet** : au démarrage, 9 erreurs « Hotkey cannot be empty » pour les transformations sans raccourci. Code inchangé, déjà présent avant.
 
