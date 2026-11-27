@@ -78,12 +78,6 @@ const AsrPanel: React.FC<{ asr: AsrReport | null }> = ({ asr }) => {
             label={t(k("reports.asr.vocabulary"))}
             value={asr.vocabulary}
           />
-          <Field
-            label={t(k("reports.asr.expressions"))}
-            value={asr.expressions}
-          />
-          <Field label={t(k("reports.asr.app"))} value={asr.app} />
-          <Field label={t(k("reports.asr.before"))} value={asr.before} />
           {asr.screen_waited === false && (
             <div className="text-xs">{t(k("reports.asr.screenLate"))}</div>
           )}

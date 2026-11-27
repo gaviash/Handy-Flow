@@ -908,12 +908,9 @@
             "disabled": "Context for the speech model is turned off: nothing was sent.",
             "model": "Model:",
             "vocabulary": "Vocabulary:",
-            "expressions": "Expressions:",
-            "app": "App:",
-            "before": "Text before the cursor:",
             "prompt": "Prompt sent",
-            "screenLate": "The screen came too late: sent without the app and text.",
-            "echo": "The model read its context back instead of speech: the text was dropped.",
+            "screenLate": "The screen came too late: sent without the names read.",
+            "echo": "The model copied its vocabulary: the copy was removed.",
             "cloudError": "The speech API failed, the local model transcribed: {{error}}"
           },
           "llm": {
@@ -978,21 +975,15 @@
         },
         "asr": {
           "label": "Konteks transkripsi",
-          "description": "Yang diterima model pengenalan suara sebelum mendengar: kata dan ungkapan yang sering Anda pakai. Hanya model yang menerima konteks yang memakainya.",
+          "description": "The words the speech model gets before it listens. Only models that accept context use them.",
           "enabled": "Kirim konteks ke model pengenalan",
           "learnedWords": "Kata yang dipelajari",
-          "expressions": "Ungkapan yang sering dipakai",
-          "screen": "Aplikasi dan teks sebelum kursor (lebih lambat)",
+          "screen": "Names read on screen",
           "maxTerms": "Maks. kata",
           "captureWait": "Maks. menunggu layar (ms)",
           "noModel": "Tidak ada model dimuat.",
           "supported": "Model saat ini menerima konteks.",
-          "unsupported": "Model saat ini tidak menerima konteks: tidak ada yang dikirim dan tidak ada yang menunggu.",
-          "expressionsList": {
-            "label": "Your Frequent Expressions",
-            "description": "Phrases of 2 to 4 words said in at least 3 dictations over 30 days: what the speech model gets.",
-            "count": "{{count}} expressions"
-          }
+          "unsupported": "Model saat ini tidak menerima konteks: tidak ada yang dikirim dan tidak ada yang menunggu."
         },
         "judge": {
           "label": "Learning Validator",

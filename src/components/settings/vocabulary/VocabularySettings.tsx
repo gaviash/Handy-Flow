@@ -106,7 +106,6 @@ export const VocabularySettings: React.FC<{ onShowModels?: () => void }> = ({
 
   const asrParts = [
     asr?.learned_words && t(l("asr.learnedWords")),
-    asr?.expressions && t(l("asr.expressions")),
   ].filter(Boolean);
 
   return (
