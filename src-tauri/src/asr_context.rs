@@ -221,7 +221,10 @@ pub fn strip_echo(text: &str, prompt: Option<&str>) -> (String, Echo) {
     // Each word of the text with the byte where it ends.
     let mut spans = Vec::new();
     let mut start = None;
-    for (i, c) in text.char_indices().chain(std::iter::once((text.len(), ' '))) {
+    for (i, c) in text
+        .char_indices()
+        .chain(std::iter::once((text.len(), ' ')))
+    {
         match (c.is_alphanumeric(), start) {
             (true, None) => start = Some(i),
             (false, Some(s)) => {
@@ -389,8 +392,7 @@ mod tests {
             panic!("context prompt expected")
         };
         assert_eq!(p, "Vocabulaire : Handy, log, Claude.");
-        let AsrPrompt::Context(p) = build(caps, &s, &AsrContextSettings::default()).prompt
-        else {
+        let AsrPrompt::Context(p) = build(caps, &s, &AsrContextSettings::default()).prompt else {
             panic!()
         };
         assert_eq!(p, "Vocabulaire : Handy, Kasimir, log, Claude.");
@@ -564,7 +566,10 @@ mod tests {
         ] {
             assert_eq!(strip_echo(t, p), (t.to_string(), Echo::None));
         }
-        assert_eq!(strip_echo("Vocabulaire : GitHub, Claude.", None).1, Echo::None);
+        assert_eq!(
+            strip_echo("Vocabulaire : GitHub, Claude.", None).1,
+            Echo::None
+        );
     }
 
     #[test]

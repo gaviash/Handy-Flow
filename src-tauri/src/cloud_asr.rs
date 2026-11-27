@@ -226,9 +226,110 @@ pub fn change_cloud_asr_setting(
     Ok(())
 }
 
+/// One transcription that never returns its own prompt: a copied head is cut
+/// off; an answer that is all prompt is asked again once without it (said
+/// alone, known words then come back as speech). `Err` only when the first
+/// call fails; the second call failing gives no text.
+pub async fn without_echo<F, Fut>(
+    prompt: Option<&str>,
+    mut call: F,
+) -> Result<(String, crate::asr_context::Echo), String>
+where
+    F: FnMut(Option<String>) -> Fut,
+    Fut: std::future::Future<Output = Result<String, String>>,
+{
+    use crate::asr_context::{strip_echo, Echo};
+    let first = call(prompt.map(str::to_string)).await?;
+    let (text, echo) = strip_echo(&first, prompt);
+    if echo != Echo::All {
+        return Ok((text, echo));
+    }
+    Ok((call(None).await.unwrap_or_default(), Echo::All))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::asr_context::Echo;
+
+    /// Runs `without_echo` with canned replies; returns its result and the
+    /// prompts the calls saw.
+    fn run(
+        prompt: Option<&str>,
+        replies: Vec<Result<&str, &str>>,
+    ) -> (Result<(String, Echo), String>, Vec<Option<String>>) {
+        let seen = std::cell::RefCell::new(Vec::new());
+        let replies = std::cell::RefCell::new(replies.into_iter());
+        let out = tauri::async_runtime::block_on(without_echo(prompt, |p| {
+            seen.borrow_mut().push(p);
+            let r = replies.borrow_mut().next().expect("one call too many");
+            std::future::ready(r.map(str::to_string).map_err(str::to_string))
+        }));
+        (out, seen.into_inner())
+    }
+
+    #[test]
+    fn a_fully_copied_prompt_is_asked_again_without_it() {
+        let p = Some("Vocabulaire : GitHub, Claude.");
+        let (out, seen) = run(p, vec![Ok("Vocabulaire : GitHub, Claude."), Ok("Bonjour.")]);
+        assert_eq!(out, Ok(("Bonjour.".into(), Echo::All)));
+        assert_eq!(seen, vec![p.map(str::to_string), None]);
+
+        let (out, seen) = run(p, vec![Ok("Bonjour.")]);
+        assert_eq!(out, Ok(("Bonjour.".into(), Echo::None)));
+        assert_eq!(seen.len(), 1);
+
+        // Said alone, the words come back from the call without a prompt.
+        let p = Some("Vocabulaire : Claude, Handy, Groq.");
+        let (out, seen) = run(
+            p,
+            vec![Ok("Claude, Handy, Groq."), Ok("Claude, Handy, Groq.")],
+        );
+        assert_eq!(out, Ok(("Claude, Handy, Groq.".into(), Echo::All)));
+        assert_eq!(seen.len(), 2);
+
+        let full = "Vocabulaire : Claude, Handy, Groq.";
+        assert_eq!(
+            run(p, vec![Ok(full), Ok("")]).0,
+            Ok((String::new(), Echo::All))
+        );
+        assert_eq!(
+            run(p, vec![Ok(full), Err("timed out")]).0,
+            Ok((String::new(), Echo::All))
+        );
+        let (out, seen) = run(p, vec![Err("HTTP 500")]);
+        assert_eq!(out, Err("HTTP 500".into()));
+        assert_eq!(seen.len(), 1);
+    }
+
+    #[test]
+    fn a_copied_head_is_cut_without_a_second_call() {
+        let p = Some("Vocabulaire : GitHub, Claude, Handy.");
+        let (out, seen) = run(p, vec![Ok("Vocabulaire : GitHub, Claude. On y va.")]);
+        assert_eq!(out, Ok(("On y va.".into(), Echo::Lead)));
+        assert_eq!(seen.len(), 1);
+    }
+
+    #[test]
+    fn escape_stops_the_second_call() {
+        let p = Some("Vocabulaire : GitHub, Claude.");
+        let mut first = true;
+        let call = without_echo(p, |_| {
+            let reply =
+                std::mem::take(&mut first).then(|| "Vocabulaire : GitHub, Claude.".to_string());
+            async move {
+                match reply {
+                    Some(r) => Ok(r),
+                    None => std::future::pending().await,
+                }
+            }
+        });
+        let out =
+            tauri::async_runtime::block_on(crate::actions::complete_unless_cancelled(call, || {
+                true
+            }));
+        assert_eq!(out, None);
+    }
 
     #[test]
     fn the_wav_is_16_khz_mono_16_bit() {

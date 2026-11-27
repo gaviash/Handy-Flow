@@ -242,7 +242,6 @@ impl Drop for StreamWorkerGuard {
     }
 }
 
-
 #[derive(Clone)]
 pub struct TranscriptionManager {
     /// The transcribe-cpp engine: owns the worker process, its model, and
@@ -1216,36 +1215,30 @@ impl TranscriptionManager {
         (prompt, report)
     }
 
-    /// Handy Adaptive: a speech API's text, finished like a local one (script,
-    /// custom words already prompted, filler words), or empty when it only
-    /// read its prompt back.
+    /// Handy Adaptive: a speech API's text, already without its prompt,
+    /// finished like a local one (script, custom words unless `prompted`,
+    /// filler words).
     pub fn finish_cloud_text(
         &self,
         raw: String,
         language: Option<String>,
-        prompt: Option<&str>,
-    ) -> (Transcription, bool) {
+        prompted: bool,
+    ) -> Transcription {
         let settings = get_settings(&self.app_handle);
-        let (raw, echo) = crate::asr_context::strip_echo(&raw, prompt);
-        let echo = echo != crate::asr_context::Echo::None;
         let evidence = match &language {
             Some(l) => OutputLanguageEvidence::UserSelected(l.clone()),
             None => OutputLanguageEvidence::Unknown,
         };
-        let text =
-            post_process_transcription_text(raw, &settings, prompt.is_some(), &evidence, &[]);
+        let text = post_process_transcription_text(raw, &settings, prompted, &evidence, &[]);
         let source = if language.is_some() {
             crate::language_detection::LanguageSource::Selected
         } else {
             crate::language_detection::LanguageSource::Model
         };
-        (
-            Transcription {
-                text,
-                language: Some(LanguageDecision { language, source }),
-            },
-            echo,
-        )
+        Transcription {
+            text,
+            language: Some(LanguageDecision { language, source }),
+        }
     }
 
     fn mark_echo_dropped(&self) {

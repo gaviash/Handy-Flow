@@ -471,7 +471,10 @@ fn non_blank_post_processed_text(text: String) -> Option<String> {
     }
 }
 
-async fn complete_unless_cancelled<F, C>(operation: F, is_cancelled: C) -> Option<F::Output>
+pub(crate) async fn complete_unless_cancelled<F, C>(
+    operation: F,
+    is_cancelled: C,
+) -> Option<F::Output>
 where
     F: Future,
     C: Fn() -> bool,
@@ -1292,29 +1295,47 @@ impl ShortcutAction for TranscribeAction {
                         let language = crate::cloud_asr::language(&get_settings(&ah));
                         let label = format!("{} {}", c.provider.id, c.model);
                         let (prompt, mut report) = tm.cloud_context(&label, language.clone());
-                        // Escape stops the call at once, without a local run.
-                        match complete_unless_cancelled(
-                            crate::cloud_asr::transcribe(
+                        let translate = get_settings(&ah).translate_to_english;
+                        let lang = language.as_deref();
+                        let samples = &samples;
+                        // One time budget for both calls: a second call gets
+                        // only what the first one left.
+                        let call = |p: Option<String>| async move {
+                            let left = c.timeout.saturating_sub(transcription_time.elapsed());
+                            let once = crate::cloud_asr::transcribe(
                                 c,
-                                &samples,
-                                language.as_deref(),
-                                prompt.as_deref(),
-                                get_settings(&ah).translate_to_english,
-                            ),
+                                samples,
+                                lang,
+                                p.as_deref(),
+                                translate,
+                            );
+                            tokio::time::timeout(left, once)
+                                .await
+                                .unwrap_or_else(|_| Err(format!("timed out after {:?}", c.timeout)))
+                        };
+                        // Escape stops both calls at once, without a local run.
+                        match complete_unless_cancelled(
+                            crate::cloud_asr::without_echo(prompt.as_deref(), call),
                             || rm.was_cancelled_since(cancel_generation),
                         )
                         .await
                         {
                             None => cloud_cancelled = true,
-                            Some(Ok(raw)) => {
+                            Some(Ok((raw, echo))) => {
                                 log::info!(
                                     "Speech API '{label}' transcribed {:.1}s of audio in {:?}",
                                     samples.len() as f64 / 16_000.0,
                                     transcription_time.elapsed()
                                 );
-                                let (t, echo) =
-                                    tm.finish_cloud_text(raw, language, prompt.as_deref());
-                                report.echo_dropped = echo;
+                                if echo != crate::asr_context::Echo::None {
+                                    log::info!(
+                                        "Speech API '{label}' read its prompt back ({echo:?})"
+                                    );
+                                }
+                                let prompted =
+                                    prompt.is_some() && echo != crate::asr_context::Echo::All;
+                                let t = tm.finish_cloud_text(raw, language, prompted);
+                                report.echo_dropped = echo != crate::asr_context::Echo::None;
                                 if t.text.trim().is_empty() {
                                     // Speech may still be there: the local model decides.
                                     warn!("Speech API '{label}' returned no text; using the local model");
@@ -1352,6 +1373,7 @@ impl ShortcutAction for TranscribeAction {
                             .take_asr_report()
                             .map(|mut l| {
                                 l.cloud_error = r.cloud_error.clone();
+                                l.echo_dropped |= r.echo_dropped;
                                 l
                             })
                             .or(Some(r)),

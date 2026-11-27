@@ -127,7 +127,6 @@ pub fn similar_dictations(
         .collect()
 }
 
-
 /// At most `max` chars, cut at a word, "…" when cut.
 fn cut(text: &str, max: usize) -> String {
     let text = text.trim();
